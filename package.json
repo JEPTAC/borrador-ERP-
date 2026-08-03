@@ -1,6 +1,6 @@
 {
   "name": "ei-erp-nova",
-  "version": "6.1.0",
+  "version": "6.2.2",
   "private": true,
   "description": "Plataforma EI ERP con portal de aplicativos y Trazabilidad logística.",
   "scripts": {
