@@ -1,0 +1,13 @@
+window.EI_MODULE_CONFIG = {
+  "id": "proyectos",
+  "title": "Proyectos",
+  "short": "Proyectos",
+  "icon": "PR",
+  "group": "Gestión",
+  "defaultRoute": "projects",
+  "routes": [
+    "projects"
+  ],
+  "description": "Órdenes y seguimiento del frente de proyectos.",
+  "engine": "legacy"
+};

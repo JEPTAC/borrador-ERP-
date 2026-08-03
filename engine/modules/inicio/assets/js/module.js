@@ -1,0 +1,14 @@
+window.EI_MODULE_CONFIG = {
+  "id": "inicio",
+  "title": "Inicio y casos",
+  "short": "Inicio",
+  "icon": "IN",
+  "group": "General",
+  "defaultRoute": "dashboard",
+  "routes": [
+    "dashboard",
+    "cases"
+  ],
+  "description": "Resumen operativo y consulta transversal de pedidos.",
+  "engine": "legacy"
+};

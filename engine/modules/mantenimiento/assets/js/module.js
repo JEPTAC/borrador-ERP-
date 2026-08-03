@@ -1,0 +1,16 @@
+window.EI_MODULE_CONFIG = {
+  "id": "mantenimiento",
+  "title": "Activos y mantenimiento",
+  "short": "Mantenimiento",
+  "icon": "MT",
+  "group": "ERP corporativo",
+  "engine": "enterprise",
+  "defaultRoute": "assets",
+  "routes": [
+    "assets",
+    "maintenance_plans",
+    "work_orders",
+    "downtime"
+  ],
+  "description": "Activos, mantenimiento preventivo, órdenes de trabajo y paradas."
+};

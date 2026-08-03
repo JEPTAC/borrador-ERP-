@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="es">
+<script>(function(){if(new URLSearchParams(location.search).get("embedded")==="1")document.documentElement.classList.add("embedded");})();</script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Centro Operativo VSM · Productividad y Confiabilidad</title>
+  <meta name="theme-color" content="#061b46">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23061b46%27/%3E%3Ctext x=%2732%27 y=%2739%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27%23f2b705%27 font-family=%27Arial%27%3EVSM%3C/text%3E%3C/svg%3E">
+  <style>
+    :root{
+      --blue:#061b46;--blue2:#0f2d5c;--gold:#f2b705;--bg:#eef3f9;--card:#fff;
+      --line:#d8e2ef;--text:#102033;--muted:#64748b;--ok:#0f9f6e;--warn:#d97706;
+      --bad:#dc2626;--info:#2563eb;--shadow:0 12px 34px rgba(15,23,42,.07)
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:"Century Gothic",Arial,sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select{font:inherit}
+    .shell{max-width:1760px;margin:auto;padding:18px}
+    .top{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:20px;
+      padding:22px 24px;border-radius:26px;color:#fff;
+      background:linear-gradient(135deg,var(--blue),var(--blue2));box-shadow:0 20px 50px rgba(6,27,70,.20)
+    }
+    .top h1{margin:0;font-size:1.65rem}.top p{margin:7px 0 0;max-width:850px;line-height:1.45;opacity:.88}
+    .actions,.quick-actions,.range-buttons{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      min-height:42px;border:0;border-radius:13px;padding:9px 13px;font-weight:900;cursor:pointer;
+      text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:#fff;color:var(--blue);
+      box-shadow:0 5px 15px rgba(15,23,42,.10)
+    }
+    .btn.primary{background:var(--gold);color:#111827}.btn.dark{background:var(--blue);color:#fff}
+    .btn.soft{background:#edf3fb;color:var(--blue);box-shadow:none;border:1px solid var(--line)}
+    .btn.active{background:var(--blue);color:#fff}.btn.danger{background:#fee2e2;color:#991b1b}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .notice{border-radius:17px;padding:12px 14px;margin:14px 0;background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46}
+    .notice.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .notice.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+    .filters,.card,.chart-card,.process-card,.alert-card{
+      background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)
+    }
+    .filters{margin-top:16px;padding:16px}
+    .filter-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}
+    .filter-head h2{font-size:1rem;margin:0;color:var(--blue)}
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+    .field span{display:block;margin-bottom:6px;color:var(--muted);font-size:.75rem;font-weight:900}
+    .input,.select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:13px;padding:9px 10px;background:#fff;color:var(--text)}
+    .filter-summary{margin-top:12px;padding:10px 12px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:.82rem}
+    .loading{display:none;align-items:center;gap:9px;margin:14px 2px}.loading.show{display:flex}
+    .spin{width:18px;height:18px;border:3px solid #dbe4f0;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:22px 2px 11px}
+    .section-head h2{margin:0;color:var(--blue);font-size:1.18rem}.section-head span{font-size:.8rem;color:var(--muted)}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:13px}
+    .kpi{padding:14px;min-width:0;position:relative;overflow:hidden}
+    .kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--blue)}
+    .kpi.warn:before{background:var(--warn)}.kpi.bad:before{background:var(--bad)}.kpi.ok:before{background:var(--ok)}
+    .kpi span{display:block;color:var(--muted);font-size:.73rem;font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+    .kpi strong{display:block;margin-top:5px;color:var(--blue);font-size:1.38rem;line-height:1.15;overflow-wrap:anywhere}
+    .kpi small{display:block;margin-top:5px;color:var(--muted);line-height:1.35}
+    .tag{display:inline-flex;margin-top:8px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#1e3a8a;font-size:.7rem;font-weight:900}
+    .focus-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:13px}
+    .focus-card{padding:15px;min-width:0}.focus-card h3{margin:0;color:var(--blue);font-size:.98rem}
+    .focus-main{font-size:1.45rem;font-weight:900;color:var(--blue);margin:8px 0 3px}
+    .focus-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+    .focus-row div{padding:8px;border-radius:13px;background:#f8fafc;border:1px solid #edf2f7;min-width:0}
+    .focus-row span{display:block;font-size:.68rem;color:var(--muted);font-weight:900}.focus-row strong{display:block;margin-top:3px;color:var(--blue);font-size:.85rem;overflow-wrap:anywhere}
+    .flow-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:stretch}
+    .process-card{padding:16px;min-width:0;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+    .process-card:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--gold))}
+    .process-card.late:before{background:var(--bad)}
+    .process-title{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .process-title h3{margin:0;color:var(--blue);font-size:.92rem}.process-title b{font-size:.72rem;border-radius:999px;padding:4px 7px;background:#eef2ff;color:#1e3a8a}
+    .process-main{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    .process-main strong{font-size:1.25rem;color:var(--blue)}.process-main span{font-size:.73rem;color:var(--muted)}
+    .process-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
+    .process-stats div{padding:9px;border-radius:12px;background:#f8fafc;text-align:center;min-width:0}
+    .process-stats span{display:block;font-size:.64rem;color:var(--muted);font-weight:900}.process-stats b{display:block;margin-top:3px;color:var(--blue);font-size:.78rem;overflow-wrap:anywhere}
+    .progress{height:9px;margin-top:10px;border-radius:999px;background:#e8eef6;overflow:hidden}
+    .progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--gold))}
+    .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
+    .chart-card{padding:15px;min-width:0}.chart-card h3{margin:0 0 11px;color:var(--blue);font-size:1rem}
+    .chart-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(130px,2.1fr) minmax(70px,auto);gap:8px;align-items:center;margin:8px 0;font-size:.78rem}
+    .chart-row b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chart-track{height:13px;border-radius:999px;background:#edf2f7;overflow:hidden}
+    .chart-track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--gold))}
+    .chart-track i.ok{background:var(--ok)}.chart-track i.bad{background:var(--bad)}.chart-track i.warn{background:var(--warn)}
+    .stack{height:18px;display:flex;border-radius:999px;overflow:hidden;background:#edf2f7}
+    .stack i{display:block;height:100%}.stack .va{background:var(--ok)}.stack .wait{background:var(--warn)}.stack .dead{background:var(--bad)}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:.75rem;color:var(--muted)}
+    .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}.dot.va{background:var(--ok)}.dot.wait{background:var(--warn)}.dot.dead{background:var(--bad)}
+    .alert-card{padding:14px}.alert-list{display:grid;gap:8px}
+    .alert-item{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:center;border:1px solid #edf2f7;border-radius:14px;padding:9px 10px;background:#fff}
+    .alert-item.bad{border-color:#fecaca;background:#fff7f7}.alert-item.warn{border-color:#fed7aa;background:#fffaf3}
+    .alert-item strong{color:var(--blue)}.alert-item small{display:block;color:var(--muted);margin-top:2px}
+    .badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:.7rem;font-weight:900;background:#eef2ff;color:#1e3a8a;white-space:nowrap}
+    .badge.ok{background:#ecfdf5;color:#065f46}.badge.warn{background:#fff7ed;color:#9a3412}.badge.bad{background:#fef2f2;color:#991b1b}
+    .results-wrap{width:100%;overflow:visible}.table-wrap{width:100%;max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:17px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1100px}th,td{padding:9px 10px;border-bottom:1px solid #edf2f7;text-align:left;font-size:.79rem;vertical-align:top;line-height:1.35}
+    th{position:sticky;top:0;z-index:2;background:#f8fafc;color:var(--blue)}
+    .muted{color:var(--muted)}.pill{display:inline-flex;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#1e3a8a;font-size:.72rem;font-weight:900}
+    .time-tags{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.time-tag{border-radius:10px;padding:5px;border:1px solid #edf2f7;font-size:.67rem}.time-tag b{display:block}.time-tag.va{background:#f0fdf4}.time-tag.wait{background:#fff7ed}.time-tag.dead{background:#fef2f2}
+    .footer{margin:20px 2px 5px;color:var(--muted);font-size:.78rem;line-height:1.45}
+    @media(max-width:1000px){
+      .top{display:block}.actions{margin-top:14px}.chart-grid{grid-template-columns:1fr}
+      .alert-item{grid-template-columns:1fr}.section-head{display:block}.section-head span{display:block;margin-top:4px}
+    }
+    @media(max-width:700px){
+      .shell{padding:9px}.top,.filters,.card,.chart-card,.process-card,.alert-card{border-radius:17px}
+      .actions .btn,.quick-actions .btn{width:100%}.range-buttons{display:grid;grid-template-columns:1fr 1fr}
+      .chart-row{grid-template-columns:1fr}.focus-row,.process-stats{grid-template-columns:1fr}
+      table{min-width:980px}
+    }
+  
+    .coverage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .coverage-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:13px;box-shadow:var(--shadow)}
+    .coverage-card span{display:block;color:var(--muted);font-size:.69rem;font-weight:900;text-transform:uppercase}
+    .coverage-card strong{display:block;color:var(--blue);font-size:1.28rem;margin-top:4px}
+    .coverage-card small{display:block;color:var(--muted);font-size:.73rem;margin-top:4px;line-height:1.35}
+    .status-chip{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.68rem;font-weight:900;white-space:nowrap}
+    .status-chip.ok{background:#ecfdf5;color:#065f46}
+    .status-chip.warn{background:#fff7ed;color:#9a3412}
+    .status-chip.bad{background:#fef2f2;color:#991b1b}
+    .status-chip.info{background:#eff6ff;color:#1d4ed8}
+    .metric-note{font-size:.72rem;color:var(--muted);line-height:1.4}
+    .reliability-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .reliability-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}
+    .reliability-card h3{margin:0;color:var(--blue);font-size:.95rem}
+    .reliability-card strong{display:block;font-size:1.35rem;color:var(--blue);margin-top:7px}
+    .reliability-card small{display:block;color:var(--muted);margin-top:4px}
+    @media(max-width:700px){
+      .process-main{grid-template-columns:1fr}
+      .process-stats{grid-template-columns:1fr}
+    }
+  
+    .wait-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:13px}
+    .wait-card{
+      background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px;
+      box-shadow:var(--shadow);position:relative;overflow:hidden;min-width:0
+    }
+    .wait-card:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--info)}
+    .wait-card.warn:before{background:var(--warn)}
+    .wait-card.bad:before{background:var(--bad)}
+    .wait-card.ok:before{background:var(--ok)}
+    .wait-card span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}
+    .wait-card strong{display:block;color:var(--blue);font-size:1.35rem;margin-top:6px}
+    .wait-card small{display:block;color:var(--muted);font-size:.73rem;line-height:1.5;margin-top:6px}
+    .wait-scope{display:inline-flex;margin-top:8px;padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.68rem;font-weight:900}.wait-source{display:block;margin-top:8px;padding:7px 8px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:.67rem;line-height:1.4}
+    .wait-detail-list{display:grid;gap:8px}
+    .wait-detail-row{
+      display:grid;grid-template-columns:minmax(130px,1fr) minmax(120px,2fr) auto;
+      gap:9px;align-items:center;padding:9px;border:1px solid #edf2f7;border-radius:13px;background:#fff
+    }
+    .wait-detail-row strong{color:var(--blue)}
+    .wait-detail-row small{display:block;color:var(--muted);margin-top:2px}
+    @media(max-width:700px){
+      .wait-detail-row{grid-template-columns:1fr}
+    }
+
+  
+    .btn.report{background:linear-gradient(135deg,#f2b705,#ffd85e);color:#111827}
+    .report-modal{
+      position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;
+      padding:18px;background:rgba(2,12,35,.72);backdrop-filter:blur(7px)
+    }
+    .report-modal.show{display:flex}
+    .report-dialog{
+      width:min(1040px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:26px;
+      box-shadow:0 32px 90px rgba(0,0,0,.34);border:1px solid #dbe4f0
+    }
+    .report-head{
+      position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:16px;
+      padding:19px 22px;background:linear-gradient(135deg,#061b46,#0f2d5c);color:#fff
+    }
+    .report-head h2{margin:0;font-size:1.2rem}.report-head p{margin:5px 0 0;font-size:.78rem;opacity:.86}
+    .report-close{width:40px;height:40px;border:0;border-radius:12px;background:rgba(255,255,255,.13);color:#fff;font-size:1.3rem;cursor:pointer}
+    .report-body{padding:20px 22px}
+    .report-scope{
+      padding:12px 14px;border-radius:15px;background:#eff6ff;border:1px solid #bfdbfe;
+      color:#1e3a8a;font-size:.8rem;line-height:1.45;margin-bottom:15px
+    }
+    .report-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .report-field{display:block;min-width:0}
+    .report-field.full{grid-column:1/-1}
+    .report-field span{display:block;margin-bottom:6px;color:#475569;font-size:.72rem;font-weight:900}
+    .report-field input,.report-field select,.report-field textarea{
+      width:100%;border:1px solid #d8e2ef;border-radius:13px;background:#fff;color:#102033;
+      padding:10px 11px;min-height:44px;outline:none
+    }
+    .report-field textarea{min-height:82px;resize:vertical;line-height:1.45}
+    .report-field input:focus,.report-field select:focus,.report-field textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+    .report-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}
+    .report-check{
+      display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid #e2e8f0;
+      border-radius:13px;background:#f8fafc;font-size:.75rem;color:#334155;line-height:1.35
+    }
+    .report-check input{margin-top:2px}
+    .report-foot{
+      position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:15px 22px;background:#fff;border-top:1px solid #e2e8f0
+    }
+    .report-foot small{color:#64748b;line-height:1.35}
+    .report-foot-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .report-required{color:#dc2626}
+    @media(max-width:760px){
+      .report-modal{padding:6px}.report-dialog{max-height:98vh;border-radius:18px}
+      .report-form-grid,.report-options{grid-template-columns:1fr}
+      .report-foot{display:block}.report-foot-actions{margin-top:10px}
+      .report-foot-actions .btn{width:100%}
+    }
+
+
+    html.embedded body{background:#f3f6fb}
+    html.embedded .shell{max-width:none;padding:10px 12px 18px}
+    html.embedded .top{border-radius:18px;box-shadow:none}
+    html.embedded #vsmBackLink{display:none!important}
+    html.embedded .filters,html.embedded .card,html.embedded .chart-card,html.embedded .process-card,html.embedded .alert-card{box-shadow:0 6px 20px rgba(15,23,42,.05)}
+    html.embedded .top h1{font-size:1.35rem}
+  </style>
+<link rel="stylesheet" href="../../shared/css/nova-embedded.css?v=6.1.0">
+</head>
+<body>
+  <a id="vsmBackLink" href="./" style="position:fixed;right:16px;bottom:16px;z-index:9999;text-decoration:none" class="btn dark">Volver al módulo VSM</a>
+  <main class="shell">
+    <section class="top">
+      <div>
+        <h1>Centro operativo VSM</h1>
+        <p>Tiempos por proceso en jornada laboral, productividad por actor, confiabilidad de registros, cumplimiento y carga operativa.</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnLoad">Actualizar datos</button>
+        <button class="btn" id="btnLoadAll">Cargar histórico</button>
+        <button class="btn report" id="btnSmartReport">Generar informe</button>
+        <button class="btn dark" id="btnExport" disabled>Exportar Excel</button>
+      </div>
+    </section>
+
+    <div id="status" class="notice ok">Inicializando centro operativo...</div>
+
+    <section class="filters">
+      <div class="filter-head">
+        <h2>Filtros operativos</h2>
+        <div class="range-buttons">
+          <button class="btn soft" data-range="today">Hoy</button>
+          <button class="btn soft" data-range="7">7 días</button>
+          <button class="btn soft" data-range="30">30 días</button>
+          <button class="btn soft" data-range="month">Mes actual</button>
+          <button class="btn soft" data-range="all">Todo</button>
+        </div>
+      </div>
+
+      <div class="filters-grid">
+        <label class="field"><span>Desde</span><input class="input" type="date" id="fFrom"></label>
+        <label class="field"><span>Hasta</span><input class="input" type="date" id="fTo"></label>
+        <label class="field"><span>Tipo de pedido</span><select class="select" id="fOrderType"><option value="">Todos</option><option value="normal">Normal / estándar</option><option value="pvn">PVN</option><option value="pvc">PVC</option><option value="pve">PVE</option><option value="pvp">PVP</option></select></label>
+        <label class="field"><span>Área</span><select class="select" id="fArea">
+          <option value="">Todas</option>
+          <option value="ventas">Ventas</option>
+          <option value="compras">Compras</option>
+          <option value="logistica">Logística</option>
+          <option value="facturacion">Facturación</option>
+          <option value="cartera">Cartera / Caja</option>
+          <option value="despacho">Despacho</option>
+        </select></label><label class="field"><span>Proceso</span><select class="select" id="fProcess"><option value="">Todos</option></select></label>
+        <label class="field"><span>Estado</span><select class="select" id="fStatus"><option value="">Todos</option><option value="open">WIP / abiertos</option><option value="closed">Cerrados</option><option value="wait">En espera o bloqueo</option><option value="cancelled">Cancelados / anulados</option></select></label>
+        <label class="field"><span>Cumplimiento</span><select class="select" id="fSla"><option value="">Todos</option><option value="late">Fuera de meta</option><option value="ontime">Dentro de meta</option></select></label>
+        <label class="field"><span>Meta en horas hábiles</span><input class="input" type="number" id="fThreshold" min="0.25" step="0.25" value="8"></label>
+        <label class="field"><span>Usuario / responsable</span><select class="select" id="fUser"><option value="">Todos</option></select></label>
+        <label class="field"><span>Buscar</span><input class="input" id="fSearch" placeholder="Pedido, OC, cliente o asesor"></label>
+        <label class="field"><span>Vista principal</span><select class="select" id="fView">
+          <option value="principal">Centro operativo</option>
+          <option value="wip">WIP y atrasos</option>
+          <option value="areas">Resumen por área</option><option value="procesos">Rendimiento por proceso</option>
+          <option value="picking">Picking / alistamiento</option>
+          <option value="cortes">Cortes</option>
+          <option value="usuarios">Productividad por usuario</option><option value="confiabilidad">Confiabilidad del proceso</option><option value="esperas">Trazabilidad de tiempos de espera</option>
+          <option value="usuario_proceso">Usuario por proceso</option>
+          <option value="pedidos">Todos los pedidos</option>
+          <option value="novedades">Novedades y reportes</option>
+          <option value="cancelados">Cancelados / anulados</option>
+          <option value="not_traced">No trazados / QA</option>
+        </select></label>
+        <label class="field"><span>Cantidad inicial</span><select class="select" id="fLimit"><option>300</option><option selected>600</option><option>1000</option><option>1500</option></select></label>
+      </div>
+
+      <div class="quick-actions" style="margin-top:12px">
+        <button class="btn primary" id="btnApply">Aplicar filtros</button>
+        <button class="btn soft" id="btnOnlyWip">Solo WIP</button>
+        <button class="btn danger" id="btnDelayed">Solo atrasados</button>
+        <button class="btn soft" id="btnReset">Limpiar filtros</button>
+      </div>
+      <div class="filter-summary" id="filterSummary">Sin filtros aplicados.</div>
+    </section>
+
+    <div class="loading" id="loading"><span class="spin"></span><strong>Procesando datos...</strong><span id="progress" class="muted"></span></div>
+
+    <div class="section-head"><h2>Cobertura de la información</h2><span>La base total cargada se muestra por separado de los pedidos trazados.</span></div>
+    <section id="coverageBand" class="coverage-grid"></section>
+
+    <div class="section-head"><h2>Resumen operativo</h2><span>Lectura rápida de la carga y los tiempos laborales.</span></div>
+    <section id="summary" class="kpi-grid"></section>
+
+    <div class="section-head"><h2>Tiempos críticos</h2><span>Picking, corte, recepción y facturación.</span></div>
+    <section id="operationalFocus" class="focus-grid"></section>
+
+    <div class="section-head"><h2 id="waitSectionTitle">Tiempos especiales de espera</h2><span id="waitSectionSubtitle">Novedades, reprocesos fuera de meta y no entregas.</span></div>
+    <section id="waitBoard" class="wait-grid"></section>
+    <section id="waitComposition" class="chart-grid" style="margin-top:14px"></section>
+
+    <div class="section-head"><h2>Flujo por proceso</h2><span>Promedio, P50, P90, WIP y cumplimiento de meta.</span></div>
+    <section id="processFlow" class="flow-board"></section>
+
+    <div class="section-head"><h2>Indicadores por área</h2><span>Carga, WIP, cumplimiento, productividad y riesgo operativo.</span></div>
+    <section id="areaBoard" class="flow-board"></section>
+
+    <div class="section-head"><h2>Indicadores por actor</h2><span>Trabajo directo, casos atendidos, WIP, cumplimiento y calidad del registro. El Super Admin está excluido de todas las mediciones.</span></div>
+    <section id="actorBoard" class="flow-board"></section>
+
+    <div class="section-head"><h2>Gráficas operativas</h2><span>Cuellos, WIP, cumplimiento y throughput.</span></div>
+    <section id="powerCharts" class="chart-grid"></section>
+
+    <section id="quickBars" style="margin-top:14px"></section>
+    <section id="ltProductivityAnalysis" style="margin-top:14px"></section>
+    <section id="deepKpis" class="kpi-grid" style="margin-top:14px"></section>
+
+    <div class="section-head"><h2>Confiabilidad del proceso</h2><span>Calidad del dato, reprocesos, devoluciones, errores y cumplimiento documental.</span></div>
+    <section id="reliabilityBoard" class="chart-grid"></section>
+
+    <div class="section-head"><h2>Alertas y acciones</h2><span>Pedidos que requieren intervención.</span></div>
+    <section id="alertsBoard" class="alert-card"></section>
+
+    <section class="kpi-grid" style="margin-top:14px">
+      <article class="card" style="padding:15px"><h3 style="margin:0 0 8px;color:var(--blue)">Cuello de botella</h3><div id="bottleneck"></div></article>
+      <article class="card" style="padding:15px">
+        <h3 style="margin:0 0 8px;color:var(--blue)">Lectura del tablero</h3>
+        <p class="muted" style="margin:0;line-height:1.5">LT y tiempos por proceso se muestran en horas laborales. P50 representa la mediana y P90 el tiempo bajo el cual termina el 90 % de los casos. La meta es una referencia operativa editable desde los filtros.</p>
+      </article>
+    </section>
+
+    <div class="section-head"><h2 id="tableTitle">Resultados operativos</h2><span id="rowCount"></span></div>
+    <section class="results-wrap"><div id="mainTable"></div></section>
+
+    <p class="footer">V237 · Centro operativo VSM. La exactitud depende de las marcas de entrada, inicio, espera y cierre registradas por cada proceso. Los tiempos se normalizan sobre la jornada laboral definida.</p>
+  </main>
+<div class="report-modal" id="smartReportModal" aria-hidden="true">
+    <section class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="smartReportTitle">
+      <header class="report-head">
+        <div>
+          <h2 id="smartReportTitle">Generador de informes institucionales</h2>
+          <p>El informe se construirá sobre la plantilla oficial de Electroingeniería e incluirá visualizaciones tipo Power BI, diagnóstico, conclusiones y plan de acción.</p>
+        </div>
+        <button class="report-close" id="btnCloseSmartReport" type="button" aria-label="Cerrar">×</button>
+      </header>
+
+      <form id="smartReportForm">
+        <div class="report-body">
+          <div class="report-scope" id="smartReportScope">Alcance actual del tablero.</div>
+          <div class="report-scope"><strong>Plantilla:</strong> Formato institucional Electroingeniería - OFICIOS, tamaño carta, con logos, datos de contacto y elementos gráficos corporativos.</div>
+
+          <div class="report-form-grid">
+            <label class="report-field">
+              <span>Nombre de quien elabora <b class="report-required">*</b></span>
+              <input id="reportAuthor" name="reportAuthor" required maxlength="100" autocomplete="name">
+            </label>
+            <label class="report-field">
+              <span>Cargo <b class="report-required">*</b></span>
+              <input id="reportPosition" name="reportPosition" required maxlength="100">
+            </label>
+            <label class="report-field">
+              <span>Área responsable <b class="report-required">*</b></span>
+              <input id="reportDepartment" name="reportDepartment" required maxlength="100" placeholder="Ej. Calidad y Mejoramiento Continuo">
+            </label>
+            <label class="report-field">
+              <span>Dirigido a <b class="report-required">*</b></span>
+              <input id="reportAudience" name="reportAudience" required maxlength="140" placeholder="Ej. Dirección de Operaciones">
+            </label>
+            <label class="report-field">
+              <span>Tipo de informe <b class="report-required">*</b></span>
+              <select id="reportType" name="reportType" required>
+                <option value="ejecutivo">Ejecutivo para toma de decisiones</option>
+                <option value="operativo">Seguimiento operativo detallado</option>
+                <option value="productividad">Productividad por área y actor</option>
+                <option value="auditoria">Auditoría y confiabilidad</option>
+                <option value="comite">Comité de seguimiento</option>
+              </select>
+            </label>
+            <label class="report-field">
+              <span>Formato <b class="report-required">*</b></span>
+              <select id="reportFormat" name="reportFormat" required>
+                <option value="pdf">PDF</option>
+                <option value="excel">Excel real (.xlsx)</option>
+                <option value="both">PDF y Excel (.xlsx)</option>
+              </select>
+            </label>
+            <label class="report-field full">
+              <span>Título del informe <b class="report-required">*</b></span>
+              <input id="reportDocumentTitle" name="reportDocumentTitle" required maxlength="160" value="Informe analítico de desempeño operativo VSM">
+            </label>
+            <label class="report-field full">
+              <span>Objetivo del informe <b class="report-required">*</b></span>
+              <textarea id="reportObjective" name="reportObjective" required maxlength="700">Analizar el desempeño del flujo operativo, los tiempos laborales, el cumplimiento, la productividad, la confiabilidad y las oportunidades de mejora para apoyar la toma de decisiones.</textarea>
+            </label>
+            <label class="report-field">
+              <span>Clasificación</span>
+              <select id="reportConfidentiality" name="reportConfidentiality">
+                <option value="Uso interno">Uso interno</option>
+                <option value="Confidencial">Confidencial</option>
+                <option value="Comité directivo">Comité directivo</option>
+                <option value="Auditoría">Auditoría</option>
+              </select>
+            </label>
+            <label class="report-field">
+              <span>Nombre del periodo o corte</span>
+              <input id="reportPeriodName" name="reportPeriodName" maxlength="100" placeholder="Ej. Seguimiento mensual julio 2026">
+            </label>
+            <label class="report-field full">
+              <span>Observaciones o contexto adicional</span>
+              <textarea id="reportNotes" name="reportNotes" maxlength="900" placeholder="Situaciones del periodo, decisiones anteriores, restricciones o aspectos que deban quedar documentados."></textarea>
+            </label>
+          </div>
+
+          <div class="report-options">
+            <label class="report-check"><input type="checkbox" id="reportIncludeOrders" checked> <span>Incluir anexo de pedidos y casos críticos.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeActors" checked> <span>Incluir productividad por actor, excluyendo Super Admin.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeMethodology" checked> <span>Incluir fórmulas, fuentes y metodología.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeActionPlan" checked> <span>Generar plan de acción priorizado.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeAlerts" checked> <span>Incluir alertas, riesgos y pedidos críticos.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeWaits" checked> <span>Incluir novedades, reprocesos y no entregas.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeTrends" checked> <span>Incluir tendencias, comparación temporal y antigüedad del WIP.</span></label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeRisks" checked> <span>Incluir matriz de riesgos, Pareto de causas y decisiones sugeridas.</span></label>
+          </div>
+        </div>
+
+        <footer class="report-foot">
+          <small>El PDF utilizará la plantilla institucional OFICIOS como fondo real de cada página. Las gráficas tendrán diseño tipo Power BI. No se modifica Firebase.</small>
+          <div class="report-foot-actions">
+            <button class="btn soft" id="btnCancelSmartReport" type="button">Cancelar</button>
+            <button class="btn report" id="btnGenerateSmartReport" type="submit">Generar informe</button>
+          </div>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <script>window.EI_VSM_APP_ROOT=new URL("../../",location.href).href;</script>
+  <script src="./dashboard.js?v=5.0.0"></script>
+<script src="../../shared/js/nova-embedded.js?v=6.1.0"></script>
+</body>
+</html>

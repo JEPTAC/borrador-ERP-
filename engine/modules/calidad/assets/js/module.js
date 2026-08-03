@@ -1,0 +1,16 @@
+window.EI_MODULE_CONFIG = {
+  "id": "calidad",
+  "title": "Calidad y CAPA",
+  "short": "Calidad",
+  "icon": "QA",
+  "group": "ERP corporativo",
+  "engine": "enterprise",
+  "defaultRoute": "inspections",
+  "routes": [
+    "inspections",
+    "nonconformities",
+    "quarantine",
+    "capa"
+  ],
+  "description": "Inspecciones, no conformidades, cuarentenas y acciones correctivas/preventivas."
+};

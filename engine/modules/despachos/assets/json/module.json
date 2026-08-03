@@ -1,0 +1,17 @@
+{
+  "id": "despachos",
+  "title": "Entregas y despachos",
+  "short": "Despachos",
+  "icon": "DE",
+  "group": "Salida",
+  "defaultRoute": "despacho_local",
+  "routes": [
+    "cliente_punto",
+    "cliente_recoge",
+    "despacho_local",
+    "despacho_nacional",
+    "cierre_despacho_nacional"
+  ],
+  "description": "Entrega en punto, recogida y despachos locales o nacionales.",
+  "engine": "legacy"
+}

@@ -1,0 +1,18 @@
+window.EI_MODULE_CONFIG = {
+  "id": "planeacion",
+  "title": "Planeación y MRP",
+  "short": "Planeación",
+  "icon": "MR",
+  "group": "ERP corporativo",
+  "engine": "enterprise",
+  "defaultRoute": "mrp",
+  "routes": [
+    "demand",
+    "mrp",
+    "atp",
+    "capacity",
+    "replenishment",
+    "proposals"
+  ],
+  "description": "Demanda, necesidades de materiales, promesa de entrega, capacidad y reabastecimiento."
+};

@@ -1,0 +1,18 @@
+window.EI_MODULE_CONFIG = {
+  "id": "maestros",
+  "title": "Datos maestros",
+  "short": "Maestros",
+  "icon": "MD",
+  "group": "ERP corporativo",
+  "engine": "enterprise",
+  "defaultRoute": "products",
+  "routes": [
+    "products",
+    "clients",
+    "suppliers",
+    "warehouses",
+    "locations",
+    "units"
+  ],
+  "description": "Catálogos únicos de productos, terceros, bodegas, ubicaciones y unidades."
+};

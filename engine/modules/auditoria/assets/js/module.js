@@ -1,0 +1,18 @@
+window.EI_MODULE_CONFIG = {
+  "id": "auditoria",
+  "title": "Auditoría y seguridad",
+  "short": "Auditoría",
+  "icon": "AU",
+  "group": "Plataforma",
+  "engine": "enterprise",
+  "defaultRoute": "events",
+  "routes": [
+    "events",
+    "timings",
+    "access",
+    "sod",
+    "security",
+    "backups"
+  ],
+  "description": "Libro de eventos, accesos, segregación de funciones, postura de seguridad y recuperación."
+};

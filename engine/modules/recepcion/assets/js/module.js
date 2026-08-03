@@ -1,0 +1,14 @@
+window.EI_MODULE_CONFIG = {
+  "id": "recepcion",
+  "title": "Recepción",
+  "short": "Recepción",
+  "icon": "RE",
+  "group": "Operación",
+  "defaultRoute": "reception_goods",
+  "routes": [
+    "reception_goods",
+    "recepcion_pedidos"
+  ],
+  "description": "Recepción física y validación documental de pedidos.",
+  "engine": "legacy"
+};

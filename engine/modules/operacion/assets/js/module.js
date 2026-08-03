@@ -1,0 +1,15 @@
+window.EI_MODULE_CONFIG = {
+  "id": "operacion",
+  "title": "Alistamiento y corte",
+  "short": "Operación",
+  "icon": "OP",
+  "group": "Operación",
+  "defaultRoute": "alistamiento",
+  "routes": [
+    "alistamiento",
+    "corte_cable",
+    "cut_diag"
+  ],
+  "description": "Alistamiento, novedades y ejecución controlada de cortes.",
+  "engine": "legacy"
+};

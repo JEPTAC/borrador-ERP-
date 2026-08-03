@@ -1,0 +1,15 @@
+{
+  "id": "creditos",
+  "title": "Solicitudes de crédito",
+  "short": "Crédito",
+  "icon": "CR",
+  "group": "Flujo comercial",
+  "engine": "credit",
+  "defaultRoute": "credit_workspace",
+  "routes": [
+    "credit_workspace",
+    "credit_new",
+    "credit_review"
+  ],
+  "description": "Ventas crea y envía expedientes; Cartera recibe, revisa, devuelve, aprueba o rechaza."
+}

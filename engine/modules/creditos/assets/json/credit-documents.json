@@ -1,0 +1,98 @@
+{
+  "formCode": "S-FT-22",
+  "version": 4,
+  "effectiveDate": "2026-07-15",
+  "allRequiredForSubmission": true,
+  "documents": [
+    {
+      "id": "doc_01",
+      "number": 1,
+      "label": "Certificado de existencia y representación (vigencia no mayor a 30 días).",
+      "required": true
+    },
+    {
+      "id": "doc_02",
+      "number": 2,
+      "label": "Fotocopia del RUT (actualizado).",
+      "required": true
+    },
+    {
+      "id": "doc_03",
+      "number": 3,
+      "label": "Fotocopia documento de identidad del Representante legal.",
+      "required": true
+    },
+    {
+      "id": "doc_04",
+      "number": 4,
+      "label": "Certificado de existencia y representación legal de cada uno de los miembros.",
+      "required": true
+    },
+    {
+      "id": "doc_05",
+      "number": 5,
+      "label": "Estados financieros del último año.",
+      "required": true
+    },
+    {
+      "id": "doc_06",
+      "number": 6,
+      "label": "Fotocopia de declaración de renta del último año gravable.",
+      "required": true
+    },
+    {
+      "id": "doc_07",
+      "number": 7,
+      "label": "Certificado de ingresos y retenciones.",
+      "required": true
+    },
+    {
+      "id": "doc_08",
+      "number": 8,
+      "label": "Pagaré y carta de instrucciones firmados (No diligenciados).",
+      "required": true
+    },
+    {
+      "id": "doc_09",
+      "number": 9,
+      "label": "Formulario de datos personales diligenciado.",
+      "required": true
+    },
+    {
+      "id": "doc_10",
+      "number": 10,
+      "label": "Fotocopia contrato adjudicado.",
+      "required": true
+    },
+    {
+      "id": "doc_11",
+      "number": 11,
+      "label": "Fotocopia de tarjeta de propiedad y/o certificado de tradición.",
+      "required": true
+    },
+    {
+      "id": "doc_12",
+      "number": 12,
+      "label": "Fotocopia documento privado de constitución.",
+      "required": true
+    },
+    {
+      "id": "doc_13",
+      "number": 13,
+      "label": "Certificado de existencia y representación legal de cada uno de los miembros.",
+      "required": true
+    },
+    {
+      "id": "doc_14",
+      "number": 14,
+      "label": "Fotocopia contrato adjudicado.",
+      "required": true
+    },
+    {
+      "id": "doc_15",
+      "number": 15,
+      "label": "Composición accionaria.",
+      "required": true
+    }
+  ]
+}
