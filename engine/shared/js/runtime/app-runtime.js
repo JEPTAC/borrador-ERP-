@@ -1933,7 +1933,7 @@ function ensureFirebaseConfigLoaded(){
 }
 function ensureFirebaseSdkLoaded(){
   if(window.firebase && window.firebase.initializeApp && window.firebase.auth && window.firebase.firestore)return Promise.resolve();
-  var v="12.15.0";
+  var v="12.16.0";
   var appUrls=[
     "https://www.gstatic.com/firebasejs/"+v+"/firebase-app-compat.js",
     "https://cdn.jsdelivr.net/npm/firebase@"+v+"/firebase-app-compat.js",

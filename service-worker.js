@@ -1,7 +1,7 @@
-const VERSION="ei-erp-nova-6.2.0-20260803-2";
+const VERSION="ei-erp-nova-6.2.1-20260803-3";
 const CORE=[
   "./index.html","./manifest.json","./core/css/tokens.css","./core/css/base.css","./core/css/auth.css","./core/css/portal.css","./core/css/shell.css",
-  "./core/js/config.js","./core/js/utils.js","./core/js/accessibility.js","./core/js/firebase.js","./core/js/auth-page.js","./core/js/portal.js",
+  "./core/js/firebase-sdk-loader.js","./core/js/config.js","./core/js/utils.js","./core/js/accessibility.js","./core/js/firebase.js","./core/js/auth-page.js","./core/js/portal.js",
   "./core/config/applications.json","./core/config/roles.json","./core/assets/logo-electroingenieria.jpeg","./core/assets/app-icon.svg",
   "./portal/index.html","./apps/trazabilidad/index.html","./apps/trazabilidad/js/app.js","./apps/trazabilidad/config/transactions.json"
 ];

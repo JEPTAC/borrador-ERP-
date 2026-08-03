@@ -36,12 +36,12 @@ async function loadOperationalProfile(){
 }
 async function initFirebase(){
   status('Cargando Firebase del tablero VSM '+VERSION+'...','ok');
-  var v='12.15.0';
+  var v='12.16.0';
   inheritFirebaseFromOpener();
   if(!(window.firebase&&window.firebase.initializeApp&&window.firebase.auth&&window.firebase.firestore)){
-    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-app-compat.js','https://unpkg.com/firebase@'+v+'/firebase-app-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-app.js'],function(){return !!(window.firebase&&window.firebase.initializeApp);},'Firebase App');
-    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-auth-compat.js','https://unpkg.com/firebase@'+v+'/firebase-auth-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-auth.js'],function(){return !!(window.firebase&&window.firebase.auth);},'Firebase Auth');
-    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-firestore-compat.js','https://unpkg.com/firebase@'+v+'/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-firestore.js'],function(){return !!(window.firebase&&window.firebase.firestore);},'Firebase Firestore');
+    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-app-compat.js','https://unpkg.com/firebase@'+v+'/firebase-app-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/firebase-app-compat.js'],function(){return !!(window.firebase&&window.firebase.initializeApp);},'Firebase App');
+    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-auth-compat.js','https://unpkg.com/firebase@'+v+'/firebase-auth-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/firebase-auth-compat.js'],function(){return !!(window.firebase&&window.firebase.auth);},'Firebase Auth');
+    await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-firestore-compat.js','https://unpkg.com/firebase@'+v+'/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/firebase-firestore-compat.js'],function(){return !!(window.firebase&&window.firebase.firestore);},'Firebase Firestore');
   }
   var fb=window.firebase;if(!fb||!fb.initializeApp||!fb.auth||!fb.firestore)throw new Error('Firebase no quedó disponible después de cargar el SDK. Revise red, DNS o bloqueo del navegador.');
   if(!fb.apps.length){await loadFirebaseConfig();fb.initializeApp(window.firebaseConfig);}else if(!app.sdkSource)app.sdkSource='sesion_erp_existente';

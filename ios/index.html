@@ -8,10 +8,11 @@
   <title>Iniciar sesión · EI ERP</title>
   <link rel="icon" href="../core/assets/app-icon.svg" type="image/svg+xml">
   <link rel="manifest" href="../manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="../core/css/base.css?v=6.2.0">
-  <link rel="stylesheet" href="../core/css/auth.css?v=6.2.0">
+  <link rel="stylesheet" href="../core/css/base.css?v=6.2.1">
+  <link rel="stylesheet" href="../core/css/auth.css?v=6.2.1">
 </head>
 <body>
   <a class="skip-link" href="#loginForm">Saltar al formulario de acceso</a>
@@ -64,14 +65,12 @@
     </section>
   </main>
   <div class="ei-live" aria-live="assertive" id="liveRegion"></div>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-  <script src="../core/js/config.js?v=6.2.0"></script>
-  <script src="../core/js/utils.js?v=6.2.0"></script>
-  <script src="../core/js/accessibility.js?v=6.2.0"></script>
-  <script src="../core/js/firebase.js?v=6.2.0"></script>
-  <script src="../core/js/auth-page.js?v=6.2.0"></script>
+  <script src="../core/js/firebase-sdk-loader.js?v=6.2.1"></script>
+  <script src="../core/js/config.js?v=6.2.1"></script>
+  <script src="../core/js/utils.js?v=6.2.1"></script>
+  <script src="../core/js/accessibility.js?v=6.2.1"></script>
+  <script src="../core/js/firebase.js?v=6.2.1"></script>
+  <script src="../core/js/auth-page.js?v=6.2.1"></script>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("../service-worker.js",{scope:"../",updateViaCache:"none"}).catch(function(){});});}</script>
 </body>
 </html>

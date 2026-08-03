@@ -1,18 +1,22 @@
 (function(){
   "use strict";
   var config=window.EI_NOVA_CONFIG;
-  var state={ready:false,app:null,auth:null,db:null,error:null};
+  var state={ready:false,initializing:null,app:null,auth:null,db:null,error:null};
   function init(){
     if(state.ready)return Promise.resolve(state);
-    try{
-      if(!window.firebase)throw new Error("No cargó el SDK de Firebase.");
+    if(state.initializing)return state.initializing;
+    var sdkReady=window.firebase?Promise.resolve(window.firebase):(window.EI_FIREBASE_SDK_READY||Promise.reject(new Error("No cargó el SDK de Firebase. Revise conexión, bloqueo del navegador o política de red.")));
+    state.initializing=sdkReady.then(function(){
+      if(!window.firebase||!firebase.initializeApp||!firebase.auth||!firebase.firestore)throw new Error("El SDK de Firebase quedó incompleto.");
       state.app=firebase.apps.length?firebase.app():firebase.initializeApp(config.firebase);
       state.auth=firebase.auth();
       state.db=firebase.firestore();
       try{state.db.settings({ignoreUndefinedProperties:true});}catch(e){}
       state.ready=true;
-      return Promise.resolve(state);
-    }catch(error){state.error=error;return Promise.reject(error);}
+      state.error=null;
+      return state;
+    }).catch(function(error){state.error=error;state.initializing=null;throw error;});
+    return state.initializing;
   }
   function profileFor(user){
     if(!user)return Promise.reject(new Error("No existe una sesión autenticada."));
