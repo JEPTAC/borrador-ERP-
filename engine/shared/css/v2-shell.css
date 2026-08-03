@@ -1,0 +1,23 @@
+/* EI Logística V2 · capa estructural compartida */
+:root{--v2-navy:#061b46;--v2-blue:#123d86;--v2-gold:#f2b705;--v2-line:#dbe4f0;--v2-soft:#f5f8fc}
+.nav .v2-nav-group{margin:12px 8px 5px;color:rgba(255,255,255,.56);font-size:.67rem;font-weight:900;letter-spacing:.10em;text-transform:uppercase}
+.nav a.v2-module-link{display:flex;align-items:center;gap:10px;min-height:40px;padding:8px 10px;border-radius:12px;color:rgba(255,255,255,.86);text-decoration:none;font-weight:800;font-size:.78rem}
+.nav a.v2-module-link:hover{background:rgba(255,255,255,.09);color:#fff}
+.nav a.v2-module-link.active{background:#fff;color:var(--v2-navy);box-shadow:0 8px 20px rgba(0,0,0,.14)}
+.nav a.v2-module-link .nav-icon{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;background:rgba(255,255,255,.12);font-size:.66rem;flex:0 0 auto}
+.nav a.v2-module-link.active .nav-icon{background:#e8efff;color:var(--v2-blue)}
+.v2-local-tabs{display:flex;gap:7px;align-items:center;overflow:auto;padding:0 0 10px;margin:-2px 0 4px;scrollbar-width:thin}
+.v2-local-tabs button{white-space:nowrap;border:1px solid var(--v2-line);background:#fff;color:var(--v2-navy);border-radius:12px;padding:8px 11px;font-weight:800;cursor:pointer}
+.v2-local-tabs button.active{background:var(--v2-navy);border-color:var(--v2-navy);color:#fff}
+.v2-module-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:#e8efff;color:var(--v2-navy);padding:5px 9px;font-size:.72rem;font-weight:900;margin-bottom:9px}
+.v2-mobile-module-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v2-mobile-module-grid a{display:flex;align-items:center;gap:9px;min-height:58px;padding:10px;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;color:var(--v2-navy);text-decoration:none;font-weight:850}
+.v2-mobile-module-grid a.active{background:var(--v2-navy);color:#fff;border-color:var(--v2-navy)}
+.v2-mobile-module-grid b{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;background:#e8efff;color:var(--v2-blue);font-size:.68rem;flex:0 0 auto}
+.v2-mobile-module-grid a.active b{background:rgba(255,255,255,.16);color:#fff}
+@media(max-width:790px){.v2-local-tabs{padding:0 0 9px}.v2-local-tabs button{min-height:36px;font-size:.72rem}.v2-mobile-module-grid{grid-template-columns:1fr 1fr}}
+
+
+/* EI ERP V4 · navegación y búsqueda global para el runtime heredado */
+.sidebar{background:linear-gradient(180deg,#071a38,#08234d 62%,#06162f)!important}.main,.content{background:#f3f6fa}.card,.panel{border-radius:16px!important}.btn,.button,button{transition:transform .15s,box-shadow .15s}.btn:hover,.button:hover{transform:translateY(-1px)}
+@media(max-width:790px){.ei-command-trigger{display:none}}

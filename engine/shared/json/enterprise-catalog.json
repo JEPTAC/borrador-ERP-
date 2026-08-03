@@ -1,0 +1,1267 @@
+{
+  "products": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "product"
+    },
+    "title": "Productos",
+    "description": "Maestro técnico y comercial de referencias.",
+    "fields": [
+      [
+        "code",
+        "Código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Descripción",
+        "text",
+        true
+      ],
+      [
+        "family",
+        "Familia",
+        "text",
+        false
+      ],
+      [
+        "uom",
+        "Unidad base",
+        "text",
+        true
+      ],
+      [
+        "active",
+        "Activo",
+        "checkbox",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "clients": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "client"
+    },
+    "title": "Clientes",
+    "description": "Terceros clientes, condiciones y datos logísticos.",
+    "fields": [
+      [
+        "code",
+        "Identificación/código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Razón social",
+        "text",
+        true
+      ],
+      [
+        "city",
+        "Ciudad",
+        "text",
+        false
+      ],
+      [
+        "creditStatus",
+        "Estado crédito",
+        "text",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "suppliers": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "supplier"
+    },
+    "title": "Proveedores",
+    "description": "Proveedores, lead time y condiciones de abastecimiento.",
+    "fields": [
+      [
+        "code",
+        "Identificación/código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Razón social",
+        "text",
+        true
+      ],
+      [
+        "leadTimeDays",
+        "Lead time (días)",
+        "number",
+        false
+      ],
+      [
+        "rating",
+        "Calificación",
+        "number",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "warehouses": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "warehouse"
+    },
+    "title": "Bodegas",
+    "description": "Centros, bodegas y reglas de operación.",
+    "fields": [
+      [
+        "code",
+        "Código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Nombre",
+        "text",
+        true
+      ],
+      [
+        "siteCode",
+        "Sede",
+        "text",
+        false
+      ],
+      [
+        "active",
+        "Activa",
+        "checkbox",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "locations": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "location"
+    },
+    "title": "Ubicaciones",
+    "description": "Pasillo, rack, nivel, posición y zona.",
+    "fields": [
+      [
+        "code",
+        "Código ubicación",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "zone",
+        "Zona",
+        "text",
+        false
+      ],
+      [
+        "capacity",
+        "Capacidad",
+        "number",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "units": {
+    "collection": "erp_master_data",
+    "filter": {
+      "type": "unit"
+    },
+    "title": "Unidades",
+    "description": "Unidades y conversiones controladas.",
+    "fields": [
+      [
+        "code",
+        "Código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Nombre",
+        "text",
+        true
+      ],
+      [
+        "baseCode",
+        "Unidad base",
+        "text",
+        false
+      ],
+      [
+        "factor",
+        "Factor conversión",
+        "number",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager"
+    ]
+  },
+  "stock": {
+    "collection": "inventory_balances",
+    "title": "Existencias",
+    "description": "Saldo por referencia, bodega, ubicación, lote y estado.",
+    "readonly": true
+  },
+  "movements": {
+    "collection": "inventory_movements",
+    "title": "Movimientos",
+    "description": "Libro cronológico de entradas, salidas, ajustes y consumos.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "locationCode",
+        "Ubicación",
+        "text",
+        false
+      ],
+      [
+        "movementType",
+        "Tipo de movimiento",
+        "select:RECEIPT,ISSUE,TRANSFER_IN,TRANSFER_OUT,ADJUSTMENT,CONSUMPTION,RETURN",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad con signo",
+        "number",
+        true
+      ],
+      [
+        "uom",
+        "Unidad",
+        "text",
+        true
+      ],
+      [
+        "sourceDocument",
+        "Documento origen",
+        "text",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica"
+    ]
+  },
+  "reservations": {
+    "collection": "inventory_reservations",
+    "title": "Reservas",
+    "description": "Reserva transaccional: valida existencias disponibles antes de comprometerlas a un pedido o proyecto.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad",
+        "number",
+        true
+      ],
+      [
+        "caseId",
+        "Pedido/caso",
+        "text",
+        true
+      ],
+      [
+        "expiresAtText",
+        "Vence",
+        "text",
+        false
+      ]
+    ],
+    "callableCreate": "createInventoryReservation",
+    "createLabel": "Reservar inventario",
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica",
+      "ventas",
+      "asesor_ventas",
+      "asesor"
+    ]
+  },
+  "cycle_counts": {
+    "collection": "inventory_counts",
+    "title": "Inventarios cíclicos",
+    "description": "Conteo ciego, reconteo, diferencias y aprobación.",
+    "fields": [
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "scope",
+        "Alcance",
+        "text",
+        true
+      ],
+      [
+        "countType",
+        "Tipo",
+        "select:BLIND,CYCLE,FULL,RECOUNT",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:DRAFT,OPEN,COUNTED,RECOUNT,APPROVED,POSTED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica"
+    ]
+  },
+  "transfers": {
+    "collection": "inventory_transfers",
+    "title": "Traslados",
+    "description": "Movimiento controlado entre bodegas o ubicaciones.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "fromWarehouse",
+        "Bodega origen",
+        "text",
+        true
+      ],
+      [
+        "toWarehouse",
+        "Bodega destino",
+        "text",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad",
+        "number",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:DRAFT,RELEASED,IN_TRANSIT,RECEIVED,CANCELLED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica"
+    ]
+  },
+  "lots_serials": {
+    "collection": "inventory_trace_units",
+    "title": "Lotes y seriales",
+    "description": "Trazabilidad individual o por lote durante todo el flujo.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "traceType",
+        "Tipo",
+        "select:LOT,SERIAL,ROLL",
+        true
+      ],
+      [
+        "traceCode",
+        "Lote/serial/carreto",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:AVAILABLE,RESERVED,QUARANTINE,CONSUMED,SHIPPED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica"
+    ]
+  },
+  "demand": {
+    "collection": "planning_demand",
+    "title": "Demanda",
+    "description": "Pronósticos, pedidos firmes y demanda dependiente.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "demandDateText",
+        "Fecha necesidad",
+        "text",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad",
+        "number",
+        true
+      ],
+      [
+        "source",
+        "Fuente",
+        "select:FORECAST,SALES_ORDER,PROJECT,SAFETY_STOCK",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "proyectos"
+    ]
+  },
+  "mrp": {
+    "collection": "planning_runs",
+    "title": "MRP",
+    "description": "Corrida real de necesidades netas con demanda, existencias, reservas y stock de seguridad.",
+    "fields": [
+      [
+        "name",
+        "Nombre corrida",
+        "text",
+        true
+      ],
+      [
+        "horizonDays",
+        "Horizonte (días)",
+        "number",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        false
+      ]
+    ],
+    "callableCreate": "runMrp",
+    "createLabel": "Ejecutar MRP neto",
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "proyectos"
+    ]
+  },
+  "atp": {
+    "collection": "planning_atp_checks",
+    "title": "ATP/CTP",
+    "description": "Calcula inventario disponible para promesa y registra el resultado por pedido.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad requerida",
+        "number",
+        true
+      ],
+      [
+        "requestedDateText",
+        "Fecha solicitada",
+        "text",
+        true
+      ],
+      [
+        "caseId",
+        "Pedido",
+        "text",
+        false
+      ]
+    ],
+    "callableCreate": "runAtpCheck",
+    "createLabel": "Calcular ATP",
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "lider_recepcion",
+      "lider_de_recepcion",
+      "logistica",
+      "despacho",
+      "aux_logistica",
+      "auxiliar_logistica",
+      "auxiliar_de_logistica",
+      "ventas",
+      "asesor_ventas",
+      "asesor"
+    ]
+  },
+  "capacity": {
+    "collection": "planning_capacity",
+    "title": "Capacidad",
+    "description": "Carga y capacidad de recursos, corte, alistamiento y despacho.",
+    "fields": [
+      [
+        "resourceCode",
+        "Recurso",
+        "text",
+        true
+      ],
+      [
+        "dateText",
+        "Fecha",
+        "text",
+        true
+      ],
+      [
+        "availableHours",
+        "Horas disponibles",
+        "number",
+        true
+      ],
+      [
+        "plannedHours",
+        "Horas planificadas",
+        "number",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "proyectos"
+    ]
+  },
+  "replenishment": {
+    "collection": "planning_replenishment",
+    "title": "Reabastecimiento",
+    "description": "Mínimos, máximos, puntos de pedido y propuestas.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "warehouseCode",
+        "Bodega",
+        "text",
+        true
+      ],
+      [
+        "minQty",
+        "Mínimo",
+        "number",
+        true
+      ],
+      [
+        "maxQty",
+        "Máximo",
+        "number",
+        true
+      ],
+      [
+        "reorderPoint",
+        "Punto pedido",
+        "number",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_de_logistica",
+      "coordinador_logistico",
+      "coordinador_logistica",
+      "lider_logistico",
+      "lider_logistica",
+      "proyectos"
+    ]
+  },
+  "inspections": {
+    "collection": "quality_inspections",
+    "title": "Inspecciones",
+    "description": "Controles de recepción, proceso y despacho.",
+    "fields": [
+      [
+        "sourceType",
+        "Origen",
+        "select:RECEIPT,PROCESS,DELIVERY,RETURN",
+        true
+      ],
+      [
+        "sourceId",
+        "Documento",
+        "text",
+        true
+      ],
+      [
+        "result",
+        "Resultado",
+        "select:PENDING,PASS,FAIL,CONDITIONAL",
+        true
+      ],
+      [
+        "inspector",
+        "Inspector",
+        "text",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_calidad",
+      "calidad",
+      "auditoria"
+    ]
+  },
+  "nonconformities": {
+    "collection": "quality_nonconformities",
+    "title": "No conformidades",
+    "description": "Registro, contención, causa, disposición y cierre.",
+    "fields": [
+      [
+        "title",
+        "Título",
+        "text",
+        true
+      ],
+      [
+        "sourceId",
+        "Documento/pedido",
+        "text",
+        false
+      ],
+      [
+        "severity",
+        "Severidad",
+        "select:LOW,MEDIUM,HIGH,CRITICAL",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:OPEN,CONTAINED,ANALYSIS,ACTION,CLOSED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_calidad",
+      "calidad",
+      "auditoria"
+    ]
+  },
+  "quarantine": {
+    "collection": "quality_quarantine",
+    "title": "Cuarentena",
+    "description": "Inventario bloqueado por calidad y decisión de disposición.",
+    "fields": [
+      [
+        "productCode",
+        "Referencia",
+        "text",
+        true
+      ],
+      [
+        "quantity",
+        "Cantidad",
+        "number",
+        true
+      ],
+      [
+        "reason",
+        "Motivo",
+        "text",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:BLOCKED,RELEASED,REWORK,SCRAP,RETURN",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_calidad",
+      "calidad",
+      "auditoria"
+    ]
+  },
+  "capa": {
+    "collection": "quality_capa",
+    "title": "CAPA",
+    "description": "Acciones correctivas y preventivas con eficacia.",
+    "fields": [
+      [
+        "title",
+        "Acción",
+        "text",
+        true
+      ],
+      [
+        "owner",
+        "Responsable",
+        "text",
+        true
+      ],
+      [
+        "dueDateText",
+        "Vencimiento",
+        "text",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:OPEN,IN_PROGRESS,VERIFY_EFFECTIVENESS,CLOSED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "jefe_calidad",
+      "calidad",
+      "auditoria"
+    ]
+  },
+  "assets": {
+    "collection": "maintenance_assets",
+    "title": "Activos",
+    "description": "Equipos, herramientas y activos críticos.",
+    "fields": [
+      [
+        "assetCode",
+        "Código",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Nombre",
+        "text",
+        true
+      ],
+      [
+        "location",
+        "Ubicación",
+        "text",
+        false
+      ],
+      [
+        "criticality",
+        "Criticidad",
+        "select:LOW,MEDIUM,HIGH,CRITICAL",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "mantenimiento",
+      "tecnico_mantenimiento"
+    ]
+  },
+  "maintenance_plans": {
+    "collection": "maintenance_plans",
+    "title": "Planes preventivos",
+    "description": "Frecuencias, tareas y próxima ejecución.",
+    "fields": [
+      [
+        "assetCode",
+        "Activo",
+        "text",
+        true
+      ],
+      [
+        "name",
+        "Plan",
+        "text",
+        true
+      ],
+      [
+        "frequencyDays",
+        "Frecuencia (días)",
+        "number",
+        true
+      ],
+      [
+        "nextDueText",
+        "Próxima fecha",
+        "text",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "mantenimiento",
+      "tecnico_mantenimiento"
+    ]
+  },
+  "work_orders": {
+    "collection": "maintenance_work_orders",
+    "title": "Órdenes de trabajo",
+    "description": "Correctivo, preventivo, seguridad y cierre técnico.",
+    "fields": [
+      [
+        "assetCode",
+        "Activo",
+        "text",
+        true
+      ],
+      [
+        "workType",
+        "Tipo",
+        "select:PREVENTIVE,CORRECTIVE,INSPECTION,CALIBRATION",
+        true
+      ],
+      [
+        "priority",
+        "Prioridad",
+        "select:LOW,MEDIUM,HIGH,CRITICAL",
+        true
+      ],
+      [
+        "status",
+        "Estado",
+        "select:OPEN,ASSIGNED,IN_PROGRESS,WAITING,CLOSED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "mantenimiento",
+      "tecnico_mantenimiento"
+    ]
+  },
+  "downtime": {
+    "collection": "maintenance_downtime",
+    "title": "Paradas",
+    "description": "Tiempo improductivo asociado a equipos y causas.",
+    "fields": [
+      [
+        "assetCode",
+        "Activo",
+        "text",
+        true
+      ],
+      [
+        "startText",
+        "Inicio",
+        "text",
+        true
+      ],
+      [
+        "endText",
+        "Fin",
+        "text",
+        false
+      ],
+      [
+        "cause",
+        "Causa",
+        "text",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "jefe_logistica",
+      "jefe_logistico",
+      "mantenimiento",
+      "tecnico_mantenimiento"
+    ]
+  },
+  "events": {
+    "collection": "erp_domain_events",
+    "title": "Eventos de negocio",
+    "description": "Historial de transiciones y movimientos de dominio.",
+    "readonly": true
+  },
+  "access": {
+    "collection": "erp_access_events",
+    "title": "Eventos de acceso",
+    "description": "Inicio de sesión, denegaciones y acciones privilegiadas.",
+    "readonly": true
+  },
+  "sod": {
+    "collection": "erp_sod_rules",
+    "title": "Segregación de funciones",
+    "description": "Conflictos de roles y controles compensatorios.",
+    "fields": [
+      [
+        "name",
+        "Regla",
+        "text",
+        true
+      ],
+      [
+        "roleA",
+        "Rol A",
+        "text",
+        true
+      ],
+      [
+        "roleB",
+        "Rol B",
+        "text",
+        true
+      ],
+      [
+        "severity",
+        "Severidad",
+        "select:MEDIUM,HIGH,CRITICAL",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "auditoria",
+      "auditor"
+    ]
+  },
+  "security": {
+    "collection": "erp_security_findings",
+    "title": "Postura de seguridad",
+    "description": "Hallazgos, responsables, tratamiento y evidencia.",
+    "fields": [
+      [
+        "title",
+        "Hallazgo/control",
+        "text",
+        true
+      ],
+      [
+        "severity",
+        "Severidad",
+        "select:LOW,MEDIUM,HIGH,CRITICAL",
+        true
+      ],
+      [
+        "owner",
+        "Responsable",
+        "text",
+        false
+      ],
+      [
+        "status",
+        "Estado",
+        "select:OPEN,MITIGATING,ACCEPTED,CLOSED",
+        true
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "auditoria",
+      "auditor"
+    ]
+  },
+  "backups": {
+    "collection": "erp_continuity_checks",
+    "title": "Continuidad y respaldos",
+    "description": "Pruebas de recuperación, PITR, respaldos y RTO/RPO.",
+    "fields": [
+      [
+        "checkType",
+        "Control",
+        "select:BACKUP,PITR,RESTORE_TEST,DR_DRILL",
+        true
+      ],
+      [
+        "dateText",
+        "Fecha",
+        "text",
+        true
+      ],
+      [
+        "result",
+        "Resultado",
+        "select:PASS,FAIL,PARTIAL",
+        true
+      ],
+      [
+        "evidence",
+        "Evidencia",
+        "text",
+        false
+      ]
+    ],
+    "writeRoles": [
+      "super_admin",
+      "admin",
+      "gerencia",
+      "manager",
+      "auditoria",
+      "auditor"
+    ]
+  },
+  "proposals": {
+    "collection": "planning_proposals",
+    "title": "Propuestas de suministro",
+    "description": "Resultados de MRP: faltantes y cantidades sugeridas para compra, traslado o fabricación.",
+    "readonly": true
+  },
+  "timings": {
+    "collection": "case_process_intervals",
+    "title": "Tiempos por proceso",
+    "description": "Intervalos inmutables por pedido: tiempo calendario, tiempo hábil, responsable, transición y exclusión de KPI.",
+    "readonly": true
+  }
+}

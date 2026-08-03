@@ -1,0 +1,29 @@
+(function(){
+"use strict";
+var BUILD="v5.0.0-20260803";
+var scriptEl=document.currentScript||Array.prototype.slice.call(document.scripts).filter(function(s){return /shared\/js\/bootstrap\.js/.test(s.src||"");}).slice(-1)[0];
+var appRoot=new URL("../../",scriptEl&&scriptEl.src||location.href);
+var declared=window.EI_MODULE_CONFIG||{id:"inicio",defaultRoute:"dashboard",routes:["dashboard"],engine:"legacy"};
+var requestedRoute=new URL(location.href).searchParams.get("route")||"";
+if(requestedRoute&&Array.isArray(declared.routes)&&declared.routes.indexOf(requestedRoute)>=0){declared.defaultRoute=requestedRoute;}
+window.EI_REQUESTED_ROUTE=requestedRoute;
+window.EI_EMBEDDED=window.EI_EMBEDDED||new URL(location.href).searchParams.get("embedded")==="1";
+function absolute(path){return new URL(path,appRoot).href;}
+function loadScript(src,attrs){return new Promise(function(resolve,reject){var s=document.createElement("script");s.src=src;s.async=false;Object.keys(attrs||{}).forEach(function(k){s.setAttribute(k,attrs[k]);});s.onload=function(){resolve(src);};s.onerror=function(){reject(new Error("No cargó "+src));};document.head.appendChild(s);});}
+function loadCss(src){return new Promise(function(resolve,reject){if(Array.prototype.some.call(document.styleSheets||[],function(x){return x.href===src;})){resolve(src);return;}var l=document.createElement("link");l.rel="stylesheet";l.href=src;l.onload=function(){resolve(src);};l.onerror=function(){reject(new Error("No cargó "+src));};document.head.appendChild(l);});}
+function fetchJson(path){return fetch(absolute(path+"?v="+encodeURIComponent(BUILD)),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("No cargó "+path);return r.json();});}
+function configureRegistry(){return Promise.all([fetchJson("shared/json/modules.json"),fetchJson("shared/json/route-labels.json")]).then(function(values){var modules=(values[0]&&values[0].modules)||[],labels=values[1]||{};modules=modules.filter(function(m){return m&&m.enabled!==false&&m.id!=="integraciones";}).map(function(m){return Object.assign({},m,{url:absolute("modules/"+m.id+"/")});});var found=modules.filter(function(m){return m.id===declared.id;})[0];var current=Object.assign({},found||{},declared);current.url=absolute("modules/"+current.id+"/");window.EI_APP_ROOT=appRoot.href;window.EI_CURRENT_MODULE=current;window.EI_V2_MODULES=modules;window.EI_V2_ROUTE_LABELS=labels;window.EI_V2_ROUTE_URLS={};modules.forEach(function(m){(m.routes||[]).forEach(function(r){window.EI_V2_ROUTE_URLS[r]=m.url+"?route="+encodeURIComponent(r);});});window.appSettings=Object.assign({},window.appSettings||{},{version:BUILD,appRoot:appRoot.href,resourceBase:absolute("shared/"),firebaseConfigPath:absolute("shared/js/firebase-config.js"),logoPath:absolute("shared/assets/logo-electroingenieria.jpeg"),initialRoute:current.defaultRoute||"dashboard"});window.EI_REQUIRED_VERSION=BUILD;try{localStorage.setItem("EI_REQUIRED_VERSION",BUILD);}catch(e){}return current;});}
+function fail(error){var app=document.getElementById("app");if(app)app.innerHTML='<main class="erp-boot"><section><strong>No fue posible iniciar EI ERP V5</strong><span>'+String(error&&error.message||error)+'</span><button class="erp-btn" onclick="location.reload()">Reintentar</button></section></main>';console.error("[EI ERP V5]",error);}
+Promise.all([loadCss(absolute("shared/css/navigation.css?v="+encodeURIComponent(BUILD))),configureRegistry()]).then(function(values){var current=values[1],engine=current.engine||"legacy";return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js")
+.then(function(){return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js");})
+.then(function(){return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js");})
+.then(function(){return loadScript(absolute("shared/js/firebase-config.js?v="+encodeURIComponent(BUILD)));})
+.then(function(){return loadScript(absolute("shared/js/navigation.js?v="+encodeURIComponent(BUILD)),{"data-ei-navigation":"true"});})
+.then(function(){return loadScript(absolute("shared/js/ux-erp.js?v="+encodeURIComponent(BUILD)),{"data-ei-ux":"true"});})
+.then(function(){
+  if(engine==="enterprise")return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js").then(function(){return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js");}).then(function(){return loadScript(absolute("shared/js/enterprise/enterprise-runtime.js?v="+encodeURIComponent(BUILD)),{"data-ei-enterprise":"true"});});
+  if(engine==="credit")return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js").then(function(){return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js");}).then(function(){return loadScript("https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js");}).then(function(){return loadScript(absolute("modules/creditos/assets/js/credit-runtime.js?v="+encodeURIComponent(BUILD)),{"data-ei-credit":"true"});});
+  return loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js").then(function(){return loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",{"data-ei-pdf-lib":"true"});}).then(function(){return loadScript("https://accounts.google.com/gsi/client");}).then(function(){return loadScript(absolute("shared/js/runtime/app-runtime.js?v="+encodeURIComponent(BUILD)),{"data-ei-main-app":"true"});});
+});
+}).then(function(){if(!window.EI_EMBEDDED&&"serviceWorker" in navigator)navigator.serviceWorker.register(absolute("service-worker.js?v="+encodeURIComponent(BUILD)),{scope:appRoot.pathname,updateViaCache:"none"}).then(function(r){try{r.update();}catch(e){}}).catch(function(e){console.warn("[EI ERP V5] PWA no registrada",e);});}).catch(fail);
+})();

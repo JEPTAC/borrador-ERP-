@@ -1,0 +1,294 @@
+{
+  "version": "6.0.0-engine",
+  "modules": [
+    {
+      "id": "inicio",
+      "title": "Inicio y casos",
+      "short": "Inicio",
+      "icon": "IN",
+      "group": "General",
+      "defaultRoute": "dashboard",
+      "routes": [
+        "dashboard",
+        "cases"
+      ],
+      "description": "Resumen operativo y consulta transversal de pedidos.",
+      "engine": "legacy"
+    },
+    {
+      "id": "ventas",
+      "title": "Ventas",
+      "short": "Ventas",
+      "icon": "VE",
+      "group": "Flujo comercial",
+      "defaultRoute": "sales_reports",
+      "routes": [
+        "create",
+        "sales_reports"
+      ],
+      "description": "Creación de pedidos, registro comercial y acceso directo a solicitudes de crédito.",
+      "engine": "legacy"
+    },
+    {
+      "id": "creditos",
+      "title": "Solicitudes de crédito",
+      "short": "Crédito",
+      "icon": "CR",
+      "group": "Flujo comercial",
+      "engine": "credit",
+      "defaultRoute": "credit_workspace",
+      "routes": [
+        "credit_workspace",
+        "credit_new",
+        "credit_review"
+      ],
+      "description": "Ventas crea y envía expedientes; Cartera recibe, revisa, devuelve, aprueba o rechaza."
+    },
+    {
+      "id": "compras",
+      "title": "Compras",
+      "short": "Compras",
+      "icon": "CO",
+      "group": "Flujo comercial",
+      "defaultRoute": "compras",
+      "routes": [
+        "compras"
+      ],
+      "description": "Gestión y liberación de pedidos PVE.",
+      "engine": "legacy"
+    },
+    {
+      "id": "recepcion",
+      "title": "Recepción",
+      "short": "Recepción",
+      "icon": "RE",
+      "group": "Operación",
+      "defaultRoute": "reception_goods",
+      "routes": [
+        "reception_goods",
+        "recepcion_pedidos"
+      ],
+      "description": "Recepción física y validación documental de pedidos.",
+      "engine": "legacy"
+    },
+    {
+      "id": "operacion",
+      "title": "Alistamiento y corte",
+      "short": "Operación",
+      "icon": "OP",
+      "group": "Operación",
+      "defaultRoute": "alistamiento",
+      "routes": [
+        "alistamiento",
+        "corte_cable",
+        "cut_diag"
+      ],
+      "description": "Alistamiento, novedades y ejecución controlada de cortes.",
+      "engine": "legacy"
+    },
+    {
+      "id": "facturacion",
+      "title": "Facturación",
+      "short": "Facturación",
+      "icon": "FA",
+      "group": "Salida",
+      "defaultRoute": "facturacion",
+      "routes": [
+        "facturacion"
+      ],
+      "description": "Validación final y facturación de pedidos.",
+      "engine": "legacy"
+    },
+    {
+      "id": "finanzas",
+      "title": "Caja y liberación financiera",
+      "short": "Finanzas",
+      "icon": "FI",
+      "group": "Salida",
+      "defaultRoute": "caja",
+      "routes": [
+        "caja",
+        "cartera"
+      ],
+      "description": "Recaudo, soportes y liberación operativa de pedidos por Caja o Cartera.",
+      "engine": "legacy"
+    },
+    {
+      "id": "despachos",
+      "title": "Entregas y despachos",
+      "short": "Despachos",
+      "icon": "DE",
+      "group": "Salida",
+      "defaultRoute": "despacho_local",
+      "routes": [
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "cierre_despacho_nacional"
+      ],
+      "description": "Entrega en punto, recogida y despachos locales o nacionales.",
+      "engine": "legacy"
+    },
+    {
+      "id": "proyectos",
+      "title": "Proyectos",
+      "short": "Proyectos",
+      "icon": "PR",
+      "group": "Gestión",
+      "defaultRoute": "projects",
+      "routes": [
+        "projects"
+      ],
+      "description": "Órdenes y seguimiento del frente de proyectos.",
+      "engine": "legacy"
+    },
+    {
+      "id": "control",
+      "title": "Control operativo",
+      "short": "Control",
+      "icon": "CT",
+      "group": "Gestión",
+      "defaultRoute": "reports",
+      "routes": [
+        "inventario",
+        "reports",
+        "requirements",
+        "approvals"
+      ],
+      "description": "Inventario, novedades, requerimientos y aprobaciones.",
+      "engine": "legacy"
+    },
+    {
+      "id": "vsm",
+      "title": "VSM e indicadores",
+      "short": "VSM",
+      "icon": "VS",
+      "group": "Analítica",
+      "defaultRoute": "indicators",
+      "routes": [
+        "indicators"
+      ],
+      "description": "Tablero conectado de tiempos, flujo, productividad, esperas y cumplimiento.",
+      "engine": "legacy"
+    },
+    {
+      "id": "administracion",
+      "title": "Administración",
+      "short": "Admin",
+      "icon": "AD",
+      "group": "Configuración",
+      "defaultRoute": "admin",
+      "routes": [
+        "users",
+        "admin"
+      ],
+      "description": "Usuarios, permisos, migraciones y herramientas administrativas.",
+      "engine": "legacy"
+    },
+    {
+      "id": "maestros",
+      "title": "Datos maestros",
+      "short": "Maestros",
+      "icon": "MD",
+      "group": "ERP corporativo",
+      "engine": "enterprise",
+      "defaultRoute": "products",
+      "routes": [
+        "products",
+        "clients",
+        "suppliers",
+        "warehouses",
+        "locations",
+        "units"
+      ],
+      "description": "Catálogos únicos de productos, terceros, bodegas, ubicaciones y unidades."
+    },
+    {
+      "id": "inventarios",
+      "title": "Inventarios y WMS",
+      "short": "Inventarios",
+      "icon": "WM",
+      "group": "ERP corporativo",
+      "engine": "enterprise",
+      "defaultRoute": "stock",
+      "routes": [
+        "stock",
+        "movements",
+        "reservations",
+        "cycle_counts",
+        "transfers",
+        "lots_serials"
+      ],
+      "description": "Libro de inventario, existencias, reservas, conteos, traslados, lotes y seriales."
+    },
+    {
+      "id": "planeacion",
+      "title": "Planeación y MRP",
+      "short": "Planeación",
+      "icon": "MR",
+      "group": "ERP corporativo",
+      "engine": "enterprise",
+      "defaultRoute": "mrp",
+      "routes": [
+        "demand",
+        "mrp",
+        "atp",
+        "capacity",
+        "replenishment",
+        "proposals"
+      ],
+      "description": "Demanda, necesidades de materiales, promesa de entrega, capacidad y reabastecimiento."
+    },
+    {
+      "id": "calidad",
+      "title": "Calidad y CAPA",
+      "short": "Calidad",
+      "icon": "QA",
+      "group": "ERP corporativo",
+      "engine": "enterprise",
+      "defaultRoute": "inspections",
+      "routes": [
+        "inspections",
+        "nonconformities",
+        "quarantine",
+        "capa"
+      ],
+      "description": "Inspecciones, no conformidades, cuarentenas y acciones correctivas/preventivas."
+    },
+    {
+      "id": "mantenimiento",
+      "title": "Activos y mantenimiento",
+      "short": "Mantenimiento",
+      "icon": "MT",
+      "group": "ERP corporativo",
+      "engine": "enterprise",
+      "defaultRoute": "assets",
+      "routes": [
+        "assets",
+        "maintenance_plans",
+        "work_orders",
+        "downtime"
+      ],
+      "description": "Activos, mantenimiento preventivo, órdenes de trabajo y paradas."
+    },
+    {
+      "id": "auditoria",
+      "title": "Auditoría y seguridad",
+      "short": "Auditoría",
+      "icon": "AU",
+      "group": "Plataforma",
+      "engine": "enterprise",
+      "defaultRoute": "events",
+      "routes": [
+        "events",
+        "timings",
+        "access",
+        "sod",
+        "security",
+        "backups"
+      ],
+      "description": "Libro de eventos, accesos, segregación de funciones, postura de seguridad y recuperación."
+    }
+  ]
+}

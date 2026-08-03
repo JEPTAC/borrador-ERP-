@@ -1,0 +1,92 @@
+html,body{background:#f3f6fa!important}
+body.nova-embedded{margin:0!important;min-height:100dvh!important;background:#f3f6fa!important;color:#172033!important;font-family:"Century Gothic","Aptos","Segoe UI",Arial,sans-serif!important;overflow-x:hidden!important}
+body.nova-embedded .sidebar,
+body.nova-embedded .erp-sidebar,
+body.nova-embedded .mobile-top,
+body.nova-embedded .bottom-nav,
+body.nova-embedded .mobile-menu-overlay,
+body.nova-embedded .ei-universal-search,
+body.nova-embedded .v2-local-tabs,
+body.nova-embedded .erp-topbar,
+body.nova-embedded .erp-tabs,
+body.nova-embedded .erp-command,
+body.nova-embedded .sidebar-brand,
+body.nova-embedded .sidebar-footer{display:none!important}
+body.nova-embedded .app-layout,
+body.nova-embedded .ei191-shell,
+body.nova-embedded .erp-layout,
+body.nova-embedded #erpLayout{display:block!important;grid-template-columns:1fr!important;min-height:100dvh!important;background:#f3f6fa!important}
+body.nova-embedded .main,
+body.nova-embedded .ei191-main,
+body.nova-embedded .erp-main{width:100%!important;max-width:none!important;margin:0!important;padding:18px!important;min-height:100dvh!important;background:#f3f6fa!important;overflow:visible!important}
+body.nova-embedded .erp-content{padding:0!important;max-width:1500px!important;margin:0 auto!important}
+body.nova-embedded .topbar{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;margin:0 0 16px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;position:static!important}
+body.nova-embedded .page-title h2,
+body.nova-embedded .erp-title-wrap h1,
+body.nova-embedded h1{color:#06152f!important;letter-spacing:-.035em!important}
+body.nova-embedded .page-title p{color:#627089!important}
+body.nova-embedded .card,
+body.nova-embedded .erp-card,
+body.nova-embedded .case-card,
+body.nova-embedded .filters,
+body.nova-embedded .notice{border:1px solid #dce3ed!important;border-radius:16px!important;background:#fff!important;box-shadow:0 4px 14px rgba(10,30,65,.06)!important}
+body.nova-embedded .case-card{padding:16px!important;margin-bottom:10px!important}
+body.nova-embedded .case-list{display:grid!important;gap:10px!important}
+body.nova-embedded .filters,
+body.nova-embedded .erp-toolbar{position:sticky!important;top:0!important;z-index:10!important;display:flex!important;gap:9px!important;align-items:center!important;flex-wrap:wrap!important;padding:12px!important;margin-bottom:14px!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(16px)!important}
+body.nova-embedded .filters .input,
+body.nova-embedded .filters .select,
+body.nova-embedded .erp-search,
+body.nova-embedded input,
+body.nova-embedded select,
+body.nova-embedded textarea{min-height:44px!important;border:1px solid #cbd3df!important;border-radius:11px!important;background:#fff!important;color:#172033!important;font-family:inherit!important;font-size:16px!important}
+body.nova-embedded .filters .input{flex:1 1 260px!important}
+body.nova-embedded .filters .select{flex:0 1 220px!important}
+body.nova-embedded .btn,
+body.nova-embedded .erp-btn{min-height:42px!important;border-radius:11px!important;font-weight:800!important;box-shadow:none!important}
+body.nova-embedded .btn-primary,
+body.nova-embedded .erp-btn:not(.secondary){background:#1247a7!important;color:#fff!important;border-color:#1247a7!important}
+body.nova-embedded .btn-gold{background:#f5ca32!important;color:#06152f!important;border-color:#f5ca32!important}
+body.nova-embedded table{border-collapse:separate!important;border-spacing:0!important;width:100%!important}
+body.nova-embedded th{background:#f1f4f8!important;color:#2f3b52!important;font-size:.76rem!important;text-transform:none!important;letter-spacing:0!important}
+body.nova-embedded th,body.nova-embedded td{padding:11px 12px!important;border-bottom:1px solid #e2e7ef!important;text-align:left!important}
+body.nova-embedded .drawer{z-index:1000!important}
+body.nova-embedded .login-wrap,
+body.nova-embedded .erp-signin{min-height:100dvh!important;padding:22px!important;background:#f3f6fa!important}
+body.nova-embedded .login-card{max-width:1080px!important;margin:auto!important}
+body.nova-embedded [style*="margin-top"]{max-width:100%}
+@media(max-width:760px){
+  body.nova-embedded .main,body.nova-embedded .ei191-main,body.nova-embedded .erp-main{padding:12px!important}
+  body.nova-embedded .topbar{display:block!important}
+  body.nova-embedded .top-actions{margin-top:10px!important;display:flex!important;gap:8px!important;overflow:auto!important;padding-bottom:3px!important}
+  body.nova-embedded .filters,body.nova-embedded .erp-toolbar{position:static!important;display:grid!important;grid-template-columns:1fr!important}
+  body.nova-embedded .filters .input,body.nova-embedded .filters .select{width:100%!important;flex:auto!important}
+  body.nova-embedded .grid-2,body.nova-embedded .erp-form-grid{grid-template-columns:1fr!important}
+  body.nova-embedded .case-actions{display:flex!important;gap:7px!important;flex-wrap:wrap!important}
+}
+
+/* NOVA V6 · mejora progresiva de formularios, filtros y acciones */
+body.nova-embedded fieldset{border:1px solid #dce3ed!important;border-radius:16px!important;background:#fff!important;padding:16px!important;margin:0 0 14px!important}
+body.nova-embedded legend{padding:0 8px!important;color:#13213b!important;font-weight:900!important;font-size:.94rem!important}
+body.nova-embedded .nova-required-field>span:first-child::after{content:" · obligatorio";color:#a43a4b;font-size:.72rem;font-weight:800}
+body.nova-embedded .nova-validation-summary{display:grid;gap:3px;padding:12px 14px;margin:0 0 14px;border:1px solid #e7aab3;border-radius:13px;background:#fff1f3;color:#7d1e2e}
+body.nova-embedded .nova-validation-summary strong{font-size:.92rem}
+body.nova-embedded .nova-validation-summary span{font-size:.82rem;line-height:1.45}
+body.nova-embedded .nova-filter-bar{border-radius:14px!important;box-shadow:0 8px 24px rgba(10,30,65,.08)!important}
+body.nova-embedded .nova-clear-filters{margin-left:auto!important;background:#f1f4f8!important;color:#24334d!important;border-color:#d6deea!important}
+body.nova-embedded .nova-table-scroll{width:100%;max-width:100%;overflow:auto;border:1px solid #dce3ed;border-radius:14px;background:#fff;overscroll-behavior-inline:contain}
+body.nova-embedded .nova-table-scroll table{min-width:720px}
+body.nova-embedded .nova-more-actions{position:relative;display:inline-block;align-self:center}
+body.nova-embedded .nova-more-actions>summary{list-style:none;min-height:42px;display:flex;align-items:center;padding:0 14px;border:1px solid #cbd3df;border-radius:11px;background:#fff;color:#22324d;font-weight:800;cursor:pointer;white-space:nowrap}
+body.nova-embedded .nova-more-actions>summary::-webkit-details-marker{display:none}
+body.nova-embedded .nova-more-actions>summary::after{content:"⋯";margin-left:9px;font-size:1.15rem}
+body.nova-embedded .nova-more-actions-panel{position:absolute;right:0;top:calc(100% + 7px);z-index:80;min-width:230px;display:grid;gap:6px;padding:8px;border:1px solid #dce3ed;border-radius:13px;background:#fff;box-shadow:0 18px 40px rgba(10,30,65,.16)}
+body.nova-embedded .nova-more-actions-panel>.btn,body.nova-embedded .nova-more-actions-panel>.erp-btn,body.nova-embedded .nova-more-actions-panel>a{width:100%!important;justify-content:flex-start!important;text-align:left!important}
+body.nova-embedded :is(input,select,textarea):focus-visible{outline:3px solid rgba(18,71,167,.28)!important;outline-offset:2px!important;border-color:#1247a7!important}
+@media(max-width:760px){
+ body.nova-embedded .nova-table-scroll table{min-width:640px}
+ body.nova-embedded .nova-more-actions{width:100%}
+ body.nova-embedded .nova-more-actions>summary{width:100%;justify-content:center}
+ body.nova-embedded .nova-more-actions-panel{position:static;margin-top:7px;box-shadow:none}
+ body.nova-embedded .nova-clear-filters{margin-left:0!important;width:100%!important}
+}
