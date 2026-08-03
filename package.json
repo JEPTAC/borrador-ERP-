@@ -1,0 +1,14 @@
+{
+  "name": "ei-erp-nova",
+  "version": "6.1.0",
+  "private": true,
+  "description": "Plataforma EI ERP con portal de aplicativos y Trazabilidad logística.",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "qa": "npm run audit && npm test && npm run test:functions && npm run test:functions:unit",
+    "test:functions": "node --check functions/index.js",
+    "serve": "python -m http.server 8080",
+    "audit": "node tests/audit-project.js",
+    "test:functions:unit": "node --test functions/test/*.test.js"
+  }
+}

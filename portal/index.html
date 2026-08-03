@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es" data-base="../" data-layout-profile="" data-layout="">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06152f">
+  <title>Aplicativos · EI ERP</title>
+  <link rel="icon" href="../core/assets/app-icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="stylesheet" href="../core/css/base.css?v=6.1.0">
+  <link rel="stylesheet" href="../core/css/portal.css?v=6.1.0">
+</head>
+<body class="portal-page">
+  <a class="skip-link" href="#appGrid">Saltar a los aplicativos</a>
+  <header class="portal-header">
+    <a class="portal-brand" href="./" aria-label="Inicio de aplicativos"><img src="../core/assets/logo-electroingenieria.jpeg" alt="Electroingeniería"><span class="portal-brand-copy"><strong>EI ERP</strong><span>Portal de aplicativos</span></span></a>
+    <div class="portal-actions">
+      <label class="sr-only" for="portalLayout">Diseño de pantalla</label>
+      <select class="ei-select" id="portalLayout" aria-label="Seleccionar diseño de pantalla"><option value="">Automático</option><option value="compact">Portátil compacto</option><option value="square">Pantalla cuadrada</option><option value="ios">iPhone / iPad</option></select>
+      <div class="portal-user"><span class="auth-avatar" data-user-avatar>EI</span><span class="portal-user-copy"><strong data-user-name>Usuario</strong><span data-user-role>Rol</span></span></div>
+      <button class="ei-icon-btn" id="portalLogout" type="button" aria-label="Cerrar sesión"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
+    </div>
+  </header>
+  <main class="portal-main" id="main">
+    <section class="portal-welcome"><div><span class="eyebrow">Centro de trabajo</span><h1 id="portalGreeting">Hola</h1><p>Seleccione el aplicativo que necesita. El contenido se adapta a su rol y conserva una navegación consistente en toda la plataforma.</p></div><div class="portal-date" id="portalDate"></div></section>
+    <section aria-labelledby="appsTitle"><header class="portal-section-head"><div><h2 id="appsTitle">Mis aplicativos</h2><p>Solo se muestran aplicativos activos y autorizados.</p></div></header><div class="app-grid" id="appGrid" aria-live="polite"><div class="ei-card ei-empty"><span class="ei-spinner ei-spinner-brand"></span><strong>Cargando aplicativos…</strong></div></div></section>
+    <div class="portal-note">La arquitectura admite más aplicativos sin mezclarlos entre sí. Un nuevo aplicativo se publica únicamente cuando su carpeta, permisos, rutas y pruebas estén completos.</div>
+  </main>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+  <script src="../core/js/config.js?v=6.1.0"></script>
+  <script src="../core/js/utils.js?v=6.1.0"></script>
+  <script src="../core/js/accessibility.js?v=6.1.0"></script>
+  <script src="../core/js/firebase.js?v=6.1.0"></script>
+  <script src="../core/js/portal.js?v=6.1.0"></script>
+  <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("../service-worker.js",{scope:"../",updateViaCache:"none"}).catch(function(){});}</script>
+</body>
+</html>

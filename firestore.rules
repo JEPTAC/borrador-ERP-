@@ -1,0 +1,1172 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+
+    function hasAuthEmail() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.size() > 0;
+    }
+
+    function uidUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function emailUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.token.email);
+    }
+
+    function uidUserExists() {
+      return signedIn() && exists(uidUserPath());
+    }
+
+    function emailUserExists() {
+      return hasAuthEmail() && exists(emailUserPath());
+    }
+
+    function userExists() {
+      return uidUserExists() || emailUserExists();
+    }
+
+    function userDoc() {
+      return uidUserExists() ? get(uidUserPath()).data : get(emailUserPath()).data;
+    }
+
+
+    function role() {
+      return userDoc().role;
+    }
+
+    function activeUser() {
+      return userExists() && userDoc().get('isActive', true) == true;
+    }
+
+    function isAdmin() {
+      return activeUser() && role() in [
+        'admin',
+        'administrador',
+        'Admin',
+        'Administrador',
+        'ADMIN'
+      ];
+    }
+
+    function isSuperAdmin() {
+      return activeUser() && role() in [
+        'super_admin',
+        'super_administrador',
+        'super admin',
+        'superadmin',
+        'super-administrador',
+        'Super Admin',
+        'Super administrador',
+        'Super Administrador',
+        'SUPER_ADMIN',
+        'SUPER ADMIN',
+        'super administrador',
+        'super_administracion',
+        'superadministrador'
+      ];
+    }
+
+    function isAdminOrSuper() {
+      return isAdmin() || isSuperAdmin();
+    }
+
+    function isManager() {
+      return activeUser() && role() in [
+        'gerencia',
+        'gerente',
+        'Gerencia',
+        'Gerente'
+      ];
+    }
+
+    function isChiefLogistics() {
+      return activeUser() && role() in [
+        'jefe_logistica',
+        'jefe_logistico',
+        'Jefe logística',
+        'Jefe de logística',
+        'Jefe logistico',
+        'Jefe de logistica'
+      ];
+    }
+
+    function isReceptionLeader() {
+      return activeUser() && role() in [
+        'lider_recepcion',
+        'lider_de_recepcion',
+        'Líder recepción',
+        'Lider recepcion',
+        'Líder de recepción',
+        'Lider de recepcion'
+      ];
+    }
+
+    function isProjectsRole() {
+      return activeUser() && role() in [
+        'proyectos',
+        'proyecto',
+        'rol_proyectos',
+        'Proyectos'
+      ];
+    }
+
+    function isQualityRole() {
+      return activeUser() && role() in [
+        'calidad', 'jefe_calidad', 'analista_calidad',
+        'Calidad', 'Jefe calidad', 'Jefe de calidad'
+      ];
+    }
+
+    function isMaintenanceRole() {
+      return activeUser() && role() in [
+        'mantenimiento', 'tecnico_mantenimiento', 'lider_mantenimiento',
+        'Mantenimiento', 'Técnico mantenimiento', 'Tecnico mantenimiento'
+      ];
+    }
+
+    function isAuditRole() {
+      return activeUser() && role() in [
+        'auditoria',
+        'auditor',
+        'Auditoría',
+        'Auditoria',
+        'consulta',
+        'solo_lectura'
+      ];
+    }
+
+    function isSalesRole() {
+      return activeUser() && role() in [
+        'ventas',
+        'asesor_ventas',
+        'asesor',
+        'Ventas',
+        'Asesor',
+        'Asesor ventas',
+        'Asesor de ventas'
+      ];
+    }
+
+    function isCashRole() {
+      return activeUser() && role() in [
+        'caja',
+        'Caja',
+        'cartera',
+        'Cartera'
+      ];
+    }
+
+    function isAuxLogisticsRoleValue(value) {
+      return value in [
+        'aux_logistica',
+        'auxiliar_logistica',
+        'auxiliar_de_logistica',
+        'aux_logistico',
+        'auxiliar_despacho',
+        'Auxiliar logística',
+        'Auxiliar logistica',
+        'Auxiliar de logística',
+        'Auxiliar de logistica',
+        'Aux logística',
+        'Aux logistica',
+        'Aux. logística',
+        'Aux. logistica',
+        'Auxiliar despacho',
+        'Auxiliar de despacho'
+      ];
+    }
+
+    function isAuxLogisticsRole() {
+      return activeUser() && isAuxLogisticsRoleValue(role());
+    }
+
+    function isCutRoleValue(value) {
+      return value in [
+        'auxiliar_corte',
+        'auxiliar_de_corte',
+        'operario_corte',
+        'operario_de_corte',
+        'corte',
+        'cortes',
+        'area_corte',
+        'modulo_corte',
+        'cortador',
+        'aux_corte',
+        'Corte',
+        'Cortes',
+        'Aux corte',
+        'Aux. corte',
+        'Auxiliar corte',
+        'Auxiliar de corte',
+        'Operario corte',
+        'Operario de corte'
+      ];
+    }
+
+    function isCutRole() {
+      return activeUser() && isCutRoleValue(role());
+    }
+
+    function isUnifiedLogisticsRoleValue(value) {
+      return value in [
+        'lider_logistico',
+        'lider_logistica',
+        'coordinador_logistico',
+        'coordinador_logistica',
+        'logistica_despacho_unificado',
+        'logistica_despacho_unificada',
+        'logistica_despacho',
+        'logistica_y_despacho',
+        'despacho_logistica',
+        'despacho_logistico',
+        'logistica',
+        'despacho',
+        'Logística / despacho (unificado)',
+        'Logistica / despacho (unificado)',
+        'Logística/despacho unificado',
+        'Logistica/despacho unificado',
+        'Logística / despacho',
+        'Logistica / despacho',
+        'Logística',
+        'Logistica',
+        'Despacho',
+        'Líder logístico',
+        'Lider logistico',
+        'Líder logística',
+        'Lider logistica',
+        'Coordinador logístico',
+        'Coordinador logistico',
+        'Coordinador logística',
+        'Coordinador logistica'
+      ];
+    }
+
+    function isUnifiedLogisticsRole() {
+      return activeUser() && isUnifiedLogisticsRoleValue(role());
+    }
+
+    function sameOperationalRole(a, b) {
+      return a == b
+        || (isUnifiedLogisticsRoleValue(a) && isUnifiedLogisticsRoleValue(b))
+        || (isAuxLogisticsRoleValue(a) && isAuxLogisticsRoleValue(b))
+        || (isCutRoleValue(a) && isCutRoleValue(b));
+    }
+
+    function canSeeAll() {
+      return isAdminOrSuper() || isManager() || isChiefLogistics();
+    }
+
+    function canManageUsers() {
+      return isAdminOrSuper() || isManager();
+    }
+
+    function canManageReports() {
+      return isAdminOrSuper() || isManager() || isChiefLogistics();
+    }
+
+    function validRoleValue(value) {
+      return value in [
+        'admin',
+        'administrador',
+        'Admin',
+        'Administrador',
+        'ADMIN',
+
+        'super_admin',
+        'super_administrador',
+        'super admin',
+        'superadmin',
+        'super-administrador',
+        'Super Admin',
+        'Super administrador',
+        'Super Administrador',
+        'SUPER_ADMIN',
+        'SUPER ADMIN',
+        'super administrador',
+        'super_administracion',
+        'superadministrador',
+
+        'gerencia',
+        'gerente',
+        'Gerencia',
+        'Gerente',
+
+        'ventas',
+        'asesor_ventas',
+        'asesor',
+        'Ventas',
+        'Asesor',
+        'Asesor ventas',
+        'Asesor de ventas',
+
+        'compras',
+        'Compras',
+        'facturacion',
+        'Facturación',
+        'Facturacion',
+        'jefe_cartera',
+        'analista_cartera',
+        'credito',
+        'creditos',
+        'analista_credito',
+        'coordinador_cartera',
+        'calidad',
+        'jefe_calidad',
+        'analista_calidad',
+        'mantenimiento',
+        'tecnico_mantenimiento',
+        'lider_mantenimiento',
+
+        'proyectos',
+        'proyecto',
+        'rol_proyectos',
+        'Proyectos',
+
+        'jefe_logistica',
+        'jefe_logistico',
+        'Jefe logística',
+        'Jefe de logística',
+        'Jefe logistico',
+        'Jefe de logistica',
+
+        'lider_logistico',
+        'lider_logistica',
+        'coordinador_logistico',
+        'coordinador_logistica',
+        'logistica_despacho_unificado',
+        'logistica_despacho_unificada',
+        'logistica_despacho',
+        'logistica_y_despacho',
+        'despacho_logistica',
+        'despacho_logistico',
+        'logistica',
+        'despacho',
+        'Logística / despacho (unificado)',
+        'Logistica / despacho (unificado)',
+        'Logística/despacho unificado',
+        'Logistica/despacho unificado',
+        'Logística / despacho',
+        'Logistica / despacho',
+        'Logística',
+        'Logistica',
+        'Despacho',
+        'Líder logístico',
+        'Lider logistico',
+        'Líder logística',
+        'Lider logistica',
+        'Coordinador logístico',
+        'Coordinador logistico',
+        'Coordinador logística',
+        'Coordinador logistica',
+
+        'aux_logistica',
+        'auxiliar_logistica',
+        'auxiliar_de_logistica',
+        'aux_logistico',
+        'auxiliar_despacho',
+        'Auxiliar logística',
+        'Auxiliar logistica',
+        'Auxiliar de logística',
+        'Auxiliar de logistica',
+        'Aux logística',
+        'Aux logistica',
+        'Aux. logística',
+        'Aux. logistica',
+        'Auxiliar despacho',
+        'Auxiliar de despacho',
+
+        'auxiliar_corte',
+        'auxiliar_de_corte',
+        'operario_corte',
+        'operario_de_corte',
+        'corte',
+        'cortes',
+        'area_corte',
+        'modulo_corte',
+        'cortador',
+        'aux_corte',
+        'Corte',
+        'Cortes',
+        'Aux corte',
+        'Aux. corte',
+        'Auxiliar corte',
+        'Auxiliar de corte',
+        'Operario corte',
+        'Operario de corte',
+
+        'caja',
+        'Caja',
+        'cartera',
+        'Cartera',
+
+        'inventarios',
+        'Inventarios',
+
+        'lider_recepcion',
+        'lider_de_recepcion',
+        'Líder recepción',
+        'Lider recepcion',
+        'Líder de recepción',
+        'Lider de recepcion',
+
+        'auditoria',
+        'Auditoría',
+        'Auditoria'
+      ];
+    }
+
+    function validUserPayload() {
+      return request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.role is string
+        && request.resource.data.isActive is bool
+        && validRoleValue(request.resource.data.role);
+    }
+
+    function validCasePayload() {
+      return request.resource.data.keys().hasAny([
+        'currentProcess',
+        'assignedRole',
+        'assignedUid',
+        'assignedTo',
+        'assignedName',
+        'assignedUsers',
+        'assignedUserIds',
+        'visibleRoles',
+        'targetRoles',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'lastMobileCutWriteAt',
+        'lastMobileCutWriteVersion',
+        'updatedByName',
+        'updatedBy',
+
+        'requirementType',
+        'requirements',
+        'openRequirement',
+        'totalRequirements',
+
+        'noDelivery',
+        'noDeliveryStatus',
+        'returnToCash',
+
+        'history',
+        'flowTrace',
+        'evidence',
+        'evidences',
+        'deliveryEvidence',
+
+        'closedAt',
+        'closedBy',
+        'closedByName',
+        'lastAction',
+        'lastActionBy',
+        'lastActionByName',
+
+        'separationRequest',
+        'separationStatus',
+        'separationOnly',
+        'separationActive',
+
+        'cashBilling',
+        'paymentCondition',
+        'paymentStatus',
+        'pendingPayment',
+
+        'deliveryRoute',
+        'deliveryType',
+        'requestedDelivery',
+        'deliveryRouteOwner',
+        'deliveryRouteOwnerId',
+        'routeOwner',
+        'routeOwnerUid',
+
+        'cutRequests',
+        'cutReturnAlerts',
+        'hasCuts',
+
+        'checklist',
+        'processStats',
+        'activeStartedAt',
+        'deadStartedAt',
+        'waitStartedAt'
+      ]);
+    }
+
+    function validRequirementPayload() {
+      return request.resource.data.keys().hasAny([
+        'caseId',
+        'targetRole',
+        'targetRoles',
+        'visibleRoles',
+        'sourceRole',
+        'sourceProcess',
+        'status',
+        'type',
+        'requirementType',
+        'category',
+        'createdBy',
+        'createdAt',
+        'updatedAt',
+        'detail',
+        'description',
+        'assignedUid',
+        'assignedTo'
+      ]);
+    }
+
+    function validReceptionPayload() {
+      return request.resource.data.keys().hasAny([
+        'documentNumber',
+        'supplier',
+        'receiptType',
+        'conformity',
+        'status',
+        'support',
+        'closureEvidence',
+        'finalDecisionStatus',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function validReportPayload() {
+      return request.resource.data.keys().hasAny([
+        'title',
+        'category',
+        'sourceModule',
+        'sourceId',
+        'sourceReference',
+        'status',
+        'severity',
+        'description',
+        'detail',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function isOwnCase() {
+      return resource.data.createdBy == request.auth.uid
+        || resource.data.createdByUid == request.auth.uid
+        || resource.data.createdByEmail == request.auth.token.email;
+    }
+
+    function isAssignedRoleCase() {
+      return sameOperationalRole(resource.data.assignedRole, role());
+    }
+
+    function isAssignedUidCase() {
+      return resource.data.assignedUid == request.auth.uid
+        || resource.data.assignedTo == request.auth.uid
+        || (
+          resource.data.assignedUserIds is list
+          && request.auth.uid in resource.data.assignedUserIds
+        );
+    }
+
+    function isVisibleRoleCase() {
+      return resource.data.visibleRoles is list
+        && (
+          role() in resource.data.visibleRoles
+          || (
+            isUnifiedLogisticsRole()
+            && resource.data.visibleRoles.hasAny([
+              'lider_logistico',
+              'lider_logistica',
+              'coordinador_logistico',
+              'coordinador_logistica',
+              'logistica_despacho_unificado',
+              'logistica_despacho',
+              'logistica',
+              'despacho'
+            ])
+          )
+          || (
+            isAuxLogisticsRole()
+            && resource.data.visibleRoles.hasAny([
+              'aux_logistica',
+              'auxiliar_logistica',
+              'auxiliar_de_logistica',
+              'aux_logistico',
+              'auxiliar_despacho'
+            ])
+          )
+        );
+    }
+
+    function isTargetRoleCase() {
+      return resource.data.targetRoles is list
+        && (
+          role() in resource.data.targetRoles
+          || (
+            isUnifiedLogisticsRole()
+            && resource.data.targetRoles.hasAny([
+              'lider_logistico',
+              'lider_logistica',
+              'coordinador_logistico',
+              'coordinador_logistica',
+              'logistica_despacho_unificado',
+              'logistica_despacho',
+              'logistica',
+              'despacho'
+            ])
+          )
+          || (
+            isAuxLogisticsRole()
+            && resource.data.targetRoles.hasAny([
+              'aux_logistica',
+              'auxiliar_logistica',
+              'auxiliar_de_logistica',
+              'aux_logistico',
+              'auxiliar_despacho'
+            ])
+          )
+        );
+    }
+
+    function isCutCase() {
+      return isCutRole() && resource.data.hasCuts == true;
+    }
+
+    function isCutWorkCase() {
+      return isCutRole()
+        && (
+          resource.data.hasCuts == true
+          || request.resource.data.hasCuts == true
+          || resource.data.currentProcess == 'corte_cable'
+          || request.resource.data.currentProcess == 'corte_cable'
+          || (
+            resource.data.cutRequests is list
+            && resource.data.cutRequests.size() > 0
+          )
+          || (
+            request.resource.data.cutRequests is list
+            && request.resource.data.cutRequests.size() > 0
+          )
+          || sameOperationalRole(resource.data.assignedRole, role())
+          || sameOperationalRole(request.resource.data.assignedRole, role())
+        );
+    }
+
+    function isNoDeliveryStatus(value) {
+      return value in [
+        'No entregado',
+        'no_entregado',
+        'NO_ENTREGADO',
+        'No Entregado',
+        'pedido_no_entregado'
+      ];
+    }
+
+    function isNoDeliveryPayload() {
+      return isNoDeliveryStatus(request.resource.data.status)
+        || request.resource.data.noDelivery == true
+        || request.resource.data.noDeliveryStatus == true
+        || request.resource.data.requirementType in [
+          'no_entrega',
+          'no_entregado',
+          'pedido_no_entregado'
+        ]
+        || request.resource.data.type in [
+          'no_entrega',
+          'no_entregado',
+          'pedido_no_entregado'
+        ]
+        || request.resource.data.category in [
+          'no_entrega',
+          'no_entregado',
+          'pedido_no_entregado'
+        ];
+    }
+
+    function noDeliveryTargetedToAllowedRole() {
+      return request.resource.data.targetRole in [
+        'lider_logistico',
+        'lider_logistica',
+        'coordinador_logistico',
+        'coordinador_logistica',
+        'logistica_despacho_unificado',
+        'logistica_despacho',
+        'logistica',
+        'despacho',
+        'jefe_logistica',
+        'jefe_logistico',
+        'gerencia',
+        'gerente',
+        'caja',
+        'cartera',
+        'admin',
+        'super_admin'
+      ]
+      || (
+        request.resource.data.visibleRoles is list
+        && request.resource.data.visibleRoles.hasAny([
+          'lider_logistico',
+          'lider_logistica',
+          'coordinador_logistico',
+          'coordinador_logistica',
+          'logistica_despacho_unificado',
+          'logistica_despacho',
+          'logistica',
+          'despacho',
+          'jefe_logistica',
+          'jefe_logistico',
+          'gerencia',
+          'gerente',
+          'caja',
+          'cartera',
+          'admin',
+          'super_admin'
+        ])
+      )
+      || (
+        request.resource.data.targetRoles is list
+        && request.resource.data.targetRoles.hasAny([
+          'lider_logistico',
+          'lider_logistica',
+          'coordinador_logistico',
+          'coordinador_logistica',
+          'logistica_despacho_unificado',
+          'logistica_despacho',
+          'logistica',
+          'despacho',
+          'jefe_logistica',
+          'jefe_logistico',
+          'gerencia',
+          'gerente',
+          'caja',
+          'cartera',
+          'admin',
+          'super_admin'
+        ])
+      );
+    }
+
+    function isOwnCaseNoDeliveryUpdate() {
+      return isSalesRole()
+        && isOwnCase()
+        && isNoDeliveryPayload();
+    }
+
+    function isSalesOwnCaseUpdate() {
+      return isSalesRole()
+        && isOwnCase();
+    }
+
+    function isNoDeliveryRequirementCreate() {
+      return isSalesRole()
+        && isNoDeliveryPayload()
+        && noDeliveryTargetedToAllowedRole();
+    }
+
+    function isLogisticsNoDeliveryToCashRequirementCreate() {
+      return activeUser()
+        && isUnifiedLogisticsRole()
+        && isNoDeliveryPayload()
+        && request.resource.data.targetRole in ['caja', 'cartera'];
+    }
+
+    function canReadCase() {
+      return activeUser() && (
+        canSeeAll()
+        || isOwnCase()
+        || isAssignedRoleCase()
+        || isAssignedUidCase()
+        || isVisibleRoleCase()
+        || isTargetRoleCase()
+        || isCutCase()
+        || isCutWorkCase()
+        || isSalesRole()
+      );
+    }
+
+    // Transiciones de Corte limitadas a roles operativos autorizados.
+    function isAuthenticatedCutTransition() {
+      return activeUser()
+        && (isCutRole() || isUnifiedLogisticsRole() || isAuxLogisticsRole() || canSeeAll())
+        && resource.data.cutRequests is list
+        && request.resource.data.cutRequests is list
+        && request.resource.data.cutRequests.size() > 0
+        && (
+          resource.data.currentProcess in ['corte_cable', 'alistamiento']
+          || request.resource.data.currentProcess in ['corte_cable', 'alistamiento']
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'cutRequests',
+          'cutReturnAlerts',
+          'hasCuts',
+          'visibleRoles',
+          'targetRoles',
+          'currentProcess',
+          'status',
+          'assignedRole',
+          'assignedUid',
+          'assignedTo',
+          'assignedName',
+          'assignedUsers',
+          'assignedUserIds',
+          'assignedUserId',
+          'assignedEmail',
+          'checklist',
+          'processStats',
+          'activeStartedAt',
+          'deadStartedAt',
+          'waitStartedAt',
+          'flowTrace',
+          'history',
+          'updatedAt',
+          'updatedBy',
+          'updatedByName',
+          'lastMobileCutWriteVersion',
+          'lastMobileCutWriteAt'
+        ]);
+    }
+
+    function isAuthenticatedCutEventCreate() {
+      return activeUser()
+        && (isCutRole() || isUnifiedLogisticsRole() || isAuxLogisticsRole() || canSeeAll())
+        && request.resource.data.caseId is string
+        && request.resource.data.process in ['corte_cable', 'alistamiento'];
+    }
+
+    function canOperateCase() {
+      return activeUser() && (
+        canSeeAll()
+        || isAssignedRoleCase()
+        || isAssignedUidCase()
+        || isVisibleRoleCase()
+        || isTargetRoleCase()
+        || isCutCase()
+        || isCutWorkCase()
+        || isCutRole()
+        || isOwnCaseNoDeliveryUpdate()
+        || isSalesOwnCaseUpdate()
+        || isCashRole()
+        || isReceptionLeader()
+        || isUnifiedLogisticsRole()
+        || isAuxLogisticsRole()
+      );
+    }
+
+    match /users/{userId} {
+      allow read: if activeUser()
+        || (signedIn() && request.auth.uid == userId);
+
+      allow create: if canManageUsers() && validUserPayload();
+
+      allow update: if canManageUsers() && validUserPayload();
+
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /cases/{caseId} {
+      allow read: if activeUser();
+
+      allow create: if activeUser() && !isAuditRole()
+        && validCasePayload();
+
+      allow update: if activeUser()
+        && !isAuditRole()
+        && (
+          canOperateCase()
+          || isCutRole()
+          || isAuthenticatedCutTransition()
+        )
+        && validCasePayload();
+
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /case_events/{eventId} {
+      allow read: if activeUser();
+      allow create: if activeUser() && !isAuditRole();
+      allow update: if false;
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /requirements/{requirementId} {
+      allow read: if activeUser();
+
+      allow create: if activeUser() && !isAuditRole()
+        && validRequirementPayload()
+        && (
+          canSeeAll()
+          || isNoDeliveryRequirementCreate()
+          || isLogisticsNoDeliveryToCashRequirementCreate()
+          || (
+            request.resource.data.targetRole == 'ventas'
+            && request.resource.data.sourceProcess == 'corte_cable'
+          )
+          || (
+            request.resource.data.targetRole == 'proyectos'
+            && request.resource.data.sourceProcess == 'proyectos'
+          )
+          || isUnifiedLogisticsRole()
+          || isAuxLogisticsRole()
+          || isSalesRole()
+          || isCashRole()
+          || isReceptionLeader()
+        );
+
+      allow update: if activeUser() && (
+        canSeeAll()
+        || sameOperationalRole(resource.data.targetRole, role())
+        || resource.data.assignedUid == request.auth.uid
+        || resource.data.assignedTo == request.auth.uid
+        || (
+          resource.data.visibleRoles is list
+          && role() in resource.data.visibleRoles
+        )
+        || (
+          resource.data.targetRoles is list
+          && role() in resource.data.targetRoles
+        )
+        || isUnifiedLogisticsRole()
+        || isAuxLogisticsRole()
+        || isSalesRole()
+        || isCashRole()
+        || isReceptionLeader()
+      );
+
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /evidences/{evidenceId} {
+      allow read: if activeUser();
+      allow create: if activeUser() && !isAuditRole();
+      allow update: if false;
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /kpis/{kpiId} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+
+    match /inventario_chipas/{chipId} {
+      allow read: if activeUser();
+      allow create: if activeUser() && !isAuditRole() && (canSeeAll() || isCutRole());
+      allow update: if activeUser() && !isAuditRole() && (canSeeAll() || isCutRole());
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /proyectos_pedidos/{projectId} {
+      allow read: if activeUser();
+
+      allow create: if activeUser() && (
+        isAdminOrSuper()
+        || isProjectsRole()
+      );
+
+      allow update: if activeUser() && (
+        isAdminOrSuper()
+        || isProjectsRole()
+      );
+
+      allow delete: if isAdminOrSuper();
+    }
+
+    match /recepciones_mercancia/{receptionId} {
+      allow read: if activeUser();
+
+      allow create: if activeUser()
+        && (
+          isAdminOrSuper()
+          || isReceptionLeader()
+        )
+        && validReceptionPayload();
+
+      allow update: if activeUser()
+        && (
+          isAdminOrSuper()
+          || isReceptionLeader()
+        )
+        && validReceptionPayload();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /reportes_novedad/{reportId} {
+      allow read: if activeUser();
+
+      allow create: if activeUser() && !isAuditRole()
+        && validReportPayload();
+
+      allow update: if activeUser() && !isAuditRole()
+        && (
+          canManageReports()
+          || isReceptionLeader()
+        )
+        && validReportPayload();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /users_deleted_log/{logId} {
+      allow read, create: if isAdminOrSuper();
+      allow update, delete: if false;
+    }
+
+    match /system_config/{configId} {
+      allow read: if activeUser();
+      allow create, update, delete: if isAdminOrSuper();
+    }
+
+
+    function validEnterpriseCreate() {
+      return activeUser()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.tenantId is string
+        && request.resource.data.companyCode is string
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validInventoryMovement() {
+      return validEnterpriseCreate()
+        && request.resource.data.productCode is string
+        && request.resource.data.productCode.size() > 0
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity != 0
+        && request.resource.data.movementType in [
+          'RECEIPT', 'ISSUE', 'TRANSFER_IN', 'TRANSFER_OUT',
+          'ADJUSTMENT', 'CONSUMPTION', 'RETURN'
+        ]
+        && !('allowNegative' in request.resource.data)
+        && !('postingStatus' in request.resource.data)
+        && !('postedAt' in request.resource.data);
+    }
+
+
+    function isCreditCreatorRole() {
+      return activeUser() && (isAdminOrSuper() || role() in [
+        'ventas','Ventas','asesor_ventas','asesor','comercial','ejecutivo_comercial'
+      ]);
+    }
+
+    function isCreditDecisionRole() {
+      return activeUser() && (isAdminOrSuper() || role() in [
+        'cartera','Cartera','jefe_cartera','analista_cartera',
+        'credito','creditos','analista_credito','coordinador_cartera'
+      ]);
+    }
+
+    function isCreditViewerRole() {
+      return activeUser() && (isCreditDecisionRole() || isManager() || isAuditRole());
+    }
+
+    function mayReadCredit(data) {
+      return activeUser() && (data.createdBy == request.auth.uid || isCreditViewerRole());
+    }
+
+    function validCreditDocumentUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'documents','documentCount','completeness','updatedAt','updatedBy','updatedByName'
+      ])
+      && request.resource.data.createdBy == resource.data.createdBy
+      && request.resource.data.status == resource.data.status
+      && request.resource.data.updatedBy == request.auth.uid
+      && request.resource.data.documentCount is int
+      && request.resource.data.documentCount >= 0
+      && request.resource.data.documentCount <= 15
+      && request.resource.data.completeness is int
+      && request.resource.data.completeness >= 0
+      && request.resource.data.completeness <= 100;
+    }
+    function isGovernedCollection(name) {
+      return name in [
+        'users', 'cases', 'case_events', 'requirements', 'evidences', 'kpis',
+        'inventario_chipas', 'proyectos_pedidos',
+        'recepciones_mercancia', 'reportes_novedad', 'users_deleted_log',
+        'system_config', 'erp_master_data', 'inventory_balances',
+        'inventory_movements', 'inventory_reservations', 'inventory_counts',
+        'inventory_transfers', 'inventory_trace_units', 'planning_demand',
+        'planning_runs', 'planning_atp_checks', 'planning_proposals', 'planning_capacity',
+        'planning_replenishment', 'quality_inspections',
+        'quality_nonconformities', 'quality_quarantine', 'quality_capa',
+        'maintenance_assets', 'maintenance_plans', 'maintenance_work_orders',
+        'maintenance_downtime',
+        'erp_domain_events',
+        'erp_access_events', 'erp_sod_rules', 'erp_security_findings',
+        'erp_continuity_checks', 'erp_sla_alerts', 'case_process_intervals',
+        'credit_requests', 'credit_request_events'
+      ];
+    }
+
+    // Colecciones empresariales gobernadas por reglas específicas y backend.
+    match /erp_master_data/{id} {
+      allow read: if activeUser();
+      allow create, update: if isAdminOrSuper() || isManager();
+      allow delete: if isSuperAdmin();
+    }
+    match /inventory_balances/{id} { allow read: if activeUser(); allow write: if false; }
+    match /inventory_movements/{id} {
+      allow read: if activeUser();
+      allow create: if validInventoryMovement() && (isAdminOrSuper() || isManager() || isChiefLogistics() || isReceptionLeader() || isUnifiedLogisticsRole());
+      allow update, delete: if false;
+    }
+    match /inventory_reservations/{id} { allow read: if activeUser(); allow write: if false; }
+    match /inventory_counts/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isAuditRole() || isUnifiedLogisticsRole(); allow delete: if false; }
+    match /inventory_transfers/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isUnifiedLogisticsRole(); allow delete: if false; }
+    match /inventory_trace_units/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isReceptionLeader() || isUnifiedLogisticsRole() || isCutRole(); allow delete: if false; }
+    match /planning_demand/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isProjectsRole(); allow delete: if false; }
+    match /planning_runs/{id} { allow read: if activeUser(); allow write: if false; }
+    match /planning_atp_checks/{id} { allow read: if activeUser(); allow write: if false; }
+    match /planning_proposals/{id} { allow read: if activeUser(); allow write: if false; }
+    match /planning_capacity/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics(); allow delete: if false; }
+    match /planning_replenishment/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics(); allow delete: if false; }
+    match /quality_inspections/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isReceptionLeader() || isQualityRole() || isAuditRole(); allow delete: if false; }
+    match /quality_nonconformities/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isReceptionLeader() || isQualityRole() || isAuditRole(); allow delete: if false; }
+    match /quality_quarantine/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isReceptionLeader() || isQualityRole() || isAuditRole(); allow delete: if false; }
+    match /quality_capa/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isQualityRole() || isAuditRole(); allow delete: if false; }
+    match /maintenance_assets/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isMaintenanceRole(); allow delete: if false; }
+    match /maintenance_plans/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isMaintenanceRole(); allow delete: if false; }
+    match /maintenance_work_orders/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isMaintenanceRole(); allow delete: if false; }
+    match /maintenance_downtime/{id} { allow read: if activeUser(); allow create, update: if isAdminOrSuper() || isManager() || isChiefLogistics() || isMaintenanceRole(); allow delete: if false; }
+    // Integraciones externas retiradas de V5. Las colecciones históricas quedan bloqueadas.
+    match /erp_domain_events/{id} { allow read: if isAdminOrSuper() || isManager() || isAuditRole(); allow write: if false; }
+    match /erp_access_events/{id} { allow read: if isAdminOrSuper() || isAuditRole(); allow create: if activeUser() && request.resource.data.createdBy == request.auth.uid && request.resource.data.trustLevel == 'CLIENT' && request.resource.data.source == 'CLIENT_UI'; allow update, delete: if false; }
+    match /erp_sod_rules/{id} { allow read: if isAdminOrSuper() || isManager() || isAuditRole(); allow write: if isAdminOrSuper(); }
+    match /erp_security_findings/{id} { allow read: if isAdminOrSuper() || isManager() || isAuditRole(); allow create, update: if isAdminOrSuper() || isAuditRole(); allow delete: if false; }
+    match /erp_continuity_checks/{id} { allow read: if isAdminOrSuper() || isManager() || isAuditRole(); allow create, update: if isAdminOrSuper() || isAuditRole(); allow delete: if false; }
+    match /erp_sla_alerts/{id} { allow read: if activeUser(); allow write: if false; }
+    match /case_process_intervals/{id} { allow read: if activeUser(); allow write: if false; }
+
+
+    // Gestión de cartera V5: estados y decisiones solo cambian mediante Cloud Functions.
+    match /credit_requests/{requestId} {
+      allow read: if mayReadCredit(resource.data);
+      allow create, delete: if false;
+      allow update: if activeUser()
+        && resource.data.createdBy == request.auth.uid
+        && isCreditCreatorRole()
+        && resource.data.status in ['DRAFT','RETURNED']
+        && validCreditDocumentUpdate();
+    }
+    match /credit_request_events/{eventId} {
+      allow read: if activeUser()
+        && exists(/databases/$(database)/documents/credit_requests/$(resource.data.requestId))
+        && mayReadCredit(get(/databases/$(database)/documents/credit_requests/$(resource.data.requestId)).data);
+      allow write: if false;
+    }
+
+    // Compatibilidad únicamente para colecciones heredadas no gobernadas explícitamente.
+    // Las reglas específicas no pueden ser ampliadas por este comodín.
+    match /{collection}/{document=**} {
+      allow read: if !isGovernedCollection(collection) && activeUser();
+      allow create, update: if !isGovernedCollection(collection) && activeUser() && !isAuditRole();
+      allow delete: if !isGovernedCollection(collection) && isAdminOrSuper();
+    }
+  }
+}
