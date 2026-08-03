@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-08-03T17:36:07.659Z",
+  "version": "6.1.0",
+  "source": "tests/audit-project.js",
+  "files_total": 197,
+  "html_files": 33,
+  "javascript_files": 42,
+  "js_lines": 27340,
+  "transaction_modules": 14,
+  "transactions": 32,
+  "runtime_bytes": 1200542,
+  "runtime_lines": 20352,
+  "empty_catches": 0,
+  "runtime_inline_styles": 110,
+  "patch_refs": 147,
+  "legacy_siesa_field_refs": 76,
+  "critical_findings": 0,
+  "warnings": 3,
+  "passed_controls": 10
+}

@@ -1,0 +1,120 @@
+{
+  "version": "6.1.0",
+  "application": {
+    "id": "trazabilidad",
+    "name": "Trazabilidad logística",
+    "description": "Flujo completo del pedido desde Ventas hasta la entrega, con crédito, compras, recepción, operación, facturación, cartera, despachos y medición VSM."
+  },
+  "groups": [
+    {"id":"general","label":"General","order":10},
+    {"id":"commercial","label":"Flujo comercial","order":20},
+    {"id":"operation","label":"Operación logística","order":30},
+    {"id":"output","label":"Salida y entrega","order":40},
+    {"id":"management","label":"Control y gestión","order":50},
+    {"id":"platform","label":"Plataforma","order":60}
+  ],
+  "modules": [
+    {
+      "id":"home","name":"Inicio","short":"Inicio","icon":"home","group":"general","description":"Resumen de trabajo, pendientes y accesos frecuentes.","groups":["all"],"order":10,
+      "actions":[
+        {"id":"dashboard","name":"Mi bandeja","description":"Pedidos y casos que requieren atención.","icon":"home","engine":"legacy","module":"inicio","route":"dashboard","groups":["all"],"primary":true,"requirements":["Sesión activa","Rol asignado"]},
+        {"id":"cases","name":"Consultar pedidos","description":"Buscar pedidos por número, cliente, OC, estado o proceso.","icon":"search","engine":"legacy","module":"inicio","route":"cases","groups":["all"],"requirements":["Criterio de búsqueda"]}
+      ]
+    },
+    {
+      "id":"sales","name":"Ventas","short":"Ventas","icon":"sales","group":"commercial","description":"Cree pedidos, solicite crédito y consulte el registro comercial.","groups":["sales","management","audit","admin"],"order":20,
+      "actions":[
+        {"id":"order-create","name":"Crear pedido","description":"Registre un pedido PVC, PVN, PVE o PVP y defina su condición de entrega.","icon":"sales","engine":"legacy","module":"ventas","route":"create","groups":["sales","admin"],"primary":true,"requirements":["Número del pedido","Tipo PVC/PVN/PVE/PVP","Cliente","Tipo de entrega"]},
+        {"id":"credit-create","name":"Crear solicitud de crédito","description":"Cree el expediente, cargue documentos y envíelo a Cartera.","icon":"credit","engine":"credit","module":"creditos","route":"credit_new","groups":["sales","admin"],"primary":true,"requirements":["Datos del cliente","Contacto","15 documentos antes de enviar"]},
+        {"id":"sales-register","name":"Registro de ventas","description":"Consulte pedidos creados, estados, clientes y trazabilidad comercial.","icon":"search","engine":"legacy","module":"ventas","route":"sales_reports","groups":["sales","management","audit","admin"],"requirements":["Periodo o criterio de búsqueda"]}
+      ]
+    },
+    {
+      "id":"credit","name":"Gestión de cartera","short":"Crédito","icon":"credit","group":"commercial","description":"Ventas envía solicitudes; Cartera revisa, devuelve, aprueba o rechaza.","groups":["sales","credit","management","audit","admin"],"order":25,
+      "actions":[
+        {"id":"credit-workspace","name":"Solicitudes de crédito","description":"Bandeja según el rol: mis solicitudes, solicitudes recibidas o consulta.","icon":"credit","engine":"credit","module":"creditos","route":"credit_workspace","groups":["sales","credit","management","audit","admin"],"primary":true,"requirements":["Rol de Ventas, Cartera o consulta"]},
+        {"id":"credit-review","name":"Revisar solicitudes","description":"Valide documentos, registre observaciones y emita una decisión.","icon":"check","engine":"credit","module":"creditos","route":"credit_review","groups":["credit","admin"],"requirements":["Solicitud enviada","Expediente documental"]}
+      ]
+    },
+    {
+      "id":"purchases","name":"Compras","short":"Compras","icon":"purchase","group":"commercial","description":"Reciba y libere pedidos PVE antes de su ingreso a Recepción.","groups":["purchases","logistics","management","audit","admin"],"order":30,
+      "actions":[
+        {"id":"purchases-workspace","name":"Gestionar compras","description":"Revise pedidos PVE, complete la gestión y libérelos al siguiente proceso.","icon":"purchase","engine":"legacy","module":"compras","route":"compras","groups":["purchases","logistics","management","audit","admin"],"primary":true,"requirements":["Pedido PVE","Orden o gestión de compra"]}
+      ]
+    },
+    {
+      "id":"reception","name":"Recepción","short":"Recepción","icon":"receive","group":"operation","description":"Controle mercancía recibida, documentos, conformidad y etiquetas.","groups":["reception","logistics","purchases","management","audit","admin"],"order":40,
+      "actions":[
+        {"id":"goods-reception","name":"Recibir mercancía","description":"Registre ingresos, conformidad, líneas y stickers por OC o pedido.","icon":"receive","engine":"legacy","module":"recepcion","route":"reception_goods","groups":["reception","logistics","purchases","management","audit","admin"],"primary":true,"requirements":["OC o pedido","Materiales recibidos","Resultado de inspección"]},
+        {"id":"orders-reception","name":"Recepción de pedidos","description":"Acepte pedidos liberados y continúe el flujo operativo.","icon":"route","engine":"legacy","module":"recepcion","route":"recepcion_pedidos","groups":["reception","logistics","management","audit","admin"],"requirements":["Pedido asignado","Validación inicial"]}
+      ]
+    },
+    {
+      "id":"operation","name":"Alistamiento y corte","short":"Operación","icon":"operation","group":"operation","description":"Aliste materiales, gestione cortes y atienda novedades sin perder trazabilidad.","groups":["logistics","cut","management","audit","admin"],"order":50,
+      "actions":[
+        {"id":"picking","name":"Alistamiento","description":"Prepare líneas, identifique faltantes y envíe cortes cuando corresponda.","icon":"operation","engine":"legacy","module":"operacion","route":"alistamiento","groups":["logistics","management","audit","admin"],"primary":true,"requirements":["Pedido aceptado","Material localizado","Novedades registradas"]},
+        {"id":"cut","name":"Corte de cable","description":"Ejecute cortes, registre evidencia, duración y material resultante.","icon":"maintenance","engine":"legacy","module":"operacion","route":"corte_cable","groups":["cut","logistics","management","audit","admin"],"primary":true,"requirements":["Solicitud de corte","Carreto asignado","Evidencia inicial y final"]},
+        {"id":"cut-diagnostic","name":"Diagnóstico de corte","description":"Revise cola, disponibilidad y problemas de sincronización del proceso.","icon":"control","engine":"legacy","module":"operacion","route":"cut_diag","groups":["cut","logistics","management","audit","admin"],"requirements":["Pedido o corte a revisar"]}
+      ]
+    },
+    {
+      "id":"billing","name":"Facturación","short":"Facturación","icon":"billing","group":"output","description":"Valide pedidos listos y registre su salida a facturación.","groups":["billing","logistics","management","audit","admin"],"order":60,
+      "actions":[
+        {"id":"billing-workspace","name":"Gestionar facturación","description":"Revise soportes, confirme condiciones y facture pedidos completos o parciales.","icon":"billing","engine":"legacy","module":"facturacion","route":"facturacion","groups":["billing","logistics","management","audit","admin"],"primary":true,"requirements":["Pedido listo","Soportes completos","Condición financiera"]}
+      ]
+    },
+    {
+      "id":"finance","name":"Caja y liberación","short":"Finanzas","icon":"finance","group":"output","description":"Gestione pagos, soportes y liberaciones financieras de pedidos.","groups":["cash","credit","management","audit","admin"],"order":70,
+      "actions":[
+        {"id":"cash-workspace","name":"Gestión de Caja","description":"Revise pedidos de contado, pagos, soportes y liberaciones.","icon":"finance","engine":"legacy","module":"finanzas","route":"caja","groups":["cash","management","audit","admin"],"primary":true,"requirements":["Pedido retenido","Soporte de pago o gestión"]},
+        {"id":"portfolio-release","name":"Liberación por Cartera","description":"Gestione la liberación financiera de pedidos PVC y PVE.","icon":"credit","engine":"legacy","module":"finanzas","route":"cartera","groups":["credit","management","audit","admin"],"requirements":["Pedido retenido","Validación de cartera"]}
+      ]
+    },
+    {
+      "id":"dispatch","name":"Entregas y despachos","short":"Despachos","icon":"dispatch","group":"output","description":"Organice entrega en punto, recogida, despacho local o nacional.","groups":["dispatch","logistics","management","audit","admin"],"order":80,
+      "actions":[
+        {"id":"customer-point","name":"Cliente en punto","description":"Registre entrega directa al cliente en las instalaciones.","icon":"user","engine":"legacy","module":"despachos","route":"cliente_punto","groups":["dispatch","logistics","management","audit","admin"],"requirements":["Pedido facturado","Identificación de quien recibe"]},
+        {"id":"customer-pickup","name":"Cliente recoge","description":"Coordine recogida y registre responsable, fecha y evidencia.","icon":"receive","engine":"legacy","module":"despachos","route":"cliente_recoge","groups":["dispatch","logistics","management","audit","admin"],"requirements":["Pedido facturado","Autorización de recogida"]},
+        {"id":"local-dispatch","name":"Despacho local","description":"Planifique y confirme entregas locales.","icon":"dispatch","engine":"legacy","module":"despachos","route":"despacho_local","groups":["dispatch","logistics","management","audit","admin"],"primary":true,"requirements":["Dirección","Transportador","Evidencia de entrega"]},
+        {"id":"national-dispatch","name":"Despacho nacional","description":"Registre transportadora, guía y seguimiento nacional.","icon":"route","engine":"legacy","module":"despachos","route":"despacho_nacional","groups":["dispatch","logistics","management","audit","admin"],"primary":true,"requirements":["Transportadora","Número de guía","Soporte de despacho"]},
+        {"id":"national-close","name":"Cerrar despacho nacional","description":"Confirme entrega y cierre documental del envío.","icon":"check","engine":"legacy","module":"despachos","route":"cierre_despacho_nacional","groups":["dispatch","logistics","management","audit","admin"],"requirements":["Guía","Confirmación de entrega"]}
+      ]
+    },
+    {
+      "id":"projects","name":"Proyectos","short":"Proyectos","icon":"project","group":"management","description":"Conecte solicitudes de proyectos con el flujo operativo.","groups":["projects","management","audit","admin"],"order":90,
+      "actions":[
+        {"id":"projects-workspace","name":"Gestionar proyectos","description":"Cree solicitudes y envíelas al flujo logístico cuando estén completas.","icon":"project","engine":"legacy","module":"proyectos","route":"projects","groups":["projects","management","audit","admin"],"primary":true,"requirements":["Proyecto","Fecha requerida","Detalle de materiales"]}
+      ]
+    },
+    {
+      "id":"control","name":"Control operativo","short":"Control","icon":"control","group":"management","description":"Centralice novedades, requerimientos, aprobaciones e inventario operativo.","groups":["sales","purchases","reception","logistics","cut","billing","cash","credit","dispatch","projects","management","audit","admin"],"order":100,
+      "actions":[
+        {"id":"reports","name":"Novedades y reportes","description":"Consulte y responda novedades vinculadas a pedidos.","icon":"alert","engine":"legacy","module":"control","route":"reports","groups":["sales","purchases","reception","logistics","cut","billing","cash","credit","dispatch","projects","management","audit","admin"],"primary":true,"requirements":["Pedido o novedad"]},
+        {"id":"requirements","name":"Requerimientos","description":"Gestione solicitudes internas pendientes por área.","icon":"file","engine":"legacy","module":"control","route":"requirements","groups":["sales","purchases","reception","logistics","cut","billing","cash","credit","dispatch","projects","management","audit","admin"],"requirements":["Responsable","Detalle de la necesidad"]},
+        {"id":"approvals","name":"Aprobaciones","description":"Revise decisiones que requieren autorización.","icon":"check","engine":"legacy","module":"control","route":"approvals","groups":["management","logistics","sales","admin"],"requirements":["Solicitud pendiente"]},
+        {"id":"operational-inventory","name":"Inventario operativo","description":"Consulte los registros de inventario actualmente asociados al flujo.","icon":"inventory","engine":"legacy","module":"control","route":"inventario","groups":["logistics","management","audit","admin"],"requirements":["Referencia o ubicación"]}
+      ]
+    },
+    {
+      "id":"analytics","name":"VSM e indicadores","short":"VSM","icon":"analytics","group":"management","description":"Mida tiempos, esperas, productividad y cumplimiento por proceso.","groups":["management","audit","logistics","sales","purchases","reception","cut","billing","cash","credit","dispatch","admin"],"order":110,
+      "actions":[
+        {"id":"vsm","name":"Abrir tablero VSM","description":"Analice lead time, tiempo productivo, esperas y desempeño del flujo.","icon":"analytics","engine":"vsm","module":"vsm","route":"indicators","groups":["management","audit","logistics","sales","purchases","reception","cut","billing","cash","credit","dispatch","admin"],"primary":true,"requirements":["Periodo de análisis","Tipo de pedido o proceso"]}
+      ]
+    },
+    {
+      "id":"audit","name":"Auditoría y tiempos","short":"Auditoría","icon":"audit","group":"platform","description":"Consulte eventos, tiempos por proceso, accesos y controles.","groups":["audit","management","admin"],"order":120,
+      "actions":[
+        {"id":"events","name":"Eventos","description":"Libro de eventos operativos y cambios relevantes.","icon":"audit","engine":"enterprise","module":"auditoria","route":"events","groups":["audit","management","admin"],"primary":true,"requirements":["Periodo o recurso"]},
+        {"id":"timings","name":"Tiempos por proceso","description":"Intervalos calendario y hábiles por pedido y etapa.","icon":"planning","engine":"enterprise","module":"auditoria","route":"timings","groups":["audit","management","admin"],"requirements":["Periodo o proceso"]},
+        {"id":"access","name":"Accesos","description":"Registro de accesos y acciones de seguridad.","icon":"user","engine":"enterprise","module":"auditoria","route":"access","groups":["audit","management","admin"],"requirements":["Usuario o periodo"]}
+      ]
+    },
+    {
+      "id":"administration","name":"Administración","short":"Administración","icon":"admin","group":"platform","description":"Usuarios, permisos, herramientas y configuración operativa.","groups":["admin"],"order":130,
+      "actions":[
+        {"id":"users","name":"Usuarios y roles","description":"Administre perfiles, roles y estado de acceso.","icon":"user","engine":"legacy","module":"administracion","route":"users","groups":["admin"],"primary":true,"requirements":["Usuario autorizado"]},
+        {"id":"admin-tools","name":"Herramientas administrativas","description":"Ejecute validaciones y tareas de soporte controladas.","icon":"admin","engine":"legacy","module":"administracion","route":"admin","groups":["admin"],"requirements":["Validar alcance antes de ejecutar"]}
+      ]
+    }
+  ]
+}

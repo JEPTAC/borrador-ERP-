@@ -1,0 +1,69 @@
+:root{
+  color-scheme:light;
+  --ei-navy-950:#06152f;
+  --ei-navy-900:#081d42;
+  --ei-navy-800:#0d2b5d;
+  --ei-blue-700:#1247a7;
+  --ei-blue-600:#1c5fd4;
+  --ei-blue-100:#eaf2ff;
+  --ei-yellow-500:#f5ca32;
+  --ei-yellow-100:#fff7d6;
+  --ei-green-600:#198754;
+  --ei-green-100:#e8f7ef;
+  --ei-red-600:#c73a48;
+  --ei-red-100:#fff0f1;
+  --ei-orange-600:#b35b00;
+  --ei-orange-100:#fff3e0;
+  --ei-slate-950:#172033;
+  --ei-slate-800:#2f3b52;
+  --ei-slate-700:#46546d;
+  --ei-slate-600:#627089;
+  --ei-slate-500:#7b879d;
+  --ei-slate-400:#a5afbf;
+  --ei-slate-300:#cbd3df;
+  --ei-slate-200:#e2e7ef;
+  --ei-slate-100:#f1f4f8;
+  --ei-slate-50:#f7f9fc;
+  --ei-white:#fff;
+  --ei-bg:#f3f6fa;
+  --ei-surface:#fff;
+  --ei-border:#dce3ed;
+  --ei-shadow-sm:0 4px 14px rgba(10,30,65,.07);
+  --ei-shadow-md:0 16px 40px rgba(10,30,65,.12);
+  --ei-shadow-lg:0 28px 80px rgba(6,21,47,.20);
+  --ei-radius-sm:10px;
+  --ei-radius-md:16px;
+  --ei-radius-lg:24px;
+  --ei-radius-xl:32px;
+  --ei-font:"Century Gothic","Aptos","Segoe UI",Arial,sans-serif;
+  --ei-text-scale:1;
+  --ei-content-max:1480px;
+  --ei-sidebar:272px;
+  --ei-header:72px;
+  --ei-focus:0 0 0 3px rgba(28,95,212,.28),0 0 0 1px #1c5fd4;
+}
+html[data-contrast="high"]{
+  --ei-bg:#fff;
+  --ei-surface:#fff;
+  --ei-border:#111827;
+  --ei-slate-700:#111827;
+  --ei-slate-600:#1f2937;
+  --ei-blue-700:#003e9c;
+  --ei-shadow-sm:none;
+  --ei-shadow-md:none;
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --ei-bg:#071226;
+  --ei-surface:#0d1f3d;
+  --ei-border:#263b5f;
+  --ei-slate-950:#f8fbff;
+  --ei-slate-800:#e4ebf6;
+  --ei-slate-700:#c9d5e8;
+  --ei-slate-600:#aab8ce;
+  --ei-slate-500:#8fa0b9;
+  --ei-slate-200:#2c4163;
+  --ei-slate-100:#142a4a;
+  --ei-slate-50:#0b1b34;
+  --ei-white:#0d1f3d;
+}

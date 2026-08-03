@@ -1,0 +1,13 @@
+{
+  "files": 186,
+  "js_lines": 26945,
+  "runtime_bytes": 1211054,
+  "runtime_lines": 20654,
+  "functions": 1311,
+  "duplicate_names": 11,
+  "empty_catches": 141,
+  "inline_styles": 110,
+  "patch_refs": 1142,
+  "siesa_refs": 178,
+  "external_urls": 73
+}

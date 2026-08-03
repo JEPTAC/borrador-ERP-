@@ -1,0 +1,47 @@
+# Auditoría automática EI ERP Nova V6.1
+
+Generada: 2026-08-03T17:36:07.659Z
+
+## Resultado
+- Hallazgos críticos: **0**
+- Advertencias: **3**
+- Controles superados: **10**
+
+## Controles superados
+- Páginas NOVA con metadatos, títulos e identificadores válidos.
+- Ventas, crédito y VSM están conectados al catálogo transaccional.
+- Ventas crea y envía; Cartera revisa y decide.
+- Corte se conserva como subflujo controlado que retorna mediante su cierre específico.
+- Procesos operativos conectados y con listas mínimas de chequeo.
+- KPIs, pendientes y búsqueda aplican visibilidad por rol.
+- Entradas dedicadas para iOS, portátil compacto y pantalla cuadrada.
+- La interfaz NOVA utiliza el sistema visual compartido sin estilos inline por página.
+- Identidad, reglas, Storage, Functions y acceso al motor endurecidos.
+- Conector, colas y navegación Siesa retirados; solo queda compatibilidad de lectura documental histórica.
+
+## Hallazgos críticos
+- Ninguno
+
+## Advertencias
+- La lectura de cases continúa abierta a todo usuario activo por compatibilidad del motor heredado; la interfaz filtra por rol, pero la migración debe llevar esta autorización al servidor antes de retirar el motor.
+- El motor de compatibilidad sigue siendo monolítico (20352 líneas); debe migrarse por transacción.
+- 76 referencias internas históricas siguen en nombres de campos/parser para compatibilidad de datos; no son una API ni un conector.
+
+## Métricas
+```json
+{
+  "files": 197,
+  "htmlFiles": 33,
+  "javascriptFiles": 42,
+  "totalJavascriptLines": 27340,
+  "transactionModules": 14,
+  "transactions": 32,
+  "runtimeBytes": 1200542,
+  "runtimeLines": 20352,
+  "emptyCatches": 0,
+  "inlineStylesInRuntime": 110,
+  "patchReferences": 147,
+  "legacySiesaFieldReferences": 76,
+  "hashedFiles": 195
+}
+```

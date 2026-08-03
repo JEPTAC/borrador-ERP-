@@ -1,0 +1,26 @@
+{
+  "version": "6.1.0",
+  "applications": [
+    {
+      "id": "trazabilidad",
+      "name": "Trazabilidad logística",
+      "shortName": "Trazabilidad",
+      "description": "Pedidos, crédito, compras, recepción, alistamiento, corte, facturación, cartera, despachos y VSM.",
+      "icon": "route",
+      "accent": "blue",
+      "enabled": true,
+      "groups": [
+        "all"
+      ],
+      "keywords": [
+        "logística",
+        "pedidos",
+        "ventas",
+        "despachos",
+        "trazabilidad",
+        "VSM"
+      ],
+      "path": "apps/trazabilidad/"
+    }
+  ]
+}

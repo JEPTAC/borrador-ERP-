@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es" data-root-base="../../../" data-app-base="../" data-layout-profile="compact" data-layout="compact">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06152f">
+  <meta name="description" content="Trazabilidad logística de Electroingeniería.">
+  <title>Trazabilidad logística · EI ERP</title>
+  <link rel="icon" href="../../../core/assets/app-icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../../manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="../../../core/css/base.css?v=6.1.0">
+  <link rel="stylesheet" href="../../../core/css/shell.css?v=6.1.0">
+</head>
+<body>
+  <a class="skip-link" href="#novaContent">Saltar al contenido</a>
+  <div class="nova-shell" id="novaShell">
+    <aside class="nova-sidebar" aria-label="Navegación de Trazabilidad logística">
+      <div class="nova-brand"><img src="../../../core/assets/logo-electroingenieria.jpeg" alt="Electroingeniería"><div><strong>EI ERP</strong><span>Trazabilidad logística</span></div></div>
+      <div class="nova-sidebar-body"><a class="nova-back-apps" href="../../../portal/"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Todos los aplicativos</span></a><nav id="novaNav" aria-label="Procesos disponibles"></nav></div>
+      <div class="nova-sidebar-footer"><div class="nova-user-card"><span class="auth-avatar" data-user-avatar>EI</span><span><strong data-user-name>Usuario</strong><span data-user-role>Rol</span></span><button id="shellLogout" type="button" aria-label="Cerrar sesión"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button></div></div>
+    </aside>
+    <div class="nova-overlay" id="navOverlay" aria-hidden="true"></div>
+    <header class="nova-topbar">
+      <button class="ei-icon-btn nova-mobile-menu" id="mobileMenu" type="button" aria-label="Abrir navegación"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="nova-breadcrumb"><small id="pageContext">Trazabilidad logística</small><strong id="pageTitle">Inicio</strong></div>
+      <button class="nova-search-trigger" id="searchTrigger" type="button" aria-haspopup="dialog"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><span>Buscar pedido, cliente, OC, factura o función</span><kbd>Ctrl K</kbd></button>
+      <button class="ei-icon-btn" type="button" data-a11y-toggle aria-label="Opciones de accesibilidad" aria-expanded="false" aria-controls="shellA11yPanel">Aa</button>
+    </header>
+    <main class="nova-main" id="main"><div class="nova-content" id="novaContent"><div class="ei-card ei-empty"><span class="ei-spinner ei-spinner-brand"></span><strong>Cargando su centro de trabajo…</strong></div></div></main>
+    <section class="nova-workspace" id="novaWorkspace" hidden aria-label="Área de transacción">
+      <header class="nova-workspace-bar"><button class="ei-btn secondary small" id="workspaceBack" type="button"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Volver</span></button><strong id="workspaceTitle">Transacción</strong><button class="ei-btn secondary small" id="workspaceExternal" type="button" aria-label="Abrir transacción en una pestaña nueva">Abrir aparte</button></header>
+      <div class="nova-workspace-loading" id="workspaceLoading"><div><span class="ei-spinner"></span><strong>Cargando transacción…</strong></div></div>
+      <iframe class="nova-workspace-frame" id="workspaceFrame" src="about:blank" title="Transacción" loading="eager"></iframe>
+    </section>
+    <nav class="nova-mobile-bottom" aria-label="Navegación móvil"><button id="mobileHome" class="active" type="button"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Inicio</span></button><button id="mobileTasks" type="button"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h8a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h10"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="17" r="2"/></svg><span>Procesos</span></button><button id="mobileSearch" type="button"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><span>Buscar</span></button><button id="mobileMore" type="button"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menú</span></button></nav>
+  </div>
+  <section class="nova-command" id="novaCommand" hidden role="dialog" aria-modal="true" aria-labelledby="commandTitle">
+    <div class="nova-command-card"><header class="nova-command-head"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><label class="sr-only" for="commandInput" id="commandTitle">Buscar en el ERP</label><input class="nova-command-input" id="commandInput" type="search" autocomplete="off" placeholder="Pedido, cliente, OC, factura, módulo o acción"><button class="ei-icon-btn" id="closeCommand" type="button" aria-label="Cerrar búsqueda"><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><nav class="nova-command-tabs" aria-label="Tipo de resultado"><button class="nova-command-tab active" type="button" data-command-tab="all">Todo</button><button class="nova-command-tab" type="button" data-command-tab="transactions">Funciones</button><button class="nova-command-tab" type="button" data-command-tab="records">Pedidos y solicitudes</button></nav><div class="nova-command-results" id="commandResults"></div></div>
+  </section>
+  <section class="nova-a11y-panel" id="shellA11yPanel" data-a11y-panel hidden aria-label="Opciones de accesibilidad"><h3>Accesibilidad</h3><div class="nova-a11y-font-actions"><button class="ei-btn secondary small" type="button" data-a11y-action="font-down">A−</button><button class="ei-btn secondary small" type="button" data-a11y-action="font-up">A+</button></div><button class="ei-btn secondary small" type="button" data-a11y-action="contrast">Alto contraste</button><button class="ei-btn secondary small" type="button" data-a11y-action="theme">Claro / oscuro</button><button class="ei-btn secondary small" type="button" data-a11y-action="motion">Reducir movimiento</button></section>
+  <div class="ei-toast-region" id="toastRegion" aria-live="polite"></div>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+  <script src="../../../core/js/config.js?v=6.1.0"></script>
+  <script src="../../../core/js/utils.js?v=6.1.0"></script>
+  <script src="../../../core/js/accessibility.js?v=6.1.0"></script>
+  <script src="../../../core/js/firebase.js?v=6.1.0"></script>
+  <script src="../js/app.js?v=6.1.0"></script>
+  <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("../../../service-worker.js",{scope:"../../../",updateViaCache:"none"}).catch(function(){});}</script>
+</body>
+</html>
