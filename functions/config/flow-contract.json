@@ -1,0 +1,34 @@
+{
+  "version": "6.2.0",
+  "terminalStatuses": ["cerrado_conforme", "cerrado_con_novedad", "cancelado", "anulado"],
+  "activeStatuses": ["asignado", "en_proceso", "en_preparacion", "en_ruta"],
+  "waitingStatuses": ["en_espera", "espera_ventas", "espera_transportadora", "pendiente_gerencia", "no_entregado", "devolucion_caja"],
+  "processes": {
+    "compras": {"next": ["recepcion_pedidos"], "responsibleGroups": ["purchases", "admin"]},
+    "recepcion_pedidos": {"next": ["alistamiento"], "responsibleGroups": ["reception", "logistics", "admin"]},
+    "alistamiento": {"next": ["corte_cable", "facturacion"], "responsibleGroups": ["logistics", "admin"]},
+    "corte_cable": {"next": ["alistamiento"], "mode": "controlled-return", "responsibleGroups": ["cut", "logistics", "admin"]},
+    "facturacion": {"next": ["caja", "cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"], "responsibleGroups": ["billing", "admin"]},
+    "caja": {"next": ["cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"], "responsibleGroups": ["cash", "admin"]},
+    "cartera": {"next": ["compras", "recepcion_pedidos"], "responsibleGroups": ["credit", "admin"]},
+    "cliente_punto": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
+    "cliente_recoge": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
+    "despacho_local": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
+    "despacho_nacional": {"next": ["cierre_despacho_nacional"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
+    "cierre_despacho_nacional": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
+    "cierre_caso": {"next": [], "terminal": true, "responsibleGroups": ["logistics", "dispatch", "admin"]}
+  },
+  "orderRouting": {
+    "default": "recepcion_pedidos",
+    "PVE": "compras",
+    "retained": {"PVC": "cartera", "PVE": "cartera", "PVN": "caja", "PVP": "caja"}
+  },
+  "invariants": [
+    "PVE no liberado debe pasar por Compras",
+    "Un pedido con cortes pendientes no puede pasar a Facturación",
+    "Corte terminado debe retornar a Alistamiento",
+    "Un pedido cerrado debe tener fecha de cierre",
+    "Una espera debe indicar motivo y responsable",
+    "Cada cambio de proceso o estado debe generar evento trazable"
+  ]
+}

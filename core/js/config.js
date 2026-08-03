@@ -1,5 +1,5 @@
 window.EI_NOVA_CONFIG = Object.freeze({
-  version: "6.1.0",
+  version: "6.2.0",
   build: "2026-08-03.2",
   company: "Electroingeniería",
   product: "EI ERP",

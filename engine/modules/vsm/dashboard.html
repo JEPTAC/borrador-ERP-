@@ -93,6 +93,7 @@
     .alert-item{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:center;border:1px solid #edf2f7;border-radius:14px;padding:9px 10px;background:#fff}
     .alert-item.bad{border-color:#fecaca;background:#fff7f7}.alert-item.warn{border-color:#fed7aa;background:#fffaf3}
     .alert-item strong{color:var(--blue)}.alert-item small{display:block;color:var(--muted);margin-top:2px}
+    .flow-health-board{padding:14px}.flow-health-head,.flow-health-empty{display:flex;align-items:center;justify-content:space-between;gap:14px}.flow-health-head small,.flow-health-empty small{display:block;color:var(--muted);margin-top:4px;line-height:1.4}.flow-health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-top:12px}.flow-health-item{border:1px solid #dbe5f0;border-left:5px solid #f59e0b;border-radius:14px;padding:12px;background:#fff}.flow-health-item.bad{border-color:#fecaca;border-left-color:#dc2626;background:#fffafa}.flow-health-item.warn{border-color:#fed7aa;border-left-color:#f59e0b;background:#fffdf8}.flow-health-item header,.flow-health-item footer{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.flow-health-item header small,.flow-health-item footer{color:var(--muted);font-size:.72rem}.flow-health-item ul{margin:10px 0;padding-left:18px;color:#344054;font-size:.78rem;line-height:1.45}.flow-health-item footer{border-top:1px solid #edf2f7;padding-top:8px;flex-wrap:wrap}
     .badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:.7rem;font-weight:900;background:#eef2ff;color:#1e3a8a;white-space:nowrap}
     .badge.ok{background:#ecfdf5;color:#065f46}.badge.warn{background:#fff7ed;color:#9a3412}.badge.bad{background:#fef2f2;color:#991b1b}
     .results-wrap{width:100%;overflow:visible}.table-wrap{width:100%;max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:17px;background:#fff}
@@ -216,11 +217,14 @@
     html.embedded #vsmBackLink{display:none!important}
     html.embedded .filters,html.embedded .card,html.embedded .chart-card,html.embedded .process-card,html.embedded .alert-card{box-shadow:0 6px 20px rgba(15,23,42,.05)}
     html.embedded .top h1{font-size:1.35rem}
-  </style>
-<link rel="stylesheet" href="../../shared/css/nova-embedded.css?v=6.1.0">
+  
+    .calendar-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 16px}.calendar-summary>div{background:#fff;border:1px solid #dbe5f0;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:5px}.calendar-summary strong{color:#061b46;font-size:.82rem}.calendar-summary span{color:#5b6b82;font-size:.74rem;line-height:1.35}@media(max-width:900px){.calendar-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.calendar-summary{grid-template-columns:1fr}}
+    .trace-sources{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:0 0 16px}.trace-sources article{background:#061b46;color:#fff;border-radius:14px;padding:11px;min-width:0}.trace-sources span,.trace-sources small{display:block}.trace-sources span{font-size:.7rem;font-weight:800;color:#c9d8ef}.trace-sources strong{display:block;font-size:1.18rem;margin:4px 0}.trace-sources small{font-size:.66rem;color:#9fb3d1;line-height:1.35}@media(max-width:1000px){.trace-sources{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:560px){.trace-sources{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<link rel="stylesheet" href="../../shared/css/nova-embedded.css?v=6.2.0">
 </head>
 <body>
-  <a id="vsmBackLink" href="./" style="position:fixed;right:16px;bottom:16px;z-index:9999;text-decoration:none" class="btn dark">Volver al módulo VSM</a>
+  <a id="vsmBackLink" href="../../../apps/trazabilidad/" style="position:fixed;right:16px;bottom:16px;z-index:9999;text-decoration:none" class="btn dark">Volver a Trazabilidad logística</a>
   <main class="shell">
     <section class="top">
       <div>
@@ -236,6 +240,8 @@
     </section>
 
     <div id="status" class="notice ok">Inicializando centro operativo...</div>
+    <section id="calendarSummary" class="calendar-summary" aria-label="Calendario laboral aplicado"></section>
+    <section id="traceSources" class="trace-sources" aria-label="Fuentes de trazabilidad utilizadas por el VSM"></section>
 
     <section class="filters">
       <div class="filter-head">
@@ -259,7 +265,8 @@
           <option value="compras">Compras</option>
           <option value="logistica">Logística</option>
           <option value="facturacion">Facturación</option>
-          <option value="cartera">Cartera / Caja</option>
+          <option value="caja">Caja</option>
+          <option value="cartera">Cartera</option>
           <option value="despacho">Despacho</option>
         </select></label><label class="field"><span>Proceso</span><select class="select" id="fProcess"><option value="">Todos</option></select></label>
         <label class="field"><span>Estado</span><select class="select" id="fStatus"><option value="">Todos</option><option value="open">WIP / abiertos</option><option value="closed">Cerrados</option><option value="wait">En espera o bloqueo</option><option value="cancelled">Cancelados / anulados</option></select></label>
@@ -329,6 +336,9 @@
     <div class="section-head"><h2>Alertas y acciones</h2><span>Pedidos que requieren intervención.</span></div>
     <section id="alertsBoard" class="alert-card"></section>
 
+    <div class="section-head"><h2>Integridad del flujo</h2><span>Pedidos con riesgo de quedar colgados, transiciones inválidas o etapas vencidas.</span></div>
+    <section id="flowHealthBoard" class="alert-card flow-health-board" aria-live="polite"></section>
+
     <section class="kpi-grid" style="margin-top:14px">
       <article class="card" style="padding:15px"><h3 style="margin:0 0 8px;color:var(--blue)">Cuello de botella</h3><div id="bottleneck"></div></article>
       <article class="card" style="padding:15px">
@@ -340,7 +350,7 @@
     <div class="section-head"><h2 id="tableTitle">Resultados operativos</h2><span id="rowCount"></span></div>
     <section class="results-wrap"><div id="mainTable"></div></section>
 
-    <p class="footer">V237 · Centro operativo VSM. La exactitud depende de las marcas de entrada, inicio, espera y cierre registradas por cada proceso. Los tiempos se normalizan sobre la jornada laboral definida.</p>
+    <p class="footer">V620 · Centro operativo VSM. La exactitud depende de las marcas de entrada, inicio, espera y cierre registradas por cada proceso. Los tiempos se normalizan sobre la jornada laboral definida.</p>
   </main>
 <div class="report-modal" id="smartReportModal" aria-hidden="true">
     <section class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="smartReportTitle">
@@ -442,8 +452,9 @@
     </section>
   </div>
 
-  <script>window.EI_VSM_APP_ROOT=new URL("../../",location.href).href;</script>
-  <script src="./dashboard.js?v=5.0.0"></script>
-<script src="../../shared/js/nova-embedded.js?v=6.1.0"></script>
+  <script>window.EI_VSM_APP_ROOT=new URL("../../",location.href).href;window.EI_VSM_RENDER_MODE="standalone-preferred";</script>
+  <script src="../../shared/js/business-calendar.js?v=6.2.0"></script>
+  <script src="../../shared/js/nova-embedded.js?v=6.2.0"></script>
+  <script src="./dashboard.js?v=6.2.0"></script>
 </body>
 </html>

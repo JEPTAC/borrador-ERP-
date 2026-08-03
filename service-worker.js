@@ -1,4 +1,4 @@
-const VERSION="ei-erp-nova-6.1.0-20260803-2";
+const VERSION="ei-erp-nova-6.2.0-20260803-2";
 const CORE=[
   "./index.html","./manifest.json","./core/css/tokens.css","./core/css/base.css","./core/css/auth.css","./core/css/portal.css","./core/css/shell.css",
   "./core/js/config.js","./core/js/utils.js","./core/js/accessibility.js","./core/js/firebase.js","./core/js/auth-page.js","./core/js/portal.js",

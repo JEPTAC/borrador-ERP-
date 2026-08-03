@@ -42,6 +42,25 @@ function toMillis(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
+const DAY_MS = 86400000;
+function isoUtcDate(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+function utcDate(year, month, day) { return new Date(Date.UTC(year, month - 1, day)); }
+function addDays(date, days) { return new Date(date.getTime() + days * DAY_MS); }
+function nextMonday(date) { return addDays(date, (8 - date.getUTCDay()) % 7); }
+function easterSunday(year) {
+  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+  return utcDate(year, month, day);
+}
+function colombianHolidays(year) {
+  const dates=[utcDate(year,1,1),utcDate(year,5,1),utcDate(year,7,20),utcDate(year,8,7),utcDate(year,12,8),utcDate(year,12,25)];
+  for (const [month,day] of [[1,6],[3,19],[6,29],[8,15],[10,12],[11,1],[11,11]]) dates.push(nextMonday(utcDate(year,month,day)));
+  const easter=easterSunday(year);
+  for (const days of [-3,-2,43,64,71]) dates.push(addDays(easter,days));
+  return [...new Set(dates.map(isoUtcDate))].sort();
+}
 function calculateBusinessMinutes(startValue, endValue, calendar = {}) {
   const start = toMillis(startValue);
   const end = toMillis(endValue);
@@ -49,27 +68,30 @@ function calculateBusinessMinutes(startValue, endValue, calendar = {}) {
   const offset = number(calendar.utcOffsetMinutes == null ? -300 : calendar.utcOffsetMinutes);
   const offsetMs = offset * 60000;
   const workdays = new Set(calendar.workdays || [1, 2, 3, 4, 5]);
-  const holidays = new Set(calendar.holidays || []);
+  const configured = new Set(calendar.holidays || []);
   const windows = calendar.windows || [[420, 720], [820, 1050]];
   const localStart = start + offsetMs;
   const localEnd = end + offsetMs;
-  let day = Math.floor(localStart / 86400000) * 86400000;
-  const lastDay = Math.floor(localEnd / 86400000) * 86400000;
+  let day = Math.floor(localStart / DAY_MS) * DAY_MS;
+  const lastDay = Math.floor(localEnd / DAY_MS) * DAY_MS;
   let totalMs = 0;
+  const holidayYears = new Map();
   while (day <= lastDay) {
     const localDate = new Date(day);
-    const dateKey = localDate.toISOString().slice(0, 10);
+    const year = localDate.getUTCFullYear();
+    if (!holidayYears.has(year)) holidayYears.set(year, new Set(calendar.country === "CO" || calendar.dynamicColombianHolidays !== false ? colombianHolidays(year) : []));
+    const dateKey = isoUtcDate(localDate);
     const weekday = localDate.getUTCDay();
-    if (workdays.has(weekday) && !holidays.has(dateKey)) {
+    if (workdays.has(weekday) && !configured.has(dateKey) && !holidayYears.get(year).has(dateKey)) {
       for (const window of windows) {
         const windowStartUtc = day + number(window[0]) * 60000 - offsetMs;
         const windowEndUtc = day + number(window[1]) * 60000 - offsetMs;
         totalMs += Math.max(0, Math.min(end, windowEndUtc) - Math.max(start, windowStartUtc));
       }
     }
-    day += 86400000;
+    day += DAY_MS;
   }
   return Math.round(totalMs / 60000);
 }
 
-module.exports = { calculateAvailability, calculateNetRequirement, calculateBusinessMinutes };
+module.exports = { calculateAvailability, calculateNetRequirement, calculateBusinessMinutes, colombianHolidays, easterSunday };

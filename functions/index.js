@@ -5,6 +5,8 @@ const {onSchedule}=require("firebase-functions/v2/scheduler");
 const admin=require("firebase-admin");
 const crypto=require("node:crypto");
 const {calculateAvailability,calculateNetRequirement,calculateBusinessMinutes}=require("./lib/erp-calculations");
+const {inspectCase,deriveProcessStart,deterministicRepair}=require("./lib/flow-integrity");
+const {timestampMillis,firestoreTimestamp}=require("./lib/time-values");
 const defaultBusinessCalendar=require("./config/business-calendar.co-2026.json");
 admin.initializeApp();
 const db=admin.firestore();
@@ -47,9 +49,21 @@ function sha(value){return crypto.createHash("sha256").update(JSON.stringify(val
 async function businessCalendar(){
  try{const snap=await db.collection("system_config").doc("business_calendar").get();return snap.exists?{...defaultBusinessCalendar,...snap.data()}:defaultBusinessCalendar;}catch(error){console.warn("Calendario empresarial no disponible",error);return defaultBusinessCalendar;}
 }
-function timestampMillis(value,fallback){return value&&typeof value.toMillis==="function"?value.toMillis():Number(fallback||Date.now());}
 function safeId(value){return String(value||crypto.randomUUID()).replace(/[^A-Za-z0-9_.-]/g,"_");}
 function closedCase(value){return ["cerrado_conforme","cerrado_con_novedad","cancelado","anulado"].includes(String(value||"").toLowerCase());}
+async function forEachCasePage(visitor,pageSize=400){
+ let last=null,total=0;
+ while(true){
+  let query=db.collection("cases").orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
+  if(last)query=query.startAfter(last);
+  const snap=await query.get();
+  if(snap.empty)break;
+  await visitor(snap.docs,total);
+  total+=snap.size;last=snap.docs[snap.docs.length-1];
+  if(snap.size<pageSize)break;
+ }
+ return total;
+}
 
 function balanceId(d){return [d.tenantId||"electroingenieria",d.companyCode||"EI",d.warehouseCode||"_",d.locationCode||"_",d.productCode||"_",d.lotCode||"_",d.serialCode||"_",d.stockStatus||"AVAILABLE"].map(x=>String(x).replace(/[^A-Za-z0-9_.-]/g,"_")).join("__");}
 exports.applyInventoryMovement=onDocumentCreated("inventory_movements/{movementId}",async event=>{
@@ -73,11 +87,26 @@ exports.applyInventoryMovement=onDocumentCreated("inventory_movements/{movementI
  }
 });
 exports.caseEventLedger=onDocumentUpdated("cases/{caseId}",async event=>{
- const before=event.data.before.data(),after=event.data.after.data(),prev=before.currentProcess||before.status||"",next=after.currentProcess||after.status||"",transitioned=prev!==next,eventKey=safeId(event.id),calendar=transitioned?await businessCalendar():null;
- const endMs=timestampMillis(after.updatedAt,Date.parse(event.time||"")||Date.now()),startValue=before.processStartedAt||before.statusStartedAt||before.updatedAt||before.createdAt,startMs=timestampMillis(startValue,endMs),elapsedMinutes=Math.max(0,Math.round((endMs-startMs)/60000)),businessMinutes=transitioned?calculateBusinessMinutes(startMs,endMs,calendar):null;
- const payload={tenantId:after.tenantId||"electroingenieria",aggregateType:"CASE",aggregateId:event.params.caseId,eventType:transitioned?"CASE_TRANSITION":"CASE_UPDATED",from:prev,to:next,actorUid:after.updatedBy||after.lastActorUid||"system",actorName:after.updatedByName||after.lastActorName||"Sistema",occurredAt:FieldValue.serverTimestamp(),source:"FIRESTORE_TRIGGER",cloudEventId:event.id,dataHash:sha(clean(after)),before:clean({status:before.status,currentProcess:before.currentProcess}),after:clean({status:after.status,currentProcess:after.currentProcess}),timing:transitioned?{elapsedMinutes,businessMinutes}:null};
+ const before=event.data.before.data(),after=event.data.after.data();
+ const prevProcess=String(before.currentProcess||""),nextProcess=String(after.currentProcess||"");
+ const prevStatus=String(before.status||""),nextStatus=String(after.status||"");
+ const processChanged=prevProcess!==nextProcess,statusChanged=prevStatus!==nextStatus,changed=processChanged||statusChanged;
+ const eventKey=safeId(event.id),calendar=changed?await businessCalendar():null,endMs=timestampMillis(after.updatedAt,Date.parse(event.time||"")||Date.now());
+ const processStartValue=deriveProcessStart(before,prevProcess),processStartMs=timestampMillis(processStartValue,endMs);
+ const statusStartValue=before.statusStartedAt||before.activeStartedAt||before.waitStartedAt||before.deadStartedAt||processStartValue;
+ const statusStartMs=timestampMillis(statusStartValue,endMs);
+ const processElapsedMinutes=Math.max(0,Math.round((endMs-processStartMs)/60000));
+ const statusElapsedMinutes=Math.max(0,Math.round((endMs-statusStartMs)/60000));
+ const processBusinessMinutes=processChanged?calculateBusinessMinutes(processStartMs,endMs,calendar):null;
+ const statusBusinessMinutes=statusChanged?calculateBusinessMinutes(statusStartMs,endMs,calendar):null;
+ const eventType=processChanged?"CASE_PROCESS_CHANGED":statusChanged?"CASE_STATUS_CHANGED":"CASE_UPDATED";
+ const payload={tenantId:after.tenantId||"electroingenieria",aggregateType:"CASE",aggregateId:event.params.caseId,eventType,fromProcess:prevProcess,toProcess:nextProcess,fromStatus:prevStatus,toStatus:nextStatus,actorUid:after.updatedBy||after.lastActorUid||"system",actorName:after.updatedByName||after.lastActorName||"Sistema",occurredAt:FieldValue.serverTimestamp(),source:"FIRESTORE_TRIGGER",cloudEventId:event.id,dataHash:sha(clean(after)),before:clean({status:prevStatus,currentProcess:prevProcess}),after:clean({status:nextStatus,currentProcess:nextProcess}),timing:changed?{process:{elapsedMinutes:processElapsedMinutes,businessMinutes:processBusinessMinutes,startValue:clean(processStartValue)},status:{elapsedMinutes:statusElapsedMinutes,businessMinutes:statusBusinessMinutes,startValue:clean(statusStartValue)}}:null};
  const batch=db.batch();batch.set(db.collection("erp_domain_events").doc("CASE__"+eventKey),payload,{merge:false});
- if(transitioned){batch.set(db.collection("case_process_intervals").doc(event.params.caseId+"__"+eventKey),{tenantId:after.tenantId||"electroingenieria",caseId:event.params.caseId,reference:after.reference||after.orderNumber||event.params.caseId,process:prev,nextProcess:next,startedAt:startValue||admin.firestore.Timestamp.fromMillis(startMs),endedAt:after.updatedAt||admin.firestore.Timestamp.fromMillis(endMs),elapsedMinutes,businessMinutes,actorUid:payload.actorUid,actorName:payload.actorName,excludedFromKpis:closedCase(after.status)&&["cancelado","anulado"].includes(String(after.status||"").toLowerCase()),cloudEventId:event.id,createdAt:FieldValue.serverTimestamp()},{merge:false});batch.set(db.collection("erp_sla_alerts").doc(event.params.caseId+"__"+safeId(prev)),{caseId:event.params.caseId,currentProcess:prev,status:"CLOSED",closedAt:FieldValue.serverTimestamp(),closedByTransition:event.id},{merge:true});}
+ if(processChanged){
+  batch.set(db.collection("case_process_intervals").doc(event.params.caseId+"__"+eventKey),{tenantId:after.tenantId||"electroingenieria",caseId:event.params.caseId,reference:after.reference||after.orderNumber||event.params.caseId,process:prevProcess,nextProcess,startedAt:firestoreTimestamp(processStartValue,admin.firestore.Timestamp,endMs),endedAt:firestoreTimestamp(after.updatedAt,admin.firestore.Timestamp,endMs),elapsedMinutes:processElapsedMinutes,businessMinutes:processBusinessMinutes,fromStatus:prevStatus,toStatus:nextStatus,actorUid:payload.actorUid,actorName:payload.actorName,excludedFromKpis:closedCase(after.status)&&["cancelado","anulado"].includes(String(after.status||"").toLowerCase()),cloudEventId:event.id,createdAt:FieldValue.serverTimestamp()},{merge:false});
+  batch.set(db.collection("erp_sla_alerts").doc(event.params.caseId+"__"+safeId(prevProcess)),{caseId:event.params.caseId,currentProcess:prevProcess,status:"CLOSED",closedAt:FieldValue.serverTimestamp(),closedByTransition:event.id},{merge:true});
+ }
+ if(statusChanged){batch.set(db.collection("case_status_intervals").doc(event.params.caseId+"__"+eventKey),{tenantId:after.tenantId||"electroingenieria",caseId:event.params.caseId,reference:after.reference||after.orderNumber||event.params.caseId,process:prevProcess||nextProcess,nextProcess,fromStatus:prevStatus,toStatus:nextStatus,startedAt:firestoreTimestamp(statusStartValue,admin.firestore.Timestamp,endMs),endedAt:firestoreTimestamp(after.updatedAt,admin.firestore.Timestamp,endMs),elapsedMinutes:statusElapsedMinutes,businessMinutes:statusBusinessMinutes,actorUid:payload.actorUid,actorName:payload.actorName,cloudEventId:event.id,createdAt:FieldValue.serverTimestamp()},{merge:false});}
  await batch.commit();
 });
 
@@ -123,8 +152,76 @@ exports.runMrp=onCall({enforceAppCheck:true,timeoutSeconds:300,memory:"512MiB"},
 });
 exports.setUserClaims=onCall({enforceAppCheck:true},async request=>{await requirePrivileged(request);const {uid,role,companyCode,siteCodes}=request.data||{};if(!uid||!role)throw new HttpsError("invalid-argument","uid y role son obligatorios.");await admin.auth().setCustomUserClaims(uid,{role:String(role),companyCode:String(companyCode||"EI"),siteCodes:Array.isArray(siteCodes)?siteCodes.slice(0,20):[]});await db.collection("erp_access_events").add({action:"SET_CUSTOM_CLAIMS",resource:"users",resourceId:uid,details:{role,companyCode,siteCodes},createdAt:FieldValue.serverTimestamp(),createdBy:request.auth.uid});return {ok:true};});
 exports.monitorCaseSla=onSchedule({schedule:"every 60 minutes",timeZone:"America/Bogota"},async()=>{
- const [calendar,configSnap]=await Promise.all([businessCalendar(),db.collection("system_config").doc("erp_sla").get()]),config=configSnap.exists?configSnap.data():{},defaultHours=Number(config.defaultBusinessHours||8.5),processHours=config.processHours||{},snap=await db.collection("cases").where("status","not-in",["cerrado_conforme","cerrado_con_novedad","cancelado","anulado"]).limit(500).get(),batch=db.batch(),now=Date.now();
- snap.docs.forEach(doc=>{const c=doc.data(),process=c.currentProcess||c.status||"unknown",start=c.processStartedAt||c.statusStartedAt||c.updatedAt||c.createdAt,startMs=timestampMillis(start,now),ageBusinessMinutes=calculateBusinessMinutes(startMs,now,calendar),limitHours=Number(processHours[process]||defaultHours);if(ageBusinessMinutes>limitHours*60){const ref=db.collection("erp_sla_alerts").doc(doc.id+"__"+safeId(process));batch.set(ref,{caseId:doc.id,reference:c.reference||doc.id,currentProcess:process,status:"OPEN",ageBusinessHours:Math.round(ageBusinessMinutes/6)/10,limitHours,detectedAt:FieldValue.serverTimestamp(),lastEvaluatedAt:FieldValue.serverTimestamp()},{merge:true});}});await batch.commit();
+ const [calendar,configSnap]=await Promise.all([businessCalendar(),db.collection("system_config").doc("erp_sla").get()]);
+ const config=configSnap.exists?configSnap.data():{},defaultHours=Number(config.defaultBusinessHours||8.5),processHours=config.processHours||{},now=Date.now();
+ await forEachCasePage(async docs=>{
+  const batch=db.batch();
+  docs.forEach(doc=>{
+   const c=doc.data(),process=c.currentProcess||c.status||"unknown",ref=db.collection("erp_sla_alerts").doc(doc.id+"__"+safeId(process));
+   if(closedCase(c.status)){batch.set(ref,{caseId:doc.id,reference:c.reference||doc.id,currentProcess:process,status:"CLOSED",closedAt:c.closedAt||FieldValue.serverTimestamp(),lastEvaluatedAt:FieldValue.serverTimestamp()},{merge:true});return;}
+   const start=deriveProcessStart(c,process),startMs=timestampMillis(start,now),ageBusinessMinutes=calculateBusinessMinutes(startMs,now,calendar),limitHours=Number(processHours[process]||defaultHours);
+   if(ageBusinessMinutes>limitHours*60)batch.set(ref,{caseId:doc.id,reference:c.reference||doc.id,currentProcess:process,status:"OPEN",ageBusinessHours:Math.round(ageBusinessMinutes/6)/10,limitHours,startedAt:firestoreTimestamp(start,admin.firestore.Timestamp,now),detectedAt:FieldValue.serverTimestamp(),lastEvaluatedAt:FieldValue.serverTimestamp()},{merge:true});
+   else batch.set(ref,{caseId:doc.id,reference:c.reference||doc.id,currentProcess:process,status:"WITHIN_LIMIT",ageBusinessHours:Math.round(ageBusinessMinutes/6)/10,limitHours,startedAt:firestoreTimestamp(start,admin.firestore.Timestamp,now),lastEvaluatedAt:FieldValue.serverTimestamp()},{merge:true});
+  });
+  await batch.commit();
+ });
+});
+
+
+async function applyDeterministicFlowRepair(caseId,actor={uid:"system_flow_guardian",name:"Guardián automático de flujo",role:"system"}){
+ const ref=db.collection("cases").doc(String(caseId||""));
+ if(!caseId)return {ok:false,repaired:false,reason:"CASE_ID_REQUIRED"};
+ return db.runTransaction(async tx=>{
+  const snap=await tx.get(ref);
+  if(!snap.exists)return {ok:false,repaired:false,reason:"CASE_NOT_FOUND"};
+  const current={id:snap.id,...snap.data()},proposal=deterministicRepair(current);
+  if(!proposal.repairable)return {ok:true,repaired:false,reason:"NO_DETERMINISTIC_REPAIR",issues:inspectCase(current)};
+  const stamp=admin.firestore.Timestamp.now(),revision=Number(current.flowRevision||0)+1,eventId=`AUTO_FLOW_REPAIR__${safeId(snap.id)}__${revision}`;
+  const patch={...proposal.patch,flowRevision:revision,lastEventId:eventId,updatedAt:stamp,updatedBy:actor.uid||"system_flow_guardian",updatedByName:actor.name||"Guardián automático de flujo",flowRepairAt:stamp,flowRepairCodes:proposal.reasonCodes,repairHistory:FieldValue.arrayUnion({at:stamp,by:actor.name||"Guardián automático de flujo",byUid:actor.uid||"system_flow_guardian",codes:proposal.reasonCodes,fromProcess:current.currentProcess||"",toProcess:proposal.patch.currentProcess||current.currentProcess||""})};
+  if(proposal.patch.currentProcess&&proposal.patch.currentProcess!==current.currentProcess){patch.processStartedAt=stamp;patch.statusStartedAt=stamp;patch.deadStartedAt=stamp;}
+  const targetProcess=proposal.patch.currentProcess||current.currentProcess||"";
+  tx.set(ref,patch,{merge:true});
+  tx.set(db.collection("case_events").doc(eventId),{id:eventId,caseId:snap.id,type:"FLOW_AUTO_REPAIRED",process:targetProcess,currentProcess:targetProcess,timestamp:stamp,createdAt:stamp,createdBy:actor.uid||"system_flow_guardian",createdByName:actor.name||"Guardián automático de flujo",createdByRole:actor.role||"system",detail:`Corrección automática determinística: ${proposal.reasonCodes.join(", ")}.`,repairCodes:proposal.reasonCodes,fromProcess:current.currentProcess||"",toProcess:targetProcess,visibleRoles:["admin","super_admin","super_administrador","gerencia","jefe_logistica",proposal.patch.assignedRole||current.assignedRole||""].filter(Boolean)},{merge:false});
+  tx.set(db.collection("erp_flow_health").doc(snap.id),{caseId:snap.id,reference:current.reference||current.orderNumber||snap.id,currentProcess:targetProcess,currentStatus:proposal.patch.status||current.status||"",assignedRole:proposal.patch.assignedRole||current.assignedRole||"",assignedName:proposal.patch.assignedName||current.assignedName||"",flowRevision:revision,status:"REPAIRED",issueCount:0,criticalCount:0,highCount:0,issues:[],lastRepairCodes:proposal.reasonCodes,lastRepairAt:stamp,evaluatedAt:stamp,calendarVersion:"6.2.0"},{merge:true});
+  return {ok:true,repaired:true,caseId:snap.id,eventId,revision,reasonCodes:proposal.reasonCodes,patch:clean(proposal.patch)};
+ });
+}
+exports.repairCaseFlow=onCall({enforceAppCheck:true,timeoutSeconds:60},async request=>{
+ const ctx=await requirePrivileged(request),caseId=String(request.data?.caseId||"").trim();
+ if(!caseId)throw new HttpsError("invalid-argument","caseId es obligatorio.");
+ const snap=await db.collection("cases").doc(caseId).get();
+ if(!snap.exists)throw new HttpsError("not-found","Pedido no encontrado.");
+ const proposal=deterministicRepair({id:snap.id,...snap.data()});
+ if(request.data?.dryRun===true)return {ok:true,repaired:false,dryRun:true,proposal};
+ return applyDeterministicFlowRepair(caseId,{uid:ctx.uid,name:ctx.profile.name||ctx.profile.displayName||ctx.email||"Administrador",role:ctx.role});
+});
+exports.repairDeterministicFlowDefects=onSchedule({schedule:"every 30 minutes",timeZone:"America/Bogota",timeoutSeconds:540},async()=>{
+ let inspected=0,repaired=0,failed=0;
+ await forEachCasePage(async docs=>{
+  for(const doc of docs){
+   inspected++;
+   const proposal=deterministicRepair({id:doc.id,...doc.data()});
+   if(!proposal.repairable)continue;
+   try{const result=await applyDeterministicFlowRepair(doc.id);if(result.repaired)repaired++;}
+   catch(error){failed++;console.error("No fue posible reparar flujo",doc.id,error);}
+  }
+ },250);
+ console.info("Guardián de flujo finalizado",{inspected,repaired,failed});
+});
+
+exports.monitorFlowIntegrity=onSchedule({schedule:"every 60 minutes",timeZone:"America/Bogota"},async()=>{
+ const [calendar,configSnap]=await Promise.all([businessCalendar(),db.collection("system_config").doc("erp_sla").get()]);
+ const config=configSnap.exists?configSnap.data():{},defaultHours=Number(config.defaultBusinessHours||8.5),processHours=config.processHours||{},now=Date.now();
+ await forEachCasePage(async docs=>{
+  const batch=db.batch();
+  docs.forEach(doc=>{
+   const c={id:doc.id,...doc.data()},issues=inspectCase(c),process=c.currentProcess||"unknown",start=deriveProcessStart(c,process),ageMinutes=calculateBusinessMinutes(timestampMillis(start,now),now,calendar),limitHours=Number(processHours[process]||defaultHours);
+   if(!closedCase(c.status)&&ageMinutes>limitHours*60)issues.push({code:"STALE_PROCESS",severity:"HIGH",message:`Proceso supera ${limitHours} h hábiles sin relevo.`,ageBusinessHours:Math.round(ageMinutes/6)/10,limitHours});
+   const criticalCount=issues.filter(x=>x.severity==="CRITICAL").length,highCount=issues.filter(x=>x.severity==="HIGH").length;
+   batch.set(db.collection("erp_flow_health").doc(doc.id),{caseId:doc.id,reference:c.reference||c.orderNumber||doc.id,currentProcess:process,currentStatus:c.status||"",assignedRole:c.assignedRole||"",assignedName:c.assignedName||"",flowRevision:Number(c.flowRevision||0),status:criticalCount?"CRITICAL":issues.length?"ATTENTION":"OK",issueCount:issues.length,criticalCount,highCount,issues:clean(issues).slice(0,30),businessAgeHours:Math.round(ageMinutes/6)/10,limitHours,evaluatedAt:FieldValue.serverTimestamp(),calendarVersion:calendar.version||"6.2.0"},{merge:true});
+  });
+  await batch.commit();
+ });
 });
 
 

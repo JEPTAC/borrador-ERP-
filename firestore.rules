@@ -1099,7 +1099,7 @@ service cloud.firestore {
         'maintenance_downtime',
         'erp_domain_events',
         'erp_access_events', 'erp_sod_rules', 'erp_security_findings',
-        'erp_continuity_checks', 'erp_sla_alerts', 'case_process_intervals',
+        'erp_continuity_checks', 'erp_sla_alerts', 'case_process_intervals', 'case_status_intervals', 'erp_flow_health',
         'credit_requests', 'credit_request_events'
       ];
     }
@@ -1142,6 +1142,8 @@ service cloud.firestore {
     match /erp_continuity_checks/{id} { allow read: if isAdminOrSuper() || isManager() || isAuditRole(); allow create, update: if isAdminOrSuper() || isAuditRole(); allow delete: if false; }
     match /erp_sla_alerts/{id} { allow read: if activeUser(); allow write: if false; }
     match /case_process_intervals/{id} { allow read: if activeUser(); allow write: if false; }
+    match /case_status_intervals/{id} { allow read: if activeUser(); allow write: if false; }
+    match /erp_flow_health/{id} { allow read: if activeUser(); allow write: if false; }
 
 
     // Gestión de cartera V5: estados y decisiones solo cambian mediante Cloud Functions.

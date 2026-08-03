@@ -39,5 +39,8 @@
     "2026-12-08",
     "2026-12-25"
   ],
-  "description": "Jornada 07:00-12:00 y 13:40-17:30; sábados, domingos y festivos excluidos."
+  "description": "Jornada 07:00-12:00 y 13:40-17:30; sábados, domingos y festivos de Colombia excluidos dinámicamente para cualquier año.",
+  "country": "CO",
+  "dynamicColombianHolidays": true,
+  "version": "6.2.0"
 }

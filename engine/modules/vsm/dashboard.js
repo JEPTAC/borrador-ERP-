@@ -1,10 +1,10 @@
 (function(){
 'use strict';
-var VERSION='V500';
-var FLOW=['compras','recepcion_pedidos','alistamiento','corte_cable','facturacion','caja','cliente_punto','cliente_recoge','despacho_local','despacho_nacional','cierre_despacho_nacional'];
-var PROCESS={compras:'Compras / liberación PVE',recepcion_pedidos:'Recepción de pedidos',alistamiento:'Alistamiento',corte_cable:'Corte de cable',facturacion:'Facturación',caja:'Caja/Cartera',cliente_punto:'Entrega cliente en punto',cliente_recoge:'Cliente recoge',despacho_local:'Despacho local',despacho_nacional:'Despacho nacional',cierre_despacho_nacional:'Cierre despacho nacional'};
+var VERSION='V620';
+var FLOW=['compras','recepcion_pedidos','alistamiento','corte_cable','facturacion','caja','cartera','cliente_punto','cliente_recoge','despacho_local','despacho_nacional','cierre_despacho_nacional'];
+var PROCESS={compras:'Compras / liberación PVE',recepcion_pedidos:'Recepción de pedidos',alistamiento:'Alistamiento',corte_cable:'Corte de cable',facturacion:'Facturación',caja:'Caja',cartera:'Cartera',cliente_punto:'Entrega cliente en punto',cliente_recoge:'Cliente recoge',despacho_local:'Despacho local',despacho_nacional:'Despacho nacional',cierre_despacho_nacional:'Cierre despacho nacional'};
 var ROLE={compras:'Compras',compra:'Compras',area_compras:'Compras',ventas:'Ventas',asesor:'Ventas',asesor_ventas:'Ventas',vendedor:'Ventas',aux_logistica:'Auxiliar logística',auxiliar_corte:'Auxiliar corte',coordinador_logistico:'Logística/despacho',lider_logistico:'Logística/despacho',jefe_logistica:'Jefe logística',gerencia:'Gerencia',caja:'Caja',cartera:'Cartera',admin:'Admin',super_admin:'Super Admin'};
-var app={db:null,auth:null,user:null,cases:[],events:[],reports:[],eventsByCase:{},metrics:null,loadedAll:false,loading:false,fromCache:false};
+var app={db:null,auth:null,user:null,profile:null,cases:[],events:[],reports:[],flowHealth:[],processIntervals:[],statusIntervals:[],eventsByCase:{},processIntervalsByCase:{},statusIntervalsByCase:{},metrics:null,loadedAll:false,loading:false,fromCache:false,historyCapped:[]};
 var $=function(id){return document.getElementById(id);};
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms||0);});}
@@ -21,24 +21,38 @@ function inheritFirebaseFromOpener(){
 }
 async function loadOne(list,check,label){if(check&&check())return true;var errors=[];for(var i=0;i<list.length;i++){try{status('Cargando '+(label||'librería')+' · fuente '+(i+1)+'/'+list.length,'ok');await script(list[i],17000);if(!check||check()){app.sdkSource=list[i];return true;}errors.push('La ruta cargó pero no dejó disponible '+(label||'librería')+': '+list[i]);}catch(e){errors.push(e.message||String(e));await sleep(150);}}throw new Error((label||'Librería')+' no cargó. Fuentes probadas: '+list.join(' | ')+'. Último error: '+(errors[errors.length-1]||'sin detalle'));}
 async function loadFirebaseConfig(){if(window.firebaseConfig)return true;var root=window.EI_VSM_APP_ROOT||new URL('../../',location.href).href;var urls=[new URL('shared/js/firebase-config.js?v='+Date.now(),root).href];var last;for(var i=0;i<urls.length;i++){try{await script(urls[i],9000);if(window.firebaseConfig)return true;}catch(e){last=e;}}throw new Error('firebase-config.js no creó window.firebaseConfig. '+(last?last.message:''));}
+async function loadOperationalProfile(){
+  if(!app.user||!app.db)throw new Error('No existe una sesión autenticada para validar el perfil VSM.');
+  var requests=[app.db.collection('users').doc(app.user.uid).get().catch(function(){return null;})];
+  if(app.user.email)requests.push(app.db.collection('users').doc(app.user.email).get().catch(function(){return null;}));
+  var results=await Promise.all(requests),doc=null;
+  results.some(function(result){if(result&&result.exists){doc=result;return true;}return false;});
+  if(!doc)throw new Error('La sesión no tiene un perfil operativo en la colección users.');
+  var data=doc.data()||{};
+  if(data.isActive===false)throw new Error('El perfil del usuario está inactivo.');
+  if(!clean(data.role||data.rol))throw new Error('El perfil no tiene un rol operativo configurado.');
+  app.profile={id:doc.id,name:data.name||data.displayName||app.user.displayName||app.user.email||'Usuario',role:data.role||data.rol,email:data.email||app.user.email||''};
+  return app.profile;
+}
 async function initFirebase(){
   status('Cargando Firebase del tablero VSM '+VERSION+'...','ok');
-  var v='10.12.5';
+  var v='12.15.0';
   inheritFirebaseFromOpener();
   if(!(window.firebase&&window.firebase.initializeApp&&window.firebase.auth&&window.firebase.firestore)){
     await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-app-compat.js','https://unpkg.com/firebase@'+v+'/firebase-app-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-app.js'],function(){return !!(window.firebase&&window.firebase.initializeApp);},'Firebase App');
     await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-auth-compat.js','https://unpkg.com/firebase@'+v+'/firebase-auth-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-auth.js'],function(){return !!(window.firebase&&window.firebase.auth);},'Firebase Auth');
     await loadOne(['https://www.gstatic.com/firebasejs/'+v+'/firebase-firestore-compat.js','https://unpkg.com/firebase@'+v+'/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/firebase@'+v+'/compat/firebase-firestore.js'],function(){return !!(window.firebase&&window.firebase.firestore);},'Firebase Firestore');
   }
-  await loadFirebaseConfig();
   var fb=window.firebase;if(!fb||!fb.initializeApp||!fb.auth||!fb.firestore)throw new Error('Firebase no quedó disponible después de cargar el SDK. Revise red, DNS o bloqueo del navegador.');
-  if(!fb.apps.length)fb.initializeApp(window.firebaseConfig);
+  if(!fb.apps.length){await loadFirebaseConfig();fb.initializeApp(window.firebaseConfig);}else if(!app.sdkSource)app.sdkSource='sesion_erp_existente';
   app.auth=fb.auth();app.db=fb.firestore();
-  if(app.sdkSource!=='app_principal'){try{app.db.settings({ignoreUndefinedProperties:true,merge:true});}catch(e){try{app.db.settings({ignoreUndefinedProperties:true});}catch(_e){}}}
+  if(app.sdkSource!=='erp_parent'&&app.sdkSource!=='app_principal'&&app.sdkSource!=='sesion_erp_existente'){try{app.db.settings({ignoreUndefinedProperties:true});}catch(_e){}}
   app.user=await new Promise(function(resolve){var done=false;var unsub=app.auth.onAuthStateChanged(function(u){if(done)return;done=true;try{unsub&&unsub();}catch(e){}resolve(u||null);});setTimeout(function(){if(done)return;done=true;resolve(app.auth.currentUser||null);},5000);});
-  if(!app.user)status('No hay sesión activa. Abre primero la app principal e inicia sesión; luego vuelve a este tablero.','bad');
-  else{var vsmUserName=app.user.displayName||'Usuario autenticado';status('Firebase conectado desde '+esc(app.sdkSource||'SDK')+'. Usuario: '+esc(vsmUserName)+'. Tablero aislado de la operación.','ok');}
+  if(!app.user)throw new Error('No hay una sesión activa. Regrese al ERP, inicie sesión y vuelva a abrir el VSM.');
+  await loadOperationalProfile();
+  status('Firebase conectado desde '+esc(app.sdkSource||'SDK')+'. Usuario: '+esc(app.profile.name)+'. Perfil: '+esc(app.profile.role)+'.','ok');
 }
+
 function toDate(v){
   if(v===null||v===undefined||v==='')return null;
   try{
@@ -84,39 +98,11 @@ function productivityState(m){
   return {ratio:ratio,non:non,cls:cls,label:label,text:text};
 }
 function workDate(v){try{if(!v)return null;if(v instanceof Date)return isNaN(v.getTime())?null:v;if(v.toDate&&typeof v.toDate==="function"){var d1=v.toDate();return d1&&isNaN(d1.getTime())?null:d1;}if(typeof v==="object"&&(v.seconds||v._seconds))return new Date(Number(v.seconds||v._seconds)*1000);var d=new Date(v);return isNaN(d.getTime())?null:d;}catch(e){return null;}}
-var EI_NON_WORKING_DATES_2026={"2026-01-01":1,"2026-01-03":1,"2026-01-04":1,"2026-01-10":1,"2026-01-11":1,"2026-01-12":1,"2026-01-17":1,"2026-01-18":1,"2026-01-24":1,"2026-01-25":1,"2026-01-31":1,"2026-02-01":1,"2026-02-07":1,"2026-02-08":1,"2026-02-14":1,"2026-02-15":1,"2026-02-21":1,"2026-02-22":1,"2026-02-28":1,"2026-03-01":1,"2026-03-07":1,"2026-03-08":1,"2026-03-14":1,"2026-03-15":1,"2026-03-21":1,"2026-03-22":1,"2026-03-23":1,"2026-03-28":1,"2026-03-29":1,"2026-04-02":1,"2026-04-03":1,"2026-04-04":1,"2026-04-05":1,"2026-04-11":1,"2026-04-12":1,"2026-04-18":1,"2026-04-19":1,"2026-04-25":1,"2026-04-26":1,"2026-05-01":1,"2026-05-02":1,"2026-05-03":1,"2026-05-09":1,"2026-05-10":1,"2026-05-16":1,"2026-05-17":1,"2026-05-18":1,"2026-05-23":1,"2026-05-24":1,"2026-05-30":1,"2026-05-31":1,"2026-06-06":1,"2026-06-07":1,"2026-06-08":1,"2026-06-13":1,"2026-06-14":1,"2026-06-15":1,"2026-06-20":1,"2026-06-21":1,"2026-06-27":1,"2026-06-28":1,"2026-06-29":1,"2026-07-04":1,"2026-07-05":1,"2026-07-11":1,"2026-07-12":1,"2026-07-13":1,"2026-07-18":1,"2026-07-19":1,"2026-07-20":1,"2026-07-25":1,"2026-07-26":1,"2026-08-01":1,"2026-08-02":1,"2026-08-07":1,"2026-08-08":1,"2026-08-09":1,"2026-08-15":1,"2026-08-16":1,"2026-08-17":1,"2026-08-22":1,"2026-08-23":1,"2026-08-29":1,"2026-08-30":1,"2026-09-05":1,"2026-09-06":1,"2026-09-12":1,"2026-09-13":1,"2026-09-19":1,"2026-09-20":1,"2026-09-26":1,"2026-09-27":1,"2026-10-03":1,"2026-10-04":1,"2026-10-10":1,"2026-10-11":1,"2026-10-12":1,"2026-10-17":1,"2026-10-18":1,"2026-10-24":1,"2026-10-25":1,"2026-10-31":1,"2026-11-01":1,"2026-11-02":1,"2026-11-07":1,"2026-11-08":1,"2026-11-14":1,"2026-11-15":1,"2026-11-16":1,"2026-11-21":1,"2026-11-22":1,"2026-11-28":1,"2026-11-29":1,"2026-12-05":1,"2026-12-06":1,"2026-12-08":1,"2026-12-12":1,"2026-12-13":1,"2026-12-19":1,"2026-12-20":1,"2026-12-25":1,"2026-12-26":1,"2026-12-27":1};
-function isoLocalDay(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-function isWorkingCalendarDay(d){
-  if(!d||isNaN(d.getTime()))return false;
-  var key=isoLocalDay(d);
-  if(EI_NON_WORKING_DATES_2026[key])return false;
-  var dow=d.getDay();
-  if(dow===0||dow===6)return false;
-  return true;
-}
-function workingMsBetween(start,end){
-  var a=workDate(start),b=workDate(end);
-  if(!a)return 0;
-  if(!b)b=new Date();
-  if(b<a)return 0;
-  var total=0,day=new Date(a);
-  day.setHours(0,0,0,0);
-  var guard=0;
-  while(day<=b&&guard<3700){
-    if(isWorkingCalendarDay(day)){
-      var y=day.getFullYear(),m=day.getMonth(),d=day.getDate();
-      [[new Date(y,m,d,7,0,0,0),new Date(y,m,d,12,0,0,0)],[new Date(y,m,d,13,40,0,0),new Date(y,m,d,17,30,0,0)]].forEach(function(w){
-        var s=Math.max(a.getTime(),w[0].getTime()),e=Math.min(b.getTime(),w[1].getTime());
-        if(e>s)total+=e-s;
-      });
-    }
-    day.setDate(day.getDate()+1);
-    guard++;
-  }
-  return Math.max(0,total);
-}
+function workingMsBetween(start,end){return window.EI_BUSINESS_CALENDAR?window.EI_BUSINESS_CALENDAR.calculateMs(start,end):durMs(start,end);}
 function workingMsSince(v){return workingMsBetween(v,new Date());}
-
+function renderCalendarSummary(){var el=$("calendarSummary");if(!el||!window.EI_BUSINESS_CALENDAR)return;var info=window.EI_BUSINESS_CALENDAR.summary(new Date().getFullYear());el.innerHTML='<div><strong>Calendario laboral aplicado</strong><span>'+esc(info.timeZone)+' · '+esc(info.workdays.join(", "))+'</span></div><div><strong>Jornada</strong><span>'+esc(info.windows.join(" / "))+'</span></div><div><strong>Exclusiones</strong><span>Fines de semana y '+info.holidays.length+' festivos de Colombia en '+new Date().getFullYear()+'</span></div><div><strong>Criterio VSM</strong><span>Todos los LT, esperas, NVA y ocupación se calculan en tiempo hábil.</span></div>';}
+function renderTraceSources(){var el=$('traceSources');if(!el)return;var alertCount=(app.flowHealth||[]).filter(function(x){return Array.isArray(x.issues)&&x.issues.length;}).length,repairedCount=(app.flowHealth||[]).filter(function(x){return String(x.status||'').toUpperCase()==='REPAIRED';}).length;el.innerHTML='<article><span>Pedidos</span><strong>'+app.cases.length+'</strong><small>Documento operativo vigente</small></article><article><span>Eventos</span><strong>'+app.events.length+'</strong><small>Movimientos y responsables</small></article><article><span>Intervalos de proceso</span><strong>'+app.processIntervals.length+'</strong><small>Relevos calculados por backend</small></article><article><span>Intervalos de estado</span><strong>'+app.statusIntervals.length+'</strong><small>Trabajo, espera y cola</small></article><article><span>Novedades</span><strong>'+app.reports.length+'</strong><small>Bloqueos y respuestas</small></article><article><span>Integridad</span><strong>'+alertCount+'</strong><small>'+repairedCount+' reparación(es) auditada(s)</small></article>';}
+async function loadBusinessCalendarConfig(){if(!app.db||!window.EI_BUSINESS_CALENDAR)return;try{var snap=await app.db.collection("system_config").doc("business_calendar").get();if(snap.exists)window.EI_BUSINESS_CALENDAR.setConfig(snap.data());}catch(error){console.warn("Calendario empresarial remoto no disponible; se usa configuración V6.2.",error);}renderCalendarSummary();}
 function timeSplitHtml(va,wait,dead){
   var total=Math.max(1,num(va)+num(wait)+num(dead));
   return '<div class="time-tags"><span class="time-tag va"><b>Ocupación</b>'+timeUnit(va)+' · '+pct(va,total)+'%</span><span class="time-tag wait"><b>Espera/bloqueo</b>'+timeUnit(wait)+' · '+pct(wait,total)+'%</span><span class="time-tag dead"><b>NVA</b>'+timeUnit(dead)+' · '+pct(dead,total)+'%</span></div>';
@@ -212,6 +198,29 @@ function idOf(c){return String(c.id||c.caseId||'');}
 function refOf(c){return String(c.reference||c.caseNumber||c.pedido||c.id||'');}
 function buildEventBuckets(){app.eventsByCase={};(app.events||[]).forEach(function(e){var keys=[e.caseId,e.caseReference,e.reference,e.sourceId,e.caseNumber].map(function(x){return String(x||'');}).filter(Boolean);keys.forEach(function(k){app.eventsByCase[k]=app.eventsByCase[k]||[];app.eventsByCase[k].push(e);});});}
 function caseEvents(c){var a=(app.eventsByCase[idOf(c)]||[]),b=(app.eventsByCase[refOf(c)]||[]);var seen={},out=[];a.concat(b).forEach(function(e){var k=e.id||[e.timestamp,e.createdAt,e.type,e.detail].join('|');if(!seen[k]){seen[k]=1;out.push(e);}});return out;}
+function buildIntervalBuckets(){
+  app.processIntervalsByCase={};app.statusIntervalsByCase={};
+  function add(target,item){
+    var keys=[item.caseId,item.caseReference,item.reference,item.orderNumber].map(function(x){return String(x||'');}).filter(Boolean);
+    keys.forEach(function(key){target[key]=target[key]||[];target[key].push(item);});
+  }
+  (app.processIntervals||[]).forEach(function(item){add(app.processIntervalsByCase,item);});
+  (app.statusIntervals||[]).forEach(function(item){add(app.statusIntervalsByCase,item);});
+}
+function intervalRowsFor(target,c){
+  var a=(target[idOf(c)]||[]),b=(target[refOf(c)]||[]),seen={},out=[];
+  a.concat(b).forEach(function(item){var key=item.id||item.cloudEventId||[item.caseId,item.process,item.startedAt,item.endedAt].join('|');if(!seen[key]){seen[key]=1;out.push(item);}});
+  return out;
+}
+function caseProcessIntervals(c,p){return intervalRowsFor(app.processIntervalsByCase,c).filter(function(x){return !p||x.process===p;});}
+function caseStatusIntervals(c,p){return intervalRowsFor(app.statusIntervalsByCase,c).filter(function(x){return !p||x.process===p;});}
+function statusIntervalKind(row){
+  var status=lower((row&&row.fromStatus)||'');
+  if(/espera|pendiente|bloque|reten|no_entregado|devolucion/.test(status))return 'wait';
+  if(/en_proceso|preparacion|ruta|acept|trabajo/.test(status))return 'active';
+  return 'dead';
+}
+function intervalBusinessMs(row){var minutes=num(row&&row.businessMinutes);if(minutes>0)return minutes*60000;return workingMsBetween(row&&row.startedAt,row&&row.endedAt);}
 function eventProcess(e,c){var p=e.process||e.currentProcess||e.sourceProcess||e.returnProcess||e.targetProcess||'';if(PROCESS[p])return p;var txt=lower([e.processName,e.detail,e.type,e.reason,e.status].join(' '));for(var i=0;i<FLOW.length;i++){if(txt.indexOf(lower(PROCESS[FLOW[i]]))>=0||txt.indexOf(FLOW[i])>=0)return FLOW[i];}return c.currentProcess||'';}
 function eventKind(e){var txt=lower([e.type,e.traceType,e.status,e.detail,e.reason].join(' '));if(/espera|requer|bloque|pendiente|pago|retenid|devolucion|no_entrega/.test(txt))return 'wait';if(/asignad|entrada|cola|dead|recibido|enviado/.test(txt))return 'dead';if(/inicio|trabajo|valor|proceso|acept|conforme|registr|finaliz|cierre|liber/.test(txt))return 'active';return 'dead';}
 function collectDatesDeep(c){var out=[],count=0;function add(v){pushDate(out,v);}function scan(o,depth){if(!o||depth>5||count>1800)return;if(Array.isArray(o)){for(var i=0;i<Math.min(o.length,220);i++)scan(o[i],depth+1);return;}if(typeof o!=='object')return;Object.keys(o).forEach(function(k){if(count>1800)return;count++;var v=o[k];if(/(At|Date|fecha|timestamp|time|hora|started|finished|closed|completed|updated|created|released|confirmed|inicio|fin|cierre)/i.test(k))add(v);if(v&&typeof v==='object'&&!(v.toDate||v.seconds||v._seconds))scan(v,depth+1);});}scan(c,0);caseEvents(c).forEach(function(e){scan(e,0);});return out;}
@@ -235,15 +244,25 @@ function reqRows(c,endMs){var rows=[];function addRow(proc,s,e,tipo,user,detalle
   if(c.separationRequest&&(c.separationRequest.waitingPaymentStartedAt||c.separationRequest.createdAt)){var sr=c.separationRequest;addRow('caja',tms(sr.waitingPaymentStartedAt||sr.createdAt),tms(sr.paymentConfirmedAt||sr.releasedAt)||endMs,'Espera pago/separación',sr.paymentConfirmedByName||sr.createdByName||'',sr.paymentConfirmationDetail||sr.detail||'');}
   return rows;
 }
-function processStatsList(c){var out={},ps=c.processStats||{};Object.keys(ps).forEach(function(p){if(PROCESS[p])out[p]=1;});if(c.currentProcess&&PROCESS[c.currentProcess])out[c.currentProcess]=1;allTraceEvents(c).forEach(function(e){if(PROCESS[e.process])out[e.process]=1;});(c.requirements||[]).forEach(function(r){var p=reqProcess(r,c);if(PROCESS[p])out[p]=1;});if((c.cutRequests||[]).length)out.corte_cable=1;if(!Object.keys(out).length)out[c.currentProcess&&PROCESS[c.currentProcess]?c.currentProcess:'recepcion_pedidos']=1;return Object.keys(out);}
+function processStatsList(c){var out={},ps=c.processStats||{};Object.keys(ps).forEach(function(p){if(PROCESS[p])out[p]=1;});if(c.currentProcess&&PROCESS[c.currentProcess])out[c.currentProcess]=1;allTraceEvents(c).forEach(function(e){if(PROCESS[e.process])out[e.process]=1;});caseProcessIntervals(c).forEach(function(x){if(PROCESS[x.process])out[x.process]=1;});caseStatusIntervals(c).forEach(function(x){if(PROCESS[x.process])out[x.process]=1;});(c.requirements||[]).forEach(function(r){var p=reqProcess(r,c);if(PROCESS[p])out[p]=1;});if((c.cutRequests||[]).length)out.corte_cable=1;if(!Object.keys(out).length)out[c.currentProcess&&PROCESS[c.currentProcess]?c.currentProcess:'recepcion_pedidos']=1;return Object.keys(out);}
 function processMetric(c,p,startMs,endMs){var st=(c.processStats||{})[p]||{};var active=num(st.activeMs||st.valueMs||st.workMs),wait=num(st.waitMs||st.holdMs),dead=num(st.deadMs||st.nvaMs||st.queueMs);if(v231ProcessStatsExcluded(st))active=0;var explicit=active+wait+dead;
-  var pEvents=allTraceEvents(c).filter(function(e){return e.process===p;});var dates=[];[st.startedAt,st.enteredAt,st.createdAt,st.activeStartedAt,st.waitStartedAt,st.deadStartedAt].forEach(function(v){pushDate(dates,v);});pEvents.forEach(function(e){dates.push(e.ms);});if(c.currentProcess===p)[c.activeStartedAt,c.waitStartedAt,c.deadStartedAt,c.updatedAt].forEach(function(v){pushDate(dates,v);});
+  var authoritativeIntervals=caseProcessIntervals(c,p),statusIntervals=caseStatusIntervals(c,p),authoritativeMs=authoritativeIntervals.reduce(function(sum,row){return sum+intervalBusinessMs(row);},0),statusActive=0,statusWait=0,statusDead=0;
+  statusIntervals.forEach(function(row){var value=intervalBusinessMs(row),kind=statusIntervalKind(row);if(kind==='active')statusActive+=value;else if(kind==='wait')statusWait+=value;else statusDead+=value;});
+  var pEvents=allTraceEvents(c).filter(function(e){return e.process===p;});var dates=[];[st.startedAt,st.enteredAt,st.createdAt,st.activeStartedAt,st.waitStartedAt,st.deadStartedAt].forEach(function(v){pushDate(dates,v);});pEvents.forEach(function(e){dates.push(e.ms);});authoritativeIntervals.forEach(function(row){pushDate(dates,row.startedAt);pushDate(dates,row.endedAt);});statusIntervals.forEach(function(row){pushDate(dates,row.startedAt);pushDate(dates,row.endedAt);});if(c.currentProcess===p)[c.activeStartedAt,c.waitStartedAt,c.deadStartedAt,c.updatedAt].forEach(function(v){pushDate(dates,v);});
   var ps=minMs(dates), pe=maxMs([st.completedAt,st.finishedAt,st.closedAt,st.updatedAt]);if(!isFinite(pe)&&pEvents.length)pe=maxMs(pEvents.map(function(e){return e.ms;}));if(c.currentProcess===p&&!isClosed(c))pe=endMs;
   var timeline=0,tlActive=0,tlWait=0,tlDead=0;if(pEvents.length){for(var i=0;i<pEvents.length;i++){var a=pEvents[i].ms,b=(i<pEvents.length-1?pEvents[i+1].ms:pe);if(!isFinite(b)||b<a)b=a;var d=workingMsBetween(a,b);if(d>0&&d<1000*60*60*24*45){timeline+=d;if(pEvents[i].kind==='wait')tlWait+=d;else if(pEvents[i].kind==='active')tlActive+=d;else tlDead+=d;}}}
-  if(!active&&tlActive)active=tlActive;if(!wait&&tlWait)wait=tlWait;if(!dead&&tlDead)dead=tlDead;
+  if(authoritativeMs>0){
+    var classified=statusActive+statusWait+statusDead;
+    if(classified>0){active=statusActive;wait=statusWait;dead=statusDead+Math.max(0,authoritativeMs-classified);}
+    else if(explicit>0){var intervalScale=Math.min(1,authoritativeMs/explicit);active*=intervalScale;wait*=intervalScale;dead*=intervalScale;dead+=Math.max(0,authoritativeMs-active-wait-dead);}
+    else{active=0;wait=0;dead=authoritativeMs;}
+    timeline=authoritativeMs;
+  }else{
+    if(!active&&tlActive)active=tlActive;if(!wait&&tlWait)wait=tlWait;if(!dead&&tlDead)dead=tlDead;
+  }
   if(c.currentProcess===p){if(c.activeStartedAt)active+=workingMsSince(c.activeStartedAt);if(c.waitStartedAt)wait+=workingMsSince(c.waitStartedAt);if(c.deadStartedAt)dead+=workingMsSince(c.deadStartedAt);}
   var req=0;reqRows(c,endMs).forEach(function(r){if(r.process===p||r.proceso===processTitle(p))req+=r.dur;});if(req>wait)wait=req;
-  var elapsed=(isFinite(ps)&&isFinite(pe)&&pe>=ps)?workingMsBetween(ps,pe):0;if(!elapsed)elapsed=Math.max(timeline,active+wait+dead);
+  var elapsed=authoritativeMs>0?Math.max(authoritativeMs,active+wait+dead):((isFinite(ps)&&isFinite(pe)&&pe>=ps)?workingMsBetween(ps,pe):0);if(!elapsed)elapsed=Math.max(timeline,active+wait+dead);
   if(!elapsed&&c.currentProcess===p)elapsed=workingMsBetween(startMs,endMs);
   if(!elapsed&&p==='corte_cable'&&(c.cutRequests||[]).length){(c.cutRequests||[]).forEach(function(x){var d=num(x.durationMs)||workingMsBetween(x.startedAt||x.takenAt,x.finishedAt||x.completedAt||x.registeredAt);elapsed+=d;active+=d;});}
   if(elapsed>0 && active+wait+dead>elapsed){var scalePm=elapsed/(active+wait+dead);active=active*scalePm;wait=wait*scalePm;dead=Math.max(0,elapsed-active-wait);}
@@ -540,30 +559,103 @@ function filterCancelledCases(){
     return caseMatchesBaseFilters(c,true);
   });
 }
-async function getSnap(q,timeoutMs){return await Promise.race([q.get(),new Promise(function(_,rej){setTimeout(function(){rej(new Error('Timeout leyendo Firebase'));},timeoutMs||14000);})]);}
-async function mergeDocsFromQuery(out,seen,q,label,limitMax){try{var snap=await getSnap(q.limit(limitMax||500),16000);snap.forEach(function(doc){if(!seen[doc.id]){var d=doc.data()||{};d.id=d.id||doc.id;out.push(d);seen[doc.id]=1;}});return snap.size;}catch(e){console.warn('VSM query omitida '+label,e);return 0;}}
-async function loadEvents(limit){if(!app.db)return;var out=[],seen={},lim=limit||1600;async function merge(q,label){try{var snap=await getSnap(q.limit(lim),14000);snap.forEach(function(doc){if(!seen[doc.id]){var d=doc.data()||{};d.id=d.id||doc.id;out.push(d);seen[doc.id]=1;}});}catch(e){console.warn('No se pudieron leer eventos '+label,e);}}
-  await merge(app.db.collection('case_events').orderBy('timestamp','desc'),'timestamp');await merge(app.db.collection('case_events').orderBy('createdAt','desc'),'createdAt');if(!out.length)await merge(app.db.collection('case_events'),'sin orden');app.events=out;buildEventBuckets();}
-async function loadReports(limit){
-  if(!app.db)return;
-  var out=[],seen={},lim=limit||1000;
-  async function merge(q,label){
-    try{
-      var snap=await getSnap(q.limit(lim),14000);
+async function getSnap(q,timeoutMs){return await Promise.race([q.get(),new Promise(function(_,rej){setTimeout(function(){rej(new Error('Timeout leyendo Firebase'));},timeoutMs||20000);})]);}
+async function mergeDocsFromQuery(out,seen,q,label,limitMax,paginate){
+  var max=Math.max(1,Number(limitMax||500)),pageSize=Math.min(500,max),total=0,cursor=null,lastSize=0,lastTake=0,page=0;
+  try{
+    while(total<max){
+      var query=q;
+      if(cursor)query=query.startAfter(cursor);
+      lastTake=Math.min(pageSize,max-total);
+      var snap=await getSnap(query.limit(lastTake),22000);
+      lastSize=snap.size;
       snap.forEach(function(doc){if(!seen[doc.id]){var d=doc.data()||{};d.id=d.id||doc.id;out.push(d);seen[doc.id]=1;}});
-    }catch(e){console.warn('No se pudieron leer reportes/novedades '+label,e);}
-  }
+      total+=snap.size;page++;
+      if(!paginate||snap.size<lastTake||!snap.docs||!snap.docs.length)break;
+      cursor=snap.docs[snap.docs.length-1];
+      if(page%4===0){loading(true,'Histórico VSM · '+label+' · '+total+' documentos revisados...');await sleep(0);}
+    }
+    if(paginate&&total>=max&&lastSize===lastTake&&cursor){
+      try{var extra=await getSnap(q.startAfter(cursor).limit(1),12000);if(extra.size){app.historyCapped=app.historyCapped||[];if(app.historyCapped.indexOf(label)<0)app.historyCapped.push(label);}}catch(capError){console.warn('No fue posible verificar el límite histórico '+label,capError);}
+    }
+    return total;
+  }catch(e){console.warn('VSM query omitida '+label,e);return total;}
+}
+async function loadEvents(limit,all){
+  if(!app.db)return;var out=[],seen={},lim=limit||1600;
+  async function merge(q,label){return mergeDocsFromQuery(out,seen,q,'eventos '+label,lim,!!all);}
+  await merge(app.db.collection('case_events').orderBy('timestamp','desc'),'timestamp');
+  await merge(app.db.collection('case_events').orderBy('createdAt','desc'),'createdAt');
+  if(all||!out.length)await merge(app.db.collection('case_events'),'sin orden');
+  app.events=out;buildEventBuckets();
+}
+async function loadReports(limit,all){
+  if(!app.db)return;var out=[],seen={},lim=limit||1000;
+  async function merge(q,label){return mergeDocsFromQuery(out,seen,q,'novedades '+label,lim,!!all);}
   await merge(app.db.collection('reportes_novedad').orderBy('updatedAt','desc'),'updatedAt');
   await merge(app.db.collection('reportes_novedad').orderBy('createdAt','desc'),'createdAt');
-  if(!out.length)await merge(app.db.collection('reportes_novedad'),'sin orden');
+  if(all||!out.length)await merge(app.db.collection('reportes_novedad'),'sin orden');
   app.reports=out;
 }
-async function loadCases(all){if(!app.db)return;loading(true,'Leyendo Firebase sin bloquear...');var limit=Number($('fLimit').value||600);var batch=all?Math.max(500,limit):limit;var out=all?app.cases.slice():[],seen={};out.forEach(function(c){seen[idOf(c)]=1;});await loadEvents(all?3500:1600);await loadReports(all?1600:1000);
-  await mergeDocsFromQuery(out,seen,app.db.collection('cases').orderBy('updatedAt','desc'),'updatedAt',batch);
+async function loadIntervals(limit,all){
+  if(!app.db)return;var lim=limit||2500;
+  async function readCollection(name,orderField){
+    var out=[],seen={};
+    await mergeDocsFromQuery(out,seen,app.db.collection(name).orderBy(orderField,'desc'),name+' '+orderField,lim,!!all);
+    if(all||!out.length)await mergeDocsFromQuery(out,seen,app.db.collection(name),name+' sin orden',lim,!!all);
+    return out;
+  }
+  var rows=await Promise.all([readCollection('case_process_intervals','endedAt'),readCollection('case_status_intervals','endedAt')]);
+  app.processIntervals=rows[0];app.statusIntervals=rows[1];buildIntervalBuckets();
+}
+async function loadFlowHealth(limit,all){
+  if(!app.db)return;var out=[],seen={},lim=limit||1000;
+  await mergeDocsFromQuery(out,seen,app.db.collection('erp_flow_health').orderBy('evaluatedAt','desc'),'salud de flujo evaluatedAt',lim,!!all);
+  if(all||!out.length)await mergeDocsFromQuery(out,seen,app.db.collection('erp_flow_health'),'salud de flujo sin orden',lim,!!all);
+  out.forEach(function(d){d.caseId=d.caseId||d.id;});app.flowHealth=out;
+}
+function flowHealthSeverity(item){
+  var issues=(item&&Array.isArray(item.issues))?item.issues:[];
+  var critical=issues.filter(function(x){return /CRITICAL|BLOCKED|INVALID|STUCK|ORPHAN/i.test(String((x&&x.severity)||'')+' '+String((x&&x.code)||''));}).length;
+  if(critical||String((item&&item.status)||'').toUpperCase()==='CRITICAL')return 'bad';
+  return issues.length?'warn':'ok';
+}
+function flowHealthIssueText(issue){
+  if(!issue)return 'Hallazgo sin detalle';
+  return clean(issue.message||issue.detail||issue.description||issue.code||'Hallazgo de integridad');
+}
+function renderFlowHealth(){
+  var board=$('flowHealthBoard');if(!board)return;
+  var visible={};
+  ((app.metrics&&app.metrics.caseRows)||[]).forEach(function(r){var id=idOf(r.c);if(id)visible[id]=1;});
+  var rows=(app.flowHealth||[]).filter(function(item){
+    var id=clean(item.caseId||item.id);
+    var hasIssues=Array.isArray(item.issues)&&item.issues.length;
+    return hasIssues&&(!Object.keys(visible).length||visible[id]);
+  }).sort(function(a,b){
+    var sa=flowHealthSeverity(a)==='bad'?2:1,sb=flowHealthSeverity(b)==='bad'?2:1;
+    return sb-sa||tms(b.evaluatedAt)-tms(a.evaluatedAt);
+  });
+  if(!rows.length){
+    var repaired=(app.flowHealth||[]).filter(function(item){return String(item.status||'').toUpperCase()==='REPAIRED';}).length;
+    board.innerHTML='<div class="flow-health-empty"><span class="status-chip ok">Flujo controlado</span><div><strong>Sin pedidos colgados detectados</strong><small>El monitor no reporta transiciones inválidas, cortes pendientes ni etapas vencidas dentro del filtro actual.'+(repaired?' Reparaciones determinísticas auditadas: '+repaired+'.':'')+'</small></div></div>';
+    return;
+  }
+  var html=rows.slice(0,40).map(function(item){
+    var issues=item.issues||[],sev=flowHealthSeverity(item),ageHours=num(item.businessAgeHours||item.ageBusinessHours||0);
+    var reference=clean(item.reference||item.caseReference||item.orderNumber||item.caseId||item.id);
+    var process=processTitle(item.currentProcess||item.process||'');
+    var issueHtml=issues.slice(0,4).map(function(issue){return '<li>'+esc(flowHealthIssueText(issue))+'</li>';}).join('');
+    return '<article class="flow-health-item '+sev+'"><header><div><strong>'+esc(reference||'Pedido sin referencia')+'</strong><small>'+esc(process||'Proceso no identificado')+'</small></div><span class="status-chip '+sev+'">'+issues.length+' hallazgo(s)</span></header><ul>'+issueHtml+'</ul><footer><span>Antigüedad hábil: '+esc(ageHours?(Math.round(ageHours*10)/10)+' h':'sin dato')+'</span><span>Evaluado: '+esc(dateTxt(item.evaluatedAt||item.updatedAt))+'</span></footer></article>';
+  }).join('');
+  board.innerHTML='<div class="flow-health-head"><div><strong>'+rows.length+' pedido(s) requieren intervención</strong><small>El guardián corrige únicamente defectos determinísticos y deja evento de auditoría; los casos ambiguos permanecen visibles para intervención humana.</small></div><span class="status-chip '+(rows.some(function(x){return flowHealthSeverity(x)==='bad';})?'bad':'warn')+'">Atención operativa</span></div><div class="flow-health-grid">'+html+'</div>';
+}
+async function loadCases(all){if(!app.db)return;loading(true,'Leyendo Firebase sin bloquear...');var limit=Number($('fLimit').value||600);var batch=all?Math.max(1000,limit):limit;var out=all?app.cases.slice():[],seen={};app.historyCapped=[];out.forEach(function(c){seen[idOf(c)]=1;});await Promise.all([loadEvents(all?50000:1600,all),loadReports(all?50000:1000,all),loadIntervals(all?50000:2500,all),loadFlowHealth(all?50000:1000,all)]);
+  await mergeDocsFromQuery(out,seen,app.db.collection('cases').orderBy('updatedAt','desc'),'pedidos updatedAt',batch,false);
   await sleep(0);loading(true,'Cargados '+out.length+' pedidos · complementando fechas de creación...');
-  await mergeDocsFromQuery(out,seen,app.db.collection('cases').orderBy('createdAt','desc'),'createdAt',Math.min(batch,900));
-  if(all){await sleep(0);loading(true,'Cargando histórico adicional sin orden...');await mergeDocsFromQuery(out,seen,app.db.collection('cases'),'sin orden',2000);}else if(out.length<50){await mergeDocsFromQuery(out,seen,app.db.collection('cases'),'sin orden mínimo',300);}
-  app.cases=out;app.loadedAll=!!all;fillFilters();status('Datos reales cargados desde Firebase: '+out.length+' pedido(s) y '+app.events.length+' evento(s) y '+(app.reports||[]).length+' novedad(es). '+VERSION+' calcula Lead Time con conciliación completa: base cargada, trazados VSM, cancelados/anulados, excluidos y no trazados.','ok');await refresh();}
+  await mergeDocsFromQuery(out,seen,app.db.collection('cases').orderBy('createdAt','desc'),'pedidos createdAt',Math.min(batch,1000),false);
+  if(all){await sleep(0);loading(true,'Cargando histórico completo de pedidos por páginas...');await mergeDocsFromQuery(out,seen,app.db.collection('cases'),'pedidos sin orden',50000,true);}else if(out.length<50){await mergeDocsFromQuery(out,seen,app.db.collection('cases'),'pedidos sin orden mínimo',300,false);}
+  app.cases=out;app.loadedAll=!!all;fillFilters();renderTraceSources();var cap=(app.historyCapped||[]).length?' Advertencia: se alcanzó el límite de seguridad en '+app.historyCapped.join(', ')+'.':'';status('Datos reales cargados desde Firebase: '+out.length+' pedido(s), '+app.events.length+' evento(s), '+(app.reports||[]).length+' novedad(es) y '+(app.flowHealth||[]).filter(function(x){return Array.isArray(x.issues)&&x.issues.length;}).length+' alerta(s) de integridad, '+(app.processIntervals||[]).length+' intervalo(s) de proceso y '+(app.statusIntervals||[]).length+' intervalo(s) de estado. '+VERSION+' calcula Lead Time con calendario laboral y conciliación completa.'+cap,(app.historyCapped||[]).length?'bad':'ok');await refresh();}
 function xls(v){return esc(v).replace(/\n/g,' ');}function row(cells){return '<tr>'+cells.map(function(c){return '<td>'+xls(c)+'</td>';}).join('')+'</tr>';}
 async function appendRows(parts,items,mapper,chunk){for(var i=0;i<items.length;i++){parts.push(mapper(items[i],i));if(i%chunk===0){loading(true,'Exportando '+i+' / '+items.length);await sleep(0);}}}
 async function exportExcel(){if(!app.metrics)await refresh();var m=app.metrics,parts=[];loading(true,'Preparando Excel VSM completo...');parts.push('<html><head><meta charset="utf-8"><style>body{font-family:Century Gothic,Arial}table{border-collapse:collapse;margin-bottom:24px}th,td{border:1px solid #cbd5e1;padding:6px;font-size:12px}th{background:#061b46;color:#fff}.n{mso-number-format:"0.00"}</style></head><body>');parts.push('<h1>Dashboard VSM ERP · '+VERSION+' · Normalizado por día y separado Normal/PVE</h1><p>Exportado: '+xls(new Date().toLocaleString('es-CO'))+'</p><h2>Fórmulas y criterios</h2><table><tr><th>Indicador</th><th>Fórmula / lectura</th></tr>'+row(['Lead Time pedido','Fin real o corte del análisis - inicio real del pedido. Si faltan campos, se respalda con trazas/eventos y updatedAt.'])+row(['Lead Time normalizado por día','Lead Time acumulado del pedido dividido entre los días calendario que abarca el pedido. Sirve para leer horas reales por pedido/día.'])+row(['VSM normal / PVE','Los PVE se separan porque pasan por Compras y tienen una carga distinta; los demás pedidos se miden como flujo normal.'])+row(['Lead Time proceso','Tiempo transcurrido en cada macroproceso desde processStats + trazas + eventos + estado actual.'])+row(['VA','Tiempo activo registrado o inferido por eventos de trabajo / conformidad / cierre.'])+row(['Espera','Tiempos de espera por proceso + bloqueos + requerimientos + pago/separación.'])+row(['Requerimientos','Desde creación del requerimiento hasta respuesta/cierre o corte.'])+row(['Tiempo residual del proceso','Lead Time - trabajo directo - espera explícita, sin negativos.'])+row(['Eficiencia','VA / Lead Time.'])+row(['Cancelados/anulados','No se incluyen en Lead Time ni productividad. Se reportan en control independiente por tipo, proceso, asesor y soporte.'])+'</table>');
@@ -600,6 +692,7 @@ var V222_SLA_HOURS={
   corte_cable:4,
   facturacion:2,
   caja:4,
+  cartera:4,
   cliente_punto:2,
   cliente_recoge:8,
   despacho_local:8,
@@ -612,7 +705,8 @@ var V222_NEXT_ACTION={
   alistamiento:"Completar picking, evidencias y liberar",
   corte_cable:"Iniciar, finalizar o registrar el corte",
   facturacion:"Emitir factura y anexar soporte",
-  caja:"Validar pago o liberar retención",
+  caja:"Validar pago, recaudo o liberar retención",
+  cartera:"Revisar cupo, soportes y liberar o devolver",
   cliente_punto:"Confirmar entrega en punto",
   cliente_recoge:"Confirmar recogida del cliente",
   despacho_local:"Programar y confirmar entrega local",
@@ -1022,13 +1116,14 @@ var V225_AREA_DEF={
   compras:{label:"Compras",processes:["compras"]},
   logistica:{label:"Logística",processes:["recepcion_pedidos","alistamiento","corte_cable"]},
   facturacion:{label:"Facturación",processes:["facturacion"]},
-  cartera:{label:"Cartera / Caja",processes:["caja"]},
+  caja:{label:"Caja",processes:["caja"]},
+  cartera:{label:"Cartera",processes:["cartera"]},
   despacho:{label:"Despacho",processes:["cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"]}
 };
-var V225_AREA_ORDER=["ventas","compras","logistica","facturacion","cartera","despacho"];
+var V225_AREA_ORDER=["ventas","compras","logistica","facturacion","caja","cartera","despacho"];
 var V225_PROCESS_AREA={
   compras:"compras",recepcion_pedidos:"logistica",alistamiento:"logistica",corte_cable:"logistica",
-  facturacion:"facturacion",caja:"cartera",cliente_punto:"despacho",cliente_recoge:"despacho",
+  facturacion:"facturacion",caja:"caja",cartera:"cartera",cliente_punto:"despacho",cliente_recoge:"despacho",
   despacho_local:"despacho",despacho_nacional:"despacho",cierre_despacho_nacional:"despacho"
 };
 
@@ -1387,7 +1482,8 @@ function v227AreaForEventText(text){
   if(/ventas|asesor|vendedor/.test(text))return "ventas";
   if(/compra|compras|pve/.test(text))return "compras";
   if(/factur/.test(text))return "facturacion";
-  if(/caja|cartera|pago|financier/.test(text))return "cartera";
+  if(/cartera|cr[eé]dito|cupo/.test(text))return "cartera";
+  if(/caja|pago|recaudo/.test(text))return "caja";
   if(/despacho|transportadora|guia|entrega|cliente recoge|cliente punto/.test(text))return "despacho";
   if(/recepcion|alistamiento|picking|corte|logistica/.test(text))return "logistica";
   return "";
@@ -1598,7 +1694,7 @@ function bindV228Base(){
 /* ============================================================
    V228 · TIEMPOS VERIFICADOS POR ETIQUETAS FIREBASE
 ============================================================ */
-var V228_AREA_SLA={ventas:4,compras:16,logistica:4,facturacion:2,cartera:4,despacho:8};
+var V228_AREA_SLA={ventas:4,compras:16,logistica:4,facturacion:2,caja:4,cartera:4,despacho:8};
 
 function v229NormalizeRole(value){
   return normKey(value||"");
@@ -1625,7 +1721,8 @@ function v228AreaFromRoleOrProcess(role,process,text){
   if(role==="ventas"||role==="asesor_ventas")return "ventas";
   if(role==="compras"||role==="proyectos")return "compras";
   if(role==="facturacion")return "facturacion";
-  if(role==="caja"||role==="cartera")return "cartera";
+  if(role==="caja")return "caja";
+  if(role==="cartera")return "cartera";
   if(/despacho|transportadora|entrega/.test(lower(text||"")))return "despacho";
   if(/recepcion|alistamiento|picking|corte|logistica/.test(lower(text||"")))return "logistica";
   return "";
@@ -1797,7 +1894,7 @@ function v228NoDeliveryRecords(c){
     if(!starts.length)return;
     var start=Math.min.apply(Math,starts),end=v228NoDeliveryEnd(c,start,rep);
     var process=(rep&&rep.targetProcess)||c.currentProcess||"despacho_nacional";
-    var area=(c.noDeliveryStatus==="DEVOLUCION_CAJA"||process==="caja")?"cartera":"despacho";
+    var area=(process==="cartera")?"cartera":((c.noDeliveryStatus==="DEVOLUCION_CAJA"||process==="caja")?"caja":"despacho");
     var row={
       category:"No entrega",pedido:refOf(c),area:area,process:process,
       duration:workingMsBetween(start,end),start:start,end:end,
@@ -1903,7 +2000,7 @@ function renderSummary(){
     v225Kpi("Novedades pendientes",m.reportPending+"",m.reportCount+" novedades analizadas",m.reportPending?"warn":"ok")+
     v225Kpi("Cortes registrados",m.doneCuts+" / "+m.totalCuts,"Finalizados, medida completa o no necesita corte",m.totalCuts&&m.doneCuts<m.totalCuts?"warn":"ok");
 
-  v225FilterSummary();renderCoverage();renderWaitBoard();renderAreaBoard();renderProcessFlow();renderActorBoard();renderPowerCharts();renderReliability();renderAlerts();
+  v225FilterSummary();renderCoverage();renderWaitBoard();renderAreaBoard();renderProcessFlow();renderActorBoard();renderPowerCharts();renderReliability();renderAlerts();renderFlowHealth();
 }
 function renderReliability(){
   var m=app.metrics;if(!m)return;var r=m.reliability;
@@ -5305,6 +5402,13 @@ async function v232GenerateExcel(meta,analysis){
   workbook.eachSheet(function(s){s.headerFooter={oddHeader:"&CElectroingeniería | "+meta.title,oddFooter:"&L"+meta.author+" | "+meta.department+"&RPágina &P de &N"};});var buffer=await workbook.xlsx.writeBuffer();v234DownloadBlob(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),v232FileName(meta,"xlsx"));
 }
 
+function configureVsmNavigation(){
+  var back=$('vsmBackLink');if(!back)return;
+  var query=new URLSearchParams(location.search),candidate=query.get('returnTo')||'';
+  if(!candidate){try{candidate=sessionStorage.getItem('ei_nova_return_url')||'';}catch(e){}}
+  if(candidate){try{var target=new URL(candidate,location.href);if(target.origin===location.origin)back.href=target.href;}catch(e){}}
+  if(window.EI_EMBEDDED===true)back.hidden=true;
+}
 function bindBase(){['fFrom','fTo','fProcess','fStatus','fOrderType','fUser','fView'].forEach(function(id){$(id).addEventListener('change',function(){refresh().catch(function(e){loading(false);status('Error recalculando: '+esc(e.message||e),'bad');});});});$('fSearch').addEventListener('input',function(){clearTimeout(window.__vsmSearch);window.__vsmSearch=setTimeout(function(){refresh().catch(function(e){loading(false);status('Error filtrando: '+esc(e.message||e),'bad');});},250);});$('btnLoad').onclick=function(){loadCases(false).catch(function(e){loading(false);status('Error cargando datos: '+esc(e.message||e),'bad');});};$('btnLoadAll').onclick=function(){loadCases(true).catch(function(e){loading(false);status('Error cargando histórico: '+esc(e.message||e),'bad');});};$('btnExport').onclick=function(){exportExcel().catch(function(e){loading(false);status('Error exportando Excel: '+esc(e.message||e),'bad');});};if($('btnReset'))$('btnReset').onclick=resetVsmFilters;}
-(async function(){try{bind();await initFirebase();$('fFrom').value='';$('fTo').value='';await loadCases(false);if(/[?&]export=1/.test(location.search))setTimeout(function(){$('btnExport').click();},900);}catch(e){loading(false);status('Error inicializando VSM: '+esc(e.message||e),'bad');}})();
+(async function(){try{configureVsmNavigation();bind();renderCalendarSummary();renderTraceSources();await initFirebase();await loadBusinessCalendarConfig();$('fFrom').value='';$('fTo').value='';await loadCases(false);if(/[?&]export=1/.test(location.search))setTimeout(function(){$('btnExport').click();},900);}catch(e){loading(false);status('Error inicializando VSM: '+esc(e.message||e),'bad');}})();
 })();

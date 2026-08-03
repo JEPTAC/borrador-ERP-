@@ -1,11 +1,12 @@
 (function(){
   "use strict";
   var query=new URLSearchParams(location.search);
+  var standalone=query.get("standalone")==="1";
   var embedded=(query.get("embedded")==="1"||query.get("nova")==="1")&&window.top!==window.self;
 
-  // El motor heredado no es una aplicación pública independiente. Toda apertura
-  // directa vuelve al shell NOVA, que valida sesión, perfil y transacciones.
-  if(!embedded){
+  // El motor heredado no es una aplicación pública independiente. El VSM y las
+  // vistas autorizadas pueden abrirse en modo standalone después de validar sesión.
+  if(!embedded&&!standalone){
     var marker="/engine/";
     var index=location.pathname.indexOf(marker);
     var root=index>=0?location.pathname.slice(0,index+1):"/";
@@ -14,9 +15,10 @@
     return;
   }
 
-  window.EI_EMBEDDED=true;
+  window.EI_EMBEDDED=embedded;
+  window.EI_STANDALONE=standalone;
   window.EI_REQUESTED_ROUTE=query.get("route")||"";
-  document.documentElement.classList.add("nova-embedded");
+  document.documentElement.classList.add(embedded?"nova-embedded":"nova-standalone");
 
   function labelForField(field){
     var parent=field.closest&&field.closest("label");
@@ -143,10 +145,13 @@
   }
 
   function mark(){
-    document.body.classList.add("nova-embedded");
+    document.body.classList.add(embedded?"nova-embedded":"nova-standalone");
     enhance(document);
     try{
-      parent.postMessage({type:"EI_ENGINE_TITLE",title:document.title.replace(/\s*·\s*EI ERP.*$/i,"")},location.origin);
+      if(embedded){
+        parent.postMessage({type:"EI_ENGINE_TITLE",title:document.title.replace(/\s*·\s*EI ERP.*$/i,"")},location.origin);
+        parent.postMessage({type:"EI_ENGINE_READY",path:location.pathname,route:window.EI_REQUESTED_ROUTE||""},location.origin);
+      }
     }catch(e){}
   }
 

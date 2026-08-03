@@ -256,7 +256,8 @@ var state = {
   kpiFilters: { from:"", to:"", process:"", user:"" },
   pdfExtraction: null,
   realtime: { caseUnsubs: [], eventUnsub: null, eventUnsubs: [], userUnsub: null, pollTimer: null, buckets: {}, eventBuckets: {}, initialCasesLoaded: false, initialEventsLoaded: false, lastHash: "", lastEventHash: "", lastChangeAt: 0, lastEventAt: 0, startedAt: 0, pendingRender: false },
-  notifications: { enabled: true, memory: {}, queue: [], queueTimer: null, lastSoundAt: 0 }
+  notifications: { enabled: true, memory: {}, queue: [], queueTimer: null, lastSoundAt: 0 },
+  pendingCaseWrites: {}
 };
 
 function ensureV221UiFixes(){
@@ -1443,9 +1444,8 @@ function autoNormalizeLoadedPvcPveFromCajaToCartera(reason){
       count++;
       c.visibleRoles=financialVisibleRolesForOrder(c);
       c.targetRoles=financialVisibleRolesForOrder(c);
-      jobs.push(db.collection("cases").doc(c.id).set(c,{merge:true}).then(function(){
-        return createEvent({type:"AUTO_CARTERA_REDIRECT_V221",caseId:c.id,process:"cartera",detail:"PVC/PVE detectado en Caja y redirigido automáticamente a Cartera.",targetRole:"cartera",visibleRoles:financialVisibleRolesForOrder(c)}).catch(function(){return null;});
-      }).catch(function(e){console.warn("No se pudo normalizar a Cartera",c.id,e);return null;}));
+      jobs.push(persistCase(c,{type:"AUTO_CARTERA_REDIRECT_V221",process:"cartera",detail:"PVC/PVE detectado en Caja y redirigido automáticamente a Cartera.",targetRole:"cartera",visibleRoles:financialVisibleRolesForOrder(c)})
+        .catch(function(e){console.warn("No se pudo normalizar a Cartera",c.id,e);return null;}));
     }
   });
   if(!jobs.length)return Promise.resolve(0);
@@ -3547,7 +3547,8 @@ function autoMigrateLegacyProcesses(){
   if(!migrated.length || !db || !state.user)return;
   if(!(canSeeAll() || isAdminRoleValue(state.user.role)))return;
   migrated.forEach(function(c){
-    db.collection("cases").doc(c.id).set(c,{merge:true}).catch(function(e){console.warn("No se pudo migrar proceso legacy",c.id,e);});
+    persistCase(c,{type:"LEGACY_FLOW_AUTO_MIGRATED",detail:"El pedido fue normalizado automáticamente al flujo vigente.",visibleRoles:["admin","super_admin","super_administrador","gerencia","auditoria"]})
+      .catch(function(e){console.warn("No se pudo migrar proceso legacy",c.id,e);});
   });
 }
 
@@ -3556,7 +3557,7 @@ function migrateLegacyProcessesNow(){
   var migrated=[];
   state.cases.forEach(function(c){if(migrateLegacyCaseInMemory(c,"Corrección manual desde Admin"))migrated.push(c);});
   if(!migrated.length){alert("No hay casos atrapados en procesos de compromiso legacy.");renderAdmin();return;}
-  Promise.all(migrated.map(function(c){return db.collection("cases").doc(c.id).set(c,{merge:true});}))
+  Promise.all(migrated.map(function(c){return persistCase(c,{type:"LEGACY_FLOW_MANUALLY_MIGRATED",detail:"El administrador normalizó el pedido al flujo vigente.",visibleRoles:["admin","super_admin","super_administrador","gerencia","auditoria"]});}))
     .then(function(){alert("Procesos corregidos: "+migrated.length+". Los casos de compromiso pasaron al flujo actual.");renderAdmin();})
     .catch(function(e){showError((e&&e.message)||e||"No se pudieron corregir los procesos legacy.");});
 }
@@ -3590,7 +3591,7 @@ function forceExistingPveToPurchasesNow(){
       idx=idx||0;
       var part=items.slice(idx,idx+25);
       if(!part.length)return Promise.resolve();
-      return Promise.all(part.map(function(c){return db.collection("cases").doc(c.id).set(c,{merge:true});})).then(function(){return writeChunks(items,idx+25);});
+      return Promise.all(part.map(function(c){return persistCase(c,{type:"PVE_PURCHASE_GATE_MIGRATED",detail:"PVE activo enviado a Compras para impedir que omita el control comercial.",targetRole:"compras",visibleRoles:purchasesVisibleRoles()});})).then(function(){return writeChunks(items,idx+25);});
     }
     return writeChunks(changedDocs,0).then(function(){
       state.cases=sortByUpdated(uniqueById(list));
@@ -3600,20 +3601,7 @@ function forceExistingPveToPurchasesNow(){
   }).catch(function(e){showError("No fue possible migrar PVE existentes a Compras: "+((e&&e.message)||e));});
 }
 
-function persistCase(c,event){
-  if(event){
-    event=Object.assign({caseId:c.id,process:c.currentProcess,timestamp:now()},event);
-    appendFlowTraceFromEvent(c,event);
-  }
-  c.updatedAt=now();
-  return db.collection("cases").doc(c.id).set(c,{merge:true}).then(function(){
-    var i=-1;for(var x=0;x<state.cases.length;x++){if(state.cases[x].id===c.id)i=x;}
-    if(i>=0)state.cases[i]=c;else state.cases.unshift(c);
-    if(event)return createEvent(enrichCaseEvent(c,event));
-  });
-}
-
-function createEvent(e){
+function normalizeCaseEvent(e){
   e=e||{};
   e.id=e.id||uid("ev");
   e.timestamp=e.timestamp||now();
@@ -3623,7 +3611,123 @@ function createEvent(e){
   e.createdByRole=e.createdByRole||(state.user?state.user.role:"");
   e.sourceRole=e.sourceRole||(state.user?state.user.role:"");
   e.visibleRoles=uniqueArray(e.visibleRoles||notificationVisibleRolesForEvent(null,e));
-  return db.collection("case_events").doc(e.id).set(e).then(function(){state.events.unshift(e);queueEventNotification(e);});
+  return e;
+}
+function cloneCaseWriteValue(value,seen){
+  if(value===null||value===undefined||typeof value!=="object")return value;
+  if(value instanceof Date||typeof value.toDate==="function"||typeof value.toMillis==="function")return value;
+  seen=seen||[];if(seen.indexOf(value)>=0)throw new Error("El pedido contiene una referencia circular y no puede guardarse.");seen.push(value);
+  var out;if(Array.isArray(value)){out=value.map(function(item){return cloneCaseWriteValue(item,seen);});}else{out={};Object.keys(value).forEach(function(key){if(typeof value[key]!=="function"&&value[key]!==undefined)out[key]=cloneCaseWriteValue(value[key],seen);});}
+  seen.pop();return out;
+}
+function persistCaseGroup(entries,relatedWrites){
+  entries=(entries||[]).filter(function(entry){return entry&&entry.case&&entry.case.id;});
+  if(!entries.length)return Promise.reject(new Error("No hay pedidos válidos para guardar."));
+  if(!db)return Promise.reject(new Error("No hay conexión con Firebase para guardar los pedidos."));
+  var seenIds={};
+  for(var n=0;n<entries.length;n++){
+    var entryId=String(entries[n].case.id);
+    if(seenIds[entryId])return Promise.reject(new Error("No es posible guardar dos veces el mismo pedido en una sola operación."));
+    seenIds[entryId]=true;
+  }
+  relatedWrites=(relatedWrites||[]).filter(function(item){return item&&item.ref&&item.data;});
+  var originalSnapshots=entries.map(function(entry){return cloneCaseWriteValue(entry.case);});
+  var writeTime=now();
+  var prepared=entries.map(function(entry){
+    var c=entry.case,event=entry.event||null,expectedRevision=Number(c.flowRevision||0);
+    if(event){
+      event=Object.assign({caseId:c.id,process:c.currentProcess,timestamp:writeTime},event);
+      appendFlowTraceFromEvent(c,event);
+      event=normalizeCaseEvent(enrichCaseEvent(c,event));
+    }
+    c.updatedAt=writeTime;
+    c.updatedBy=state.user&&state.user.uid||c.updatedBy||"";
+    c.updatedByName=state.user&&state.user.name||c.updatedByName||"";
+    c.flowRevision=expectedRevision+1;
+    if(event)c.lastEventId=event.id;
+    var writeCase=cloneCaseWriteValue(c),writeEvent=event?cloneCaseWriteValue(event):null;
+    return {
+      caseObj:c,eventObj:event,expectedRevision:expectedRevision,
+      writeCase:writeCase,writeEvent:writeEvent,
+      caseRef:db.collection("cases").doc(c.id),
+      eventRef:writeEvent?db.collection("case_events").doc(writeEvent.id):null
+    };
+  });
+
+  function restoreOriginalCases(){
+    prepared.forEach(function(item,index){
+      var target=item.caseObj,snapshot=originalSnapshots[index]||{};
+      Object.keys(target).forEach(function(key){delete target[key];});
+      Object.keys(snapshot).forEach(function(key){target[key]=snapshot[key];});
+      replaceCaseInState(target);
+    });
+  }
+
+  if(navigator.onLine===false){
+    if(relatedWrites.length){
+      restoreOriginalCases();
+      return Promise.reject(new Error("Esta operación modifica inventario u otros registros relacionados y requiere conexión para garantizar consistencia."));
+    }
+    return v246QueuePreparedCaseGroup(prepared,relatedWrites).catch(function(error){restoreOriginalCases();throw error;});
+  }
+
+  var ids=prepared.map(function(item){return String(item.caseObj.id);});
+  var previous=Promise.all(ids.map(function(id){return (state.pendingCaseWrites[id]||Promise.resolve()).catch(function(){return null;});}));
+  var write=previous.then(function(){
+    return db.runTransaction(function(tx){
+      return Promise.all(prepared.map(function(item){return tx.get(item.caseRef);})).then(function(remotes){
+        remotes.forEach(function(remote,index){
+          var item=prepared[index],remoteRevision=remote.exists?Number((remote.data()||{}).flowRevision||0):0;
+          if(remote.exists&&remoteRevision!==item.expectedRevision){
+            var conflict=new Error("El pedido "+item.caseObj.id+" cambió en otro equipo o pestaña. Actualice la bandeja antes de volver a guardar.");
+            conflict.code="FLOW_REVISION_CONFLICT";
+            conflict.caseId=item.caseObj.id;
+            conflict.remoteRevision=remoteRevision;
+            conflict.expectedRevision=item.expectedRevision;
+            throw conflict;
+          }
+        });
+        prepared.forEach(function(item){
+          tx.set(item.caseRef,item.writeCase,{merge:true});
+          if(item.eventRef)tx.set(item.eventRef,item.writeEvent,{merge:false});
+        });
+        relatedWrites.forEach(function(item){tx.set(item.ref,cloneCaseWriteValue(item.data),item.options||{merge:true});});
+      });
+    });
+  }).then(function(){
+    prepared.forEach(function(item){
+      var c=item.caseObj,i=-1;
+      for(var x=0;x<state.cases.length;x++){if(state.cases[x].id===c.id)i=x;}
+      if(i>=0)state.cases[i]=c;else state.cases.unshift(c);
+      if(item.eventObj){
+        if(!(state.events||[]).some(function(existing){return existing&&existing.id===item.eventObj.id;}))state.events.unshift(item.eventObj);
+        try{queueEventNotification(item.eventObj);}catch(notificationError){novaCaptureError(notificationError,"notificación posterior al guardado");}
+      }
+    });
+    return prepared.map(function(item){return item.caseObj;});
+  }).catch(function(error){
+    if(error&&error.code==="FLOW_REVISION_CONFLICT"){
+      restoreOriginalCases();
+      try{loadData();}catch(reloadError){novaCaptureError(reloadError,"recarga posterior a conflicto");}
+    }else if(typeof v246Retryable==="function"&&v246Retryable(error)&&!relatedWrites.length){
+      return v246QueuePreparedCaseGroup(prepared,relatedWrites).catch(function(queueError){restoreOriginalCases();throw queueError;});
+    }else{
+      restoreOriginalCases();
+    }
+    novaCaptureError(error,"guardado transaccional de pedidos y eventos");
+    throw error;
+  });
+  var tracked=write.finally(function(){ids.forEach(function(id){if(state.pendingCaseWrites[id]===tracked)delete state.pendingCaseWrites[id];});});
+  ids.forEach(function(id){state.pendingCaseWrites[id]=tracked;});
+  return tracked;
+}
+function persistCase(c,event){
+  return persistCaseGroup([{case:c,event:event}]).then(function(rows){return rows[0];});
+}
+
+function createEvent(e){
+  e=normalizeCaseEvent(e);
+  return db.collection("case_events").doc(e.id).set(e,{merge:false}).then(function(){state.events.unshift(e);try{queueEventNotification(e);}catch(notificationError){novaCaptureError(notificationError,"notificación de evento");}return e;});
 }
 
 function caseById(id){for(var i=0;i<state.cases.length;i++){if(state.cases[i].id===id)return state.cases[i];}return null;}
@@ -5926,7 +6030,10 @@ function renderDetail(id){
   if(beforeReceptionFlow!==JSON.stringify(c.documentFlow||{}))correctedOnOpen=true;
   if(repairReceptionLinesFromPdfExtraction(c))correctedOnOpen=true;
   if(correctedOnOpen){
-    if(db && state.user && (canSeeAll() || isAdminRoleValue(state.user.role) || canOperateCurrentProcess(c))){db.collection("cases").doc(c.id).set(c,{merge:true}).catch(function(e){console.warn("No se pudo guardar corrección automática",e);});}
+    if(db && state.user && (canSeeAll() || isAdminRoleValue(state.user.role) || canOperateCurrentProcess(c))){
+      persistCase(c,{type:"CASE_AUTOMATICALLY_REPAIRED",detail:"El sistema normalizó metadatos, rutas o documentos del pedido al abrir el detalle.",visibleRoles:["admin","super_admin","super_administrador","gerencia","auditoria","jefe_logistica"]})
+        .catch(function(e){console.warn("No se pudo guardar corrección automática",e);});
+    }
   }
   if(isCutOperator() && !(c.cutRequests||[]).some(function(x){return !cutIsOperationallyDone(x);})){renderCutsQueue();return;}
   var def=processes[c.currentProcess]||processes.recepcion_pedidos, actions="", canOperate=canOperateCurrentProcess(c);
@@ -6410,10 +6517,10 @@ function createPartialShipment(id,fd){
   child.cutRequests=[];child.hasCuts=false;
   child.processStats={};procStats(child,'facturacion').startedAt=stamp;
   child.partialSource={caseId:c.id,shipmentId:partialId,sequence:seq,reason:reason,createdAt:stamp,createdByName:state.user.name};
-  return db.collection('cases').doc(child.id).set(child).then(function(){
-    state.cases.unshift(child);
-    return persistCase(c,{type:'PARTIAL_SHIPMENT_CREATED',detail:'Envío parcial '+seq+' creado con '+selected.length+' líneas. El pedido original queda abierto en alistamiento.',targetRole:'coordinador_logistico',visibleRoles:['coordinador_logistico','lider_logistico','jefe_logistica','facturacion','admin','super_admin','super_administrador']});
-  }).then(function(){return createEvent(enrichCaseEvent(child,{caseId:child.id,type:'PARTIAL_SHIPMENT_SENT_TO_BILLING',process:'facturacion',detail:'Envío parcial '+seq+' enviado a facturación desde '+(c.reference||c.id),targetRole:'coordinador_logistico',visibleRoles:['coordinador_logistico','lider_logistico','jefe_logistica','admin','super_admin','super_administrador']}));}).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});
+  return persistCaseGroup([
+    {case:c,event:{type:'PARTIAL_SHIPMENT_CREATED',detail:'Envío parcial '+seq+' creado con '+selected.length+' líneas. El pedido original queda abierto en alistamiento.',targetRole:'coordinador_logistico',visibleRoles:['coordinador_logistico','lider_logistico','jefe_logistica','facturacion','admin','super_admin','super_administrador']}},
+    {case:child,event:{type:'PARTIAL_SHIPMENT_SENT_TO_BILLING',process:'facturacion',detail:'Envío parcial '+seq+' enviado a facturación desde '+(c.reference||c.id),targetRole:'facturacion',visibleRoles:['coordinador_logistico','lider_logistico','jefe_logistica','facturacion','admin','super_admin','super_administrador']}}
+  ]).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});
 }
 
 function cutStatusChip(st){var map={PENDIENTE_CORTE:["Pendiente corte","warning"],EN_CORTE:["En corte","primary"],CONFORME:["Conforme","success"],AUTORIZADO:["Autorizado","success"],FINALIZADO:["Finalizado","success"],APROBADO_PENDIENTE_CORTE:["Aprobado, pendiente corte","warning"],PENDIENTE_REGISTRO:["Pendiente registrar","warning"],PENDIENTE_GERENCIA:["Pendiente gerencia","warning"],PENDIENTE_LIDER:["Pendiente jefe logística","warning"],PENDIENTE_JEFE_LOGISTICA:["Pendiente jefe logística","warning"],REQUERIMIENTO:["Requerimiento a ventas","warning"],RECHAZADO:["Rechazado","danger"],NO_CONFORME:["No conforme","danger"],REVISAR:["Revisar","warning"]};var m=map[st]||[st||"Pendiente","info"];return '<span class="chip '+m[1]+'">'+esc(m[0])+'</span>';}
@@ -7874,6 +7981,8 @@ function finishCutWithoutPhysicalProcess(c,cut,mode){
   procStats(c,"corte_cable").completedAt=pending.length===0?(procStats(c,"corte_cable").completedAt||doneAt):procStats(c,"corte_cable").completedAt;
   c.currentProcess="alistamiento";
   c.status="en_proceso";
+  c.processStartedAt=now();
+  c.statusStartedAt=c.processStartedAt;
   c.assignedRole=primaryOwnerRole("alistamiento");
   c.assignedName=processOwnerTitle("alistamiento");
   releaseCaseFromCutOwner(c);
@@ -8026,6 +8135,8 @@ function handleCutAction(c,cut,action){
     stopWait(c);stopActive(c);procStats(c,"corte_cable").completedAt=pending.length===0?(procStats(c,"corte_cable").completedAt||now()):procStats(c,"corte_cable").completedAt;
     c.currentProcess="alistamiento";
     c.status="en_proceso";
+    c.processStartedAt=now();
+    c.statusStartedAt=c.processStartedAt;
     c.assignedRole=primaryOwnerRole("alistamiento");
     c.assignedName=processOwnerTitle("alistamiento");
     releaseCaseFromCutOwner(c);
@@ -8119,7 +8230,7 @@ function renderCutsQueue(){
     if(Number.isFinite(m))groups[k].meters+=m;
   });
 
-  if(isMobileRuntime()||isCutRuntimeUser()){
+  if(isMobileRuntime()){
     var groupKeys=Object.keys(groups).sort(function(a,b){return groups[b].meters-groups[a].meters || groups[a].title.localeCompare(groups[b].title);});
     var groupHtml=groupKeys.map(function(k){
       var g=groups[k];
@@ -8144,7 +8255,7 @@ function renderCutsQueue(){
       '</details>';
     }).join("");
     layout(
-      header("Cortes agrupados","Bandeja organizada por referencia/tipo de cable para prealistamiento y operación por pedido.",'<button class="btn btn-success" data-action="forceProtectedRefresh">Actualizar bandeja</button><button class="btn btn-gold" data-action="v254Send4582Billing" data-ref="4582">Pasar 4582 a Facturación</button>')+
+      header("Cortes agrupados","Bandeja organizada por referencia/tipo de cable para prealistamiento y operación por pedido.",'<button class="btn btn-success" data-action="forceProtectedRefresh">Actualizar bandeja</button>')+
       '<section class="ei191-cut-kpis"><article><span>Pendientes</span><strong>'+rows.length+'</strong></article><article><span>Grupos</span><strong>'+groupKeys.length+'</strong></article><article><span>Versión</span><strong>V254</strong></article></section>'+
       '<section class="ei191-cut-groups">'+(groupHtml||'<section class="card"><div class="empty">No hay cortes pendientes.</div></section>')+'</section>'
     );
@@ -8156,7 +8267,7 @@ function renderCutsQueue(){
     var body=g.items.map(function(r){return '<tr><td>'+esc(r.c.reference||r.cut.pedido||'')+'</td><td>'+esc(r.c.client||'')+'</td><td>'+pdfMiniButton(r.c)+'</td><td>'+esc(r.cut.code||r.cut.id)+'</td><td>'+esc(r.cut.metrosSolicitados||'')+'</td><td>'+v239CutStatusChip(r.cut)+'</td><td><div class="v239-cut-actions"><button class="btn btn-small btn-primary" data-action="'+(v239IsCutUnavailable(r.cut)?'resumeUnavailableCut':'launchCut')+'" data-id="'+esc(r.c.id)+'" data-cut="'+esc(r.cut.id)+'">'+(v239IsCutUnavailable(r.cut)?'Retomar corte':'Abrir corte')+'</button><button class="btn btn-small btn-danger" data-action="cutUnavailable" data-id="'+esc(r.c.id)+'" data-cut="'+esc(r.cut.id)+'">'+(v239IsCutUnavailable(r.cut)?'Actualizar novedad':'Corte no disponible')+'</button></div>'+v239UnavailableNoteHtml(r.cut)+'</td></tr>';}).join('');
     return '<details class="card cut-group" open><summary><div><strong>'+esc(g.title)+'</strong><small>'+g.items.length+' corte(s) pendiente(s) · Prealistamiento sugerido: '+esc(cutNormalizeDecimal(g.meters))+' m</small></div><span class="chip primary">'+esc(g.key)+'</span></summary><div class="notice"><strong>Prealistamiento:</strong> reúna el cable por esta referencia y opere los cortes en secuencia desde un mismo rollo.<div class="top-actions" style="margin-top:10px"><button class="btn btn-success" data-action="startReferenceCuts" data-ref="'+esc(g.key)+'">Iniciar cortes por referencia</button></div></div><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>PDF</th><th>Corte</th><th>Metros</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+body+'</tbody></table></div></details>';
   }).join('');
-  layout(header("Cortes de cable","Bandeja agrupada por tipo de cable para prealistamiento eficiente. Las solicitudes llegan durante el día, se consolidan por referencia y luego se operan pedido por pedido.",'<button class="btn btn-primary" data-action="exportCutsExcel">Excel dashboard cortes</button><button class="btn btn-success" data-action="forceProtectedRefresh">Actualizar vista</button><button class="btn btn-gold" data-action="v254Send4582Billing" data-ref="4582">Pasar 4582 a Facturación</button>')+'<section class="grid grid-3"><article class="card kpi"><span>Cortes pendientes</span><strong>'+rows.length+'</strong><small>Pedidos por cortar</small></article><article class="card kpi"><span>Tipos de cable</span><strong>'+Object.keys(groups).length+'</strong><small>Agrupados</small></article><article class="card kpi"><span>Funcionalidad</span><strong>Completa</strong><small>Misma lógica de PC</small></article></section><section style="margin-top:16px">'+(groupHtml||'<section class="card"><div class="empty">No hay cortes pendientes.</div></section>')+'</section>');
+  layout(header("Cortes de cable","Bandeja agrupada por tipo de cable para prealistamiento eficiente. Las solicitudes llegan durante el día, se consolidan por referencia y luego se operan pedido por pedido.",'<button class="btn btn-primary" data-action="exportCutsExcel">Excel dashboard cortes</button><button class="btn btn-success" data-action="forceProtectedRefresh">Actualizar vista</button>')+'<section class="grid grid-3"><article class="card kpi"><span>Cortes pendientes</span><strong>'+rows.length+'</strong><small>Pedidos por cortar</small></article><article class="card kpi"><span>Tipos de cable</span><strong>'+Object.keys(groups).length+'</strong><small>Agrupados</small></article><article class="card kpi"><span>Funcionalidad</span><strong>Completa</strong><small>Misma lógica de PC</small></article></section><section style="margin-top:16px">'+(groupHtml||'<section class="card"><div class="empty">No hay cortes pendientes.</div></section>')+'</section>');
 }
 
 function requirementIsPending(req){
@@ -8475,7 +8586,7 @@ function projectOrderToCase(id){
   var delivery=p.pickupPoint?"cliente_recoge":(p.deliveryType==="nacional"?"despacho_nacional":(p.deliveryType==="local"||p.deliveryType==="obra"?"despacho_local":""));
   var c={id:caseId,reference:p.orderRef||p.projectName,client:p.customer||p.projectName,description:"Solicitud de proyecto: "+(p.requestType||"Pedido")+". Proyecto: "+(p.projectName||"")+". Requerido para: "+(p.requiredDate||"Sin fecha")+". Detalle: "+(p.itemsDetail||"")+". "+(p.notes||""),orderKind:"PROYECTO",requestedDelivery:delivery,requiredDate:p.requiredDate||"",priority:p.projectPriority||"Normal",priorityMode:(p.projectPriority==="Crítica"||p.projectPriority==="Alta")?"gerencia":"normal",source:"proyectos",projectId:p.id,projectName:p.projectName,projectRequestType:p.requestType||"Pedido",currentProcess:"recepcion_pedidos",status:"creado_ventas",assignedRole:primaryOwnerRole("recepcion_pedidos"),assignedName:processOwnerTitle("recepcion_pedidos"),createdAt:now(),updatedAt:now(),createdBy:state.user.uid,createdByName:state.user.name,createdByRole:normalizeRole(state.user.role),checklist:{},processStats:{}};
   processes.recepcion_pedidos.checklist.forEach(function(x){c.checklist[x]="pending";});
-  db.collection("cases").doc(caseId).set(c).then(function(){return db.collection("proyectos_pedidos").doc(id).update({status:"ENVIADO_A_FLUJO",caseId:caseId,updatedAt:now(),updatedBy:state.user.uid});}).then(function(){return createEvent({type:"PROJECT_ORDER_TO_CASE",detail:"Proyecto enviado al flujo operativo: "+(p.projectName||p.orderRef),caseId:caseId,targetRole:"coordinador_logistico",visibleRoles:["proyectos","coordinador_logistico","jefe_logistica","admin","super_admin"]}).catch(function(){return null;});}).then(loadData).then(renderProjectOrders).catch(function(e){showError(e.message||e);});
+  persistCaseGroup([{case:c,event:{type:"PROJECT_ORDER_TO_CASE",detail:"Proyecto enviado al flujo operativo: "+(p.projectName||p.orderRef),targetRole:"coordinador_logistico",visibleRoles:["proyectos","coordinador_logistico","jefe_logistica","admin","super_admin","super_administrador"]}}],[{ref:db.collection("proyectos_pedidos").doc(id),data:{status:"ENVIADO_A_FLUJO",caseId:caseId,updatedAt:now(),updatedBy:state.user.uid,updatedByName:state.user.name},options:{merge:true}}]).then(loadData).then(renderProjectOrders).catch(function(e){showError(e.message||e);});
 }
 function receptionConformityOptionsHtml(selected){
   var opts=["Conforme","Conforme con observación","Retenido"];
@@ -9247,15 +9358,13 @@ function forceStrictTraceCorrectionNow(){
       casesFixed++;
       caseEntriesRemoved+=cleaned.removedState.length+cleaned.removedFlow.length;
       var q=(c.quarantinedMixedTrace||[]).concat(cleaned.removedState).concat(cleaned.removedFlow).slice(-300);
-      caseJobs.push(db.collection("cases").doc(c.id).set({
-        stateHistory:cleaned.stateKeep,
-        flowTrace:cleaned.flowKeep,
-        quarantinedMixedTrace:q,
-        mixedTraceQuarantinedAt:stamp,
-        mixedTraceQuarantinedBy:state.user.uid,
-        mixedTraceQuarantinedByName:state.user.name,
-        updatedAt:stamp
-      },{merge:true}));
+      c.stateHistory=cleaned.stateKeep;
+      c.flowTrace=cleaned.flowKeep;
+      c.quarantinedMixedTrace=q;
+      c.mixedTraceQuarantinedAt=stamp;
+      c.mixedTraceQuarantinedBy=state.user.uid;
+      c.mixedTraceQuarantinedByName=state.user.name;
+      caseJobs.push(persistCase(c,{type:"CASE_TRACE_QUARANTINED",detail:"Se retiraron "+(cleaned.removedState.length+cleaned.removedFlow.length)+" traza(s) cruzadas y se conservaron en cuarentena.",visibleRoles:["admin","super_admin","super_administrador","gerencia","jefe_logistica","auditoria"]}));
     }
   });
   var total=reportJobs.length+caseJobs.length;
@@ -10462,18 +10571,24 @@ function applyPersonalAssignment(c,next,assignmentUsers){
   }
 }
 function assignToProcess(c,next,detail,assignmentUsers){
+  if(!c)return Promise.reject(new Error("No se encontró el pedido que debe avanzar."));
+  if(!processes[next]&&next!=="cierre_caso")return Promise.reject(new Error("El proceso destino no existe: "+next));
   if(c && next==="recepcion_pedidos" && pveShouldBeForcedToPurchases(c)){
     ensurePvePurchasingMetadata(c,"Bloqueo V221: ningún PVE sin liberar por Compras puede entrar directo a Recepción");
     next="compras";
     detail="PVE sin liberación de Compras. Se redirige primero a Compras antes de Recepción.";
     assignmentUsers=null;
   }
+  if(window.EI_FLOW_INTEGRITY&&window.EI_FLOW_INTEGRITY.contract.processes[c.currentProcess]){
+    var validation=window.EI_FLOW_INTEGRITY.validateTransition(c,next,{allowControlledReturn:true});
+    if(!validation.ok)return Promise.reject(new Error(validation.errors.join(" ")));
+  }
   closeSeparationIfCajaReleases(c,next);
   var current=c.currentProcess;
   stopActive(c);stopWait(c);
   procStats(c,current).completedAt=now();
   addStateHistory(c,"handoff","Cambio de etapa: "+processTitle(current)+" → "+processTitle(next),{fromProcess:current,toProcess:next,fecha_hora_fin_estado:procStats(c,current).completedAt,tipo_estado:"valor"});
-  c.currentProcess=next;c.status="asignado";applyPersonalAssignment(c,next,assignmentUsers);c.deadStartedAt=now();c.activeStartedAt=null;c.waitStartedAt=null;c.openRequirement=null;c.checklist={};
+  c.currentProcess=next;c.status="asignado";applyPersonalAssignment(c,next,assignmentUsers);c.deadStartedAt=now();c.processStartedAt=c.deadStartedAt;c.statusStartedAt=c.deadStartedAt;c.activeStartedAt=null;c.waitStartedAt=null;c.openRequirement=null;c.checklist={};
   if(isDeliveryProcess(next)){c.deliveryType=expectedDeliveryTypeForProcess(next);}
   var s=procStats(c,next);s.startedAt=s.startedAt||now();s.handoffs=Number(s.handoffs||0)+1;
   processes[next].checklist.forEach(function(x){c.checklist[x]="pending";});
@@ -11695,7 +11810,7 @@ function exportSalesReport(){
     .then(function(){appendSummary();return appendDetail();})
     .then(function(){parts.push('</tbody></table></body></html>');downloadHtmlExcelParts('registro_ventas_demora_v133_'+new Date().toISOString().slice(0,10)+'.xls',parts);});
 }
-function resendPendingItems(id){var c=caseById(id);if(!c)return;var pending=(c.orderItems||[]).filter(function(it){return partialQtyParse(it.partialPendingQty)>0 || /PENDIENTE|NO_ENCONTRADO|NOVEDAD|SALDO/i.test(it.estado||it.alistamientoStatus||'');});if(!pending.length){alert('No hay faltantes pendientes para reenviar.');return;}var child=JSON.parse(JSON.stringify(c));var stamp=now(),seq=(c.pendingResends||[]).length+1;child.id=uid('FAL');child.parentCaseId=c.id;child.isPendingResend=true;child.reference=(c.reference||c.id)+'-FALTANTE-'+String(seq).padStart(2,'0');child.currentProcess=isPveOrder(child)?'compras':'recepcion_pedidos';child.status='asignado';ensurePvePurchasingMetadata(child,'Reenvío de faltante V221: PVE pasa primero a Compras');child.assignedRole=primaryOwnerRole(child.currentProcess);child.assignedName=processOwnerTitle(child.currentProcess);child.assignedTo='';child.assignedUid='';child.assignedUsers=[];child.assignedUserIds=[];child.createdAt=stamp;child.updatedAt=stamp;child.closedAt=null;child.openRequirement=null;child.orderItems=pending.map(function(it){var x=Object.assign({},it);x.cantidad=it.partialPendingQty||it.cantidad;x.estado='REENVIADO_FALTANTE';return x;});child.checklist={};(processes[child.currentProcess]||processes.recepcion_pedidos).checklist.forEach(function(x){child.checklist[x]=(x==='Pedido registrado por ventas'||x==='Orden PVE recibida desde ventas')?'ok':'pending';});child.processStats={};procStats(child,'recepcion_pedidos').startedAt=stamp;c.pendingResends=c.pendingResends||[];c.pendingResends.push({id:child.id,at:stamp,byName:state.user.name,items:child.orderItems.length});db.collection('cases').doc(child.id).set(child).then(function(){state.cases.unshift(child);return persistCase(c,{type:'PENDING_ITEMS_RESENT',detail:'Ventas reenvió '+child.orderItems.length+' línea(s) faltante(s) al flujo.',targetRole:'coordinador_logistico',visibleRoles:['ventas','coordinador_logistico','jefe_logistica','admin','super_admin','super_administrador']});}).then(function(){renderSalesReports();}).catch(function(e){showError(e.message||e);});}
+function resendPendingItems(id){var c=caseById(id);if(!c)return;var pending=(c.orderItems||[]).filter(function(it){return partialQtyParse(it.partialPendingQty)>0 || /PENDIENTE|NO_ENCONTRADO|NOVEDAD|SALDO/i.test(it.estado||it.alistamientoStatus||'');});if(!pending.length){alert('No hay faltantes pendientes para reenviar.');return;}var child=JSON.parse(JSON.stringify(c));var stamp=now(),seq=(c.pendingResends||[]).length+1;child.id=uid('FAL');child.parentCaseId=c.id;child.isPendingResend=true;child.reference=(c.reference||c.id)+'-FALTANTE-'+String(seq).padStart(2,'0');child.currentProcess=isPveOrder(child)?'compras':'recepcion_pedidos';child.status='asignado';ensurePvePurchasingMetadata(child,'Reenvío de faltante V221: PVE pasa primero a Compras');child.assignedRole=primaryOwnerRole(child.currentProcess);child.assignedName=processOwnerTitle(child.currentProcess);child.assignedTo='';child.assignedUid='';child.assignedUsers=[];child.assignedUserIds=[];child.createdAt=stamp;child.updatedAt=stamp;child.closedAt=null;child.openRequirement=null;child.orderItems=pending.map(function(it){var x=Object.assign({},it);x.cantidad=it.partialPendingQty||it.cantidad;x.estado='REENVIADO_FALTANTE';return x;});child.checklist={};(processes[child.currentProcess]||processes.recepcion_pedidos).checklist.forEach(function(x){child.checklist[x]=(x==='Pedido registrado por ventas'||x==='Orden PVE recibida desde ventas')?'ok':'pending';});child.processStats={};procStats(child,child.currentProcess).startedAt=stamp;c.pendingResends=c.pendingResends||[];c.pendingResends.push({id:child.id,at:stamp,byName:state.user.name,items:child.orderItems.length});persistCaseGroup([{case:c,event:{type:'PENDING_ITEMS_RESENT',detail:'Ventas reenvió '+child.orderItems.length+' línea(s) faltante(s) al flujo.',targetRole:child.assignedRole,visibleRoles:['ventas','compras','coordinador_logistico','jefe_logistica','admin','super_admin','super_administrador']}},{case:child,event:{type:'PENDING_ITEMS_FLOW_CREATED',process:child.currentProcess,detail:'Caso de faltantes '+child.reference+' creado desde '+(c.reference||c.id)+'.',targetRole:child.assignedRole,visibleRoles:['ventas','compras','coordinador_logistico','jefe_logistica','admin','super_admin','super_administrador']}}]).then(function(){renderSalesReports();}).catch(function(e){showError(e.message||e);});}
 
 function bindActions(){
   qsa("[data-action]").forEach(function(b){b.onclick=function(){var a=b.getAttribute("data-action"),id=b.getAttribute("data-id");
@@ -14040,10 +14155,7 @@ function eiV221PersistCutCase(c,cut,event,expected){
   }
   event=event||{};
   event=Object.assign({caseId:c.id,process:c.currentProcess,timestamp:now(),visibleRoles:["auxiliar_corte","aux_logistica","coordinador_logistico","lider_logistico","jefe_logistica","admin","super_admin"]},event);
-  try{appendFlowTraceFromEvent(c,event);}catch(e){novaCaptureError(e,"operación heredada");}
-  return db.collection("cases").doc(c.id).set(c,{merge:true}).then(function(){
-    return db.collection("cases").doc(c.id).get();
-  }).then(function(doc){
+  return persistCase(c,event).then(function(){return db.collection("cases").doc(c.id).get();}).then(function(doc){
     if(!doc||!doc.exists)throw new Error("Firestore no devolvió el caso guardado.");
     var remote=doc.data()||{};remote.id=doc.id;
     var remoteCut=(remote.cutRequests||[]).find(function(x){return x&&cut&&x.id===cut.id;});
@@ -14054,7 +14166,7 @@ function eiV221PersistCutCase(c,cut,event,expected){
       throw new Error("El pedido no quedó en "+expected.currentProcess+" en Firestore.");
     }
     eiV221ReplaceCase(remote);
-    return createEvent(enrichCaseEvent(remote,event)).catch(function(e){console.warn("[V221] Caso guardado; evento no creado",e);}).then(function(){return remote;});
+    return remote;
   }).catch(function(e){
     var msg=(e&&e.message)||String(e||"");
     var authEmail="",authUid="";
@@ -14104,6 +14216,8 @@ function eiV221SendCutToAlistamiento(c,cut,mode){
   procStats(c,"corte_cable").completedAt=pending.length===0?(procStats(c,"corte_cable").completedAt||now()):procStats(c,"corte_cable").completedAt;
   c.currentProcess="alistamiento";
   c.status="en_proceso";
+  c.processStartedAt=now();
+  c.statusStartedAt=c.processStartedAt;
   c.assignedRole=primaryOwnerRole("alistamiento");
   c.assignedName=processOwnerTitle("alistamiento");
   releaseCaseFromCutOwner(c);
@@ -14172,6 +14286,8 @@ function eiV221MobileStart(c,cut){
   cut.startedByName=state.user.name;
   c.currentProcess="corte_cable";
   c.status="en_proceso";
+  c.processStartedAt=now();
+  c.statusStartedAt=c.processStartedAt;
   procStats(c,"corte_cable").startedAt=procStats(c,"corte_cable").startedAt||now();
   var event={type:"CUT_STARTED",cutId:cut.id,detail:"Corte iniciado desde móvil V221: "+(cut.code||cut.id),targetRole:"auxiliar_corte"};
   return eiV221PersistCutCase(c,cut,event,{cutStatus:"EN_CORTE"}).then(function(){closeDrawer();openCutModule(c.id,cut.id);});
@@ -14535,21 +14651,16 @@ function v238AssignRollToCut(record,item,sequence,total){
   cut.rollAssignedAt=now();
   cut.rollAssignedByName=state.user?state.user.name:"";
   c.hasCuts=true;
-  return db.collection("cases").doc(c.id).set({cutRequests:c.cutRequests,hasCuts:true,updatedAt:now()},{merge:true}).then(function(){
-    return db.collection(V238_ROLL_COLLECTION).doc(record.id).set({
-      activeCaseId:c.id,activeCutId:cut.id,activeCutCode:cut.code||cut.id,
-      activeStatus:"ASIGNADO",referenceSessionStatus:"ACTIVA",
-      updatedAt:now(),updatedByName:state.user?state.user.name:""
-    },{merge:true});
-  }).then(function(){
-    createEvent(enrichCaseEvent(c,{
-      caseId:c.id,type:"CUT_ROLL_ASSIGNED",process:"corte_cable",cutId:cut.id,
-      detail:"Rollo "+v238RollCode(record)+" asignado al corte "+(cut.code||cut.id)+". Disponible antes: "+v238Meters(available)+" m.",
-      targetRole:"auxiliar_corte",
-      visibleRoles:["auxiliar_corte","jefe_logistica","coordinador_logistico","admin","super_admin"]
-    })).catch(function(){});
-    return {caseObj:c,cutObj:cut,record:record};
-  });
+  return persistCaseGroup([{case:c,event:{
+    type:"CUT_ROLL_ASSIGNED",process:"corte_cable",cutId:cut.id,
+    detail:"Rollo "+v238RollCode(record)+" asignado al corte "+(cut.code||cut.id)+". Disponible antes: "+v238Meters(available)+" m.",
+    targetRole:"auxiliar_corte",
+    visibleRoles:["auxiliar_corte","jefe_logistica","coordinador_logistico","admin","super_admin","super_administrador"]
+  }}],[{ref:db.collection(V238_ROLL_COLLECTION).doc(record.id),data:{
+    activeCaseId:c.id,activeCutId:cut.id,activeCutCode:cut.code||cut.id,
+    activeStatus:"ASIGNADO",referenceSessionStatus:"ACTIVA",
+    updatedAt:now(),updatedByName:state.user?state.user.name:""
+  },options:{merge:true}}]).then(function(){return {caseObj:c,cutObj:cut,record:record};});
 }
 function v238OpenReplacementRoll(item,oldRecord,errorInfo){
   var required=v238Num(item&&item.meters)||v238Num(item&&item.cutObj&&(item.cutObj.metrosSolicitados||item.cutObj.metrajeFinal))||0;
@@ -14726,34 +14837,122 @@ function v238StartBatchCut(c,cut){
       var item={caseId:c.id,cutId:cut.id,caseReference:c.reference||cut.pedido||c.id,client:c.client||"",code:cut.code||cut.id,referencia:cut.referencia||"",descripcion:cut.descripcion||"",meters:requested,caseObj:c,cutObj:cut};
       v238OpenReplacementRoll(item,record,{available:available,required:requested});return null;
     }
-    cut.rollRemainingBefore=v238Meters(available);cut.disponibleAntes=v238Meters(available);
     var calc=cutCalc(cut);
     if(!cutCanMeasure(cut)){alert("El corte está bloqueado por cálculo o aprobación pendiente. "+((calc.rule&&calc.rule.message)||""));return null;}
-    return db.runTransaction(function(tx){
-      var ref=db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId);
-      return tx.get(ref).then(function(snap){
-        if(!snap.exists)throw new Error("El rollo asignado ya no existe.");
-        var current=Object.assign({id:snap.id},snap.data()||{}),currentAvailable=v238RollAvailable(current);
-        if(current.activeCutId&&String(current.activeCutId)!==String(cut.id)&&String(current.activeStatus)!=="FINALIZADO")throw new Error("El rollo está siendo utilizado por el corte "+(current.activeCutCode||current.activeCutId)+".");
-        if(currentAvailable<requested){var error=new Error("El rollo no tiene saldo suficiente.");error.code="ROLL_INSUFFICIENT";error.available=currentAvailable;error.required=requested;throw error;}
-        tx.set(ref,{activeCaseId:c.id,activeCutId:cut.id,activeCutCode:cut.code||cut.id,activeStatus:"EN_CORTE",referenceSessionStatus:"ACTIVA",updatedAt:now(),updatedByName:state.user?state.user.name:""},{merge:true});
-        return currentAvailable;
+
+    var expectedRevision=Number(c.flowRevision||0);
+    var stamp=now();
+    var eventId=uid("ev");
+    var rollRef=db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId);
+    var caseRef=db.collection("cases").doc(c.id);
+    var eventRef=db.collection("case_events").doc(eventId);
+    var finalCase=null,finalEvent=null,currentAvailable=0;
+    var previous=state.pendingCaseWrites[c.id]||Promise.resolve();
+
+    var write=previous.catch(function(){return null;}).then(function(){
+      return db.runTransaction(function(tx){
+        return Promise.all([tx.get(rollRef),tx.get(caseRef)]).then(function(snaps){
+          var rollSnap=snaps[0],caseSnap=snaps[1];
+          if(!rollSnap.exists)throw new Error("El rollo asignado ya no existe.");
+          var remoteRevision=caseSnap.exists?Number((caseSnap.data()||{}).flowRevision||0):0;
+          if(caseSnap.exists&&remoteRevision!==expectedRevision){
+            var conflict=new Error("El pedido cambió en otro equipo o pestaña antes de iniciar el corte. Actualice la bandeja.");
+            conflict.code="FLOW_REVISION_CONFLICT";
+            conflict.caseId=c.id;
+            conflict.remoteRevision=remoteRevision;
+            conflict.expectedRevision=expectedRevision;
+            throw conflict;
+          }
+
+          var current=Object.assign({id:rollSnap.id},rollSnap.data()||{});
+          currentAvailable=v238RollAvailable(current);
+          if(current.activeCutId&&String(current.activeCutId)!==String(cut.id)&&String(current.activeStatus)!=="FINALIZADO"){
+            throw new Error("El rollo está siendo utilizado por el corte "+(current.activeCutCode||current.activeCutId)+".");
+          }
+          if(currentAvailable<requested){
+            var insufficient=new Error("El rollo no tiene saldo suficiente.");
+            insufficient.code="ROLL_INSUFFICIENT";
+            insufficient.available=currentAvailable;
+            insufficient.required=requested;
+            throw insufficient;
+          }
+
+          var nextCase=cloneCaseWriteValue(c);
+          var nextCut=(nextCase.cutRequests||[]).filter(function(item){return String(item.id)===String(cut.id);})[0];
+          if(!nextCut)throw new Error("El corte ya no pertenece al pedido actualizado.");
+          nextCut.rollRemainingBefore=v238Meters(currentAvailable);
+          nextCut.disponibleAntes=v238Meters(currentAvailable);
+          nextCut.status="EN_CORTE";
+          nextCut.startedAt=stamp;
+          nextCut.lastStartedAt=stamp;
+          nextCut.pausedAt="";
+          nextCut.horaInicio=nextCut.horaInicio||new Date().toTimeString().slice(0,8);
+          nextCut.fechaCorte=nextCut.fechaCorte||new Date().toISOString().slice(0,10);
+          nextCut.startedBy=state.user.uid;
+          nextCut.startedByName=state.user.name;
+          nextCase.currentProcess="corte_cable";
+          nextCase.status="en_proceso";
+          nextCase.processStartedAt=stamp;
+          nextCase.statusStartedAt=stamp;
+          nextCase.hasCuts=true;
+          procStats(nextCase,"corte_cable").startedAt=procStats(nextCase,"corte_cable").startedAt||stamp;
+
+          var event=normalizeCaseEvent(enrichCaseEvent(nextCase,{
+            id:eventId,
+            caseId:nextCase.id,
+            type:Number(nextCut.durationMs||0)>0?"CUT_REFERENCE_RESUMED":"CUT_REFERENCE_STARTED",
+            process:"corte_cable",
+            cutId:nextCut.id,
+            timestamp:stamp,
+            detail:(Number(nextCut.durationMs||0)>0?"Corte continuado":"Corte iniciado")+" desde el rollo "+(nextCut.sourceRollCode||nextCut.sourceRollId)+". Saldo antes: "+v238Meters(currentAvailable)+" m.",
+            targetRole:"auxiliar_corte",
+            visibleRoles:["auxiliar_corte","jefe_logistica","coordinador_logistico","admin","super_admin","super_administrador","auditoria"]
+          }));
+          appendFlowTraceFromEvent(nextCase,event);
+          nextCase.updatedAt=stamp;
+          nextCase.updatedBy=state.user.uid;
+          nextCase.updatedByName=state.user.name;
+          nextCase.flowRevision=expectedRevision+1;
+          nextCase.lastEventId=event.id;
+
+          tx.set(rollRef,{
+            activeCaseId:nextCase.id,
+            activeCutId:nextCut.id,
+            activeCutCode:nextCut.code||nextCut.id,
+            activeStatus:"EN_CORTE",
+            referenceSessionStatus:"ACTIVA",
+            updatedAt:stamp,
+            updatedByName:state.user.name
+          },{merge:true});
+          tx.set(caseRef,cloneCaseWriteValue(nextCase),{merge:true});
+          tx.set(eventRef,cloneCaseWriteValue(event),{merge:false});
+          finalCase=nextCase;
+          finalEvent=event;
+        });
       });
-    }).then(function(currentAvailable){
-      cut.rollRemainingBefore=v238Meters(currentAvailable);cut.disponibleAntes=v238Meters(currentAvailable);
-      cut.status="EN_CORTE";cut.startedAt=now();cut.lastStartedAt=cut.startedAt;cut.pausedAt="";
-      cut.horaInicio=cut.horaInicio||new Date().toTimeString().slice(0,8);cut.fechaCorte=cut.fechaCorte||new Date().toISOString().slice(0,10);
-      cut.startedBy=state.user.uid;cut.startedByName=state.user.name;
-      c.currentProcess="corte_cable";c.status="en_proceso";c.hasCuts=true;
-      procStats(c,"corte_cable").startedAt=procStats(c,"corte_cable").startedAt||now();
-      return persistCase(c,{type:cut.durationMs?"CUT_REFERENCE_RESUMED":"CUT_REFERENCE_STARTED",cutId:cut.id,detail:(cut.durationMs?"Corte continuado":"Corte iniciado")+" desde el rollo "+cut.sourceRollCode+". Saldo antes: "+v238Meters(currentAvailable)+" m.",targetRole:"auxiliar_corte"})
-        .then(function(){closeDrawer();openCutModule(c.id,cut.id);});
+    }).then(function(){
+      if(!finalCase||!finalEvent)throw new Error("No fue posible confirmar el inicio transaccional del corte.");
+      replaceCaseInState(finalCase);
+      state.events.unshift(finalEvent);
+      try{queueEventNotification(finalEvent);}catch(notificationError){novaCaptureError(notificationError,"notificación posterior al inicio de corte");}
+      closeDrawer();
+      openCutModule(finalCase.id,cut.id);
+      return finalCase;
     }).catch(function(err){
+      if(err&&err.code==="FLOW_REVISION_CONFLICT"){
+        try{loadData();}catch(reloadError){novaCaptureError(reloadError,"recarga posterior a conflicto de corte");}
+      }
       if(err&&err.code==="ROLL_INSUFFICIENT"){
         var item={caseId:c.id,cutId:cut.id,caseReference:c.reference||cut.pedido||c.id,client:c.client||"",code:cut.code||cut.id,referencia:cut.referencia||"",descripcion:cut.descripcion||"",meters:requested,caseObj:c,cutObj:cut};
         v238OpenReplacementRoll(item,record,err);
-      }else showError(err.message||err);
+        return null;
+      }
+      showError(err.message||err);
+      return null;
     });
+    var tracked=write.finally(function(){if(state.pendingCaseWrites[c.id]===tracked)delete state.pendingCaseWrites[c.id];});
+    state.pendingCaseWrites[c.id]=tracked;
+    return tracked;
   }).catch(function(err){showError(err.message||err);});
 }
 function v238PauseBatchCut(c,cut){
@@ -14762,9 +14961,11 @@ function v238PauseBatchCut(c,cut){
   var extra=msSince(cut.startedAt);
   cut.durationMs=Number(cut.durationMs||0)+Math.max(0,extra);cut.durationText=fmt(cut.durationMs);
   cut.startedAt=null;cut.status="PAUSADO_CORTE";cut.pausedAt=now();cut.pausedBy=state.user.uid;cut.pausedByName=state.user.name;
-  v238UpdateRollActive(cut.sourceRollId,{activeStatus:"PAUSADO"}).catch(function(){});
-  persistCase(c,{type:"CUT_REFERENCE_PAUSED",cutId:cut.id,detail:"Corte pausado en "+cut.durationText+". El rollo "+cut.sourceRollCode+" permanece reservado.",targetRole:"auxiliar_corte"})
-    .then(function(){closeDrawer();openCutModule(c.id,cut.id);}).catch(function(e){showError(e.message||e);});
+  persistCaseGroup([
+    {case:c,event:{type:"CUT_REFERENCE_PAUSED",cutId:cut.id,detail:"Corte pausado en "+cut.durationText+". El rollo "+cut.sourceRollCode+" permanece reservado.",targetRole:"auxiliar_corte"}}
+  ],[
+    {ref:db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId),data:{activeStatus:"PAUSADO",updatedAt:now(),updatedByName:state.user?state.user.name:""},options:{merge:true}}
+  ]).then(function(){closeDrawer();openCutModule(c.id,cut.id);}).catch(function(e){showError(e.message||e);});
 }
 function v238FinishBatchCut(c,cut){
   try{if(qs("#cutFullForm"))applyCutFormValues(cut);}catch(e){novaCaptureError(e,"operación heredada");}
@@ -14775,10 +14976,12 @@ function v238FinishBatchCut(c,cut){
   cut.finishedBy=state.user.uid;cut.finishedByName=state.user.name;cut.startedAt=null;cut.status="PENDIENTE_REGISTRO";
   var before=v238Num(cut.rollRemainingBefore||cut.disponibleAntes),actual=v238Num(cut.metrajeFinal||cut.metrosSolicitados);
   if(Number.isFinite(before)&&Number.isFinite(actual))cut.remanenteReal=v238Meters(before-actual);
-  v238UpdateRollActive(cut.sourceRollId,{activeStatus:"FINALIZADO_PENDIENTE_REGISTRO"}).catch(function(){});
   refreshCutStats(c);
-  persistCase(c,{type:"CUT_FINISHED_PENDING_REGISTER",cutId:cut.id,detail:"Corte de referencia finalizado. Rollo "+cut.sourceRollCode+" · "+v238Meters(actual)+" m · pendiente evidencia y registro.",targetRole:"auxiliar_corte"})
-    .then(function(){closeDrawer();openCutModule(c.id,cut.id);}).catch(function(e){showError(e.message||e);});
+  persistCaseGroup([
+    {case:c,event:{type:"CUT_FINISHED_PENDING_REGISTER",cutId:cut.id,detail:"Corte de referencia finalizado. Rollo "+cut.sourceRollCode+" · "+v238Meters(actual)+" m · pendiente evidencia y registro.",targetRole:"auxiliar_corte"}}
+  ],[
+    {ref:db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId),data:{activeStatus:"FINALIZADO_PENDIENTE_REGISTRO",updatedAt:now(),updatedByName:state.user?state.user.name:""},options:{merge:true}}
+  ]).then(function(){closeDrawer();openCutModule(c.id,cut.id);}).catch(function(e){showError(e.message||e);});
 }
 function v238MergeQueue(record,refKey){
   var dynamic=v238ReferenceQueue(refKey),map={};
@@ -14794,44 +14997,77 @@ function v238CommitRollAfterCut(c,cut){
   if(cut.rollInventoryCommittedAt)return v238GetRollDoc(cut.sourceRollId);
   var actual=v238Num(cut.metrajeFinal||cut.metrosSolicitados);
   if(!Number.isFinite(actual)||actual<=0)return Promise.reject(new Error("No se puede descontar inventario: el metraje final no es válido."));
-  var rollRef=db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId);
-  return db.runTransaction(function(tx){
-    return tx.get(rollRef).then(function(snap){
-      if(!snap.exists)throw new Error("El rollo asignado no existe en inventario.");
-      var record=Object.assign({id:snap.id},snap.data()||{}),committed=Array.isArray(record.committedCutIds)?record.committedCutIds.slice():[];
-      if(committed.indexOf(cut.id)>=0)return {record:record,already:true,before:v238RollAvailable(record),after:v238RollAvailable(record)};
-      var before=v238RollAvailable(record);
-      if(!Number.isFinite(before))before=v238Num(cut.rollRemainingBefore||cut.disponibleAntes);
-      if(!Number.isFinite(before)||before<actual)throw new Error("El saldo del rollo es menor al metraje final del corte.");
-      var after=Math.max(0,Number((before-actual).toFixed(4)));
-      committed.push(cut.id);if(committed.length>250)committed=committed.slice(-250);
-      var queue=v238MergeQueue(record,v238RefKey(cut.referencia||record.referencia));
-      queue=queue.map(function(x){return String(x.caseId)===String(c.id)&&String(x.cutId)===String(cut.id)?Object.assign({},x,{status:"FINALIZADO",completedAt:now(),meters:v238Meters(actual)}):x;});
-      var completed=queue.filter(function(x){return x.status==="FINALIZADO";}).length;
-      var history=Array.isArray(record.cutHistory)?record.cutHistory.slice():[];
-      history.push({caseId:c.id,caseReference:c.reference||cut.pedido||"",cutId:cut.id,cutCode:cut.code||cut.id,meters:v238Meters(actual),before:v238Meters(before),after:v238Meters(after),completedAt:now(),completedByName:state.user?state.user.name:""});
-      if(history.length>100)history=history.slice(-100);
-      var update={
-        recordType:V238_ROLL_RECORD_TYPE,availableMeters:v238Meters(after),sobrante:v238Meters(after),
-        consumedMeters:v238Meters((v238Num(record.consumedMeters)||0)+actual),status:after>0?"DISPONIBLE":"AGOTADO",
-        activeCaseId:"",activeCutId:"",activeCutCode:"",activeStatus:"",
-        sessionQueue:queue,sessionTotalCuts:queue.length,sessionCompletedCuts:completed,
-        referenceSessionStatus:completed>=queue.length?"FINALIZADA":"ACTIVA",
-        committedCutIds:committed,cutHistory:history,lastCutId:cut.id,lastCutCode:cut.code||cut.id,lastCutMeters:v238Meters(actual),
-        lastCutAt:now(),lastCutByName:state.user?state.user.name:"",updatedAt:now(),updatedByName:state.user?state.user.name:""
-      };
-      tx.set(rollRef,update,{merge:true});
-      return {record:Object.assign(record,update,{id:snap.id}),already:false,before:before,after:after};
+  var rollRef=db.collection(V238_ROLL_COLLECTION).doc(cut.sourceRollId),caseRef=db.collection("cases").doc(c.id);
+  var expectedRevision=Number(c.flowRevision||0),writeTime=now();
+  var event=normalizeCaseEvent(enrichCaseEvent(c,{
+    caseId:c.id,type:"CUT_INVENTORY_COMMITTED",process:"corte_cable",cutId:cut.id,timestamp:writeTime,
+    detail:"Inventario del rollo "+(cut.sourceRollCode||cut.sourceRollId)+" descontado por "+v238Meters(actual)+" m para el corte "+(cut.code||cut.id)+".",
+    targetRole:"auxiliar_corte",visibleRoles:["auxiliar_corte","jefe_logistica","coordinador_logistico","admin","super_admin","super_administrador","auditoria"]
+  }));
+  appendFlowTraceFromEvent(c,event);
+  var previous=state.pendingCaseWrites[c.id]||Promise.resolve(),resultRecord=null;
+  var write=previous.catch(function(){return null;}).then(function(){
+    return db.runTransaction(function(tx){
+      return Promise.all([tx.get(rollRef),tx.get(caseRef)]).then(function(snaps){
+        var rollSnap=snaps[0],caseSnap=snaps[1];
+        if(!rollSnap.exists)throw new Error("El rollo asignado no existe en inventario.");
+        var remoteRevision=caseSnap.exists?Number((caseSnap.data()||{}).flowRevision||0):0;
+        if(caseSnap.exists&&remoteRevision!==expectedRevision){
+          var conflict=new Error("El pedido cambió en otro equipo o pestaña antes de descontar el rollo. Actualice la bandeja.");
+          conflict.code="FLOW_REVISION_CONFLICT";conflict.caseId=c.id;conflict.remoteRevision=remoteRevision;conflict.expectedRevision=expectedRevision;throw conflict;
+        }
+        var record=Object.assign({id:rollSnap.id},rollSnap.data()||{}),committed=Array.isArray(record.committedCutIds)?record.committedCutIds.slice():[];
+        var already=committed.indexOf(cut.id)>=0,before,after,update=null;
+        if(already){
+          var oldHistory=(record.cutHistory||[]).filter(function(row){return String(row.cutId)===String(cut.id);}).slice(-1)[0]||{};
+          before=v238Num(oldHistory.before);after=v238Num(oldHistory.after);
+          if(!Number.isFinite(after))after=v238RollAvailable(record);
+          if(!Number.isFinite(before))before=after+actual;
+        }else{
+          before=v238RollAvailable(record);
+          if(!Number.isFinite(before))before=v238Num(cut.rollRemainingBefore||cut.disponibleAntes);
+          if(!Number.isFinite(before)||before<actual)throw new Error("El saldo del rollo es menor al metraje final del corte.");
+          after=Math.max(0,Number((before-actual).toFixed(4)));
+          committed.push(cut.id);if(committed.length>250)committed=committed.slice(-250);
+          var queue=v238MergeQueue(record,v238RefKey(cut.referencia||record.referencia));
+          queue=queue.map(function(x){return String(x.caseId)===String(c.id)&&String(x.cutId)===String(cut.id)?Object.assign({},x,{status:"FINALIZADO",completedAt:writeTime,meters:v238Meters(actual)}):x;});
+          var completed=queue.filter(function(x){return x.status==="FINALIZADO";}).length;
+          var history=Array.isArray(record.cutHistory)?record.cutHistory.slice():[];
+          history.push({caseId:c.id,caseReference:c.reference||cut.pedido||"",cutId:cut.id,cutCode:cut.code||cut.id,meters:v238Meters(actual),before:v238Meters(before),after:v238Meters(after),completedAt:writeTime,completedByName:state.user?state.user.name:""});
+          if(history.length>100)history=history.slice(-100);
+          update={
+            recordType:V238_ROLL_RECORD_TYPE,availableMeters:v238Meters(after),sobrante:v238Meters(after),
+            consumedMeters:v238Meters((v238Num(record.consumedMeters)||0)+actual),status:after>0?"DISPONIBLE":"AGOTADO",
+            activeCaseId:"",activeCutId:"",activeCutCode:"",activeStatus:"",
+            sessionQueue:queue,sessionTotalCuts:queue.length,sessionCompletedCuts:completed,
+            referenceSessionStatus:completed>=queue.length?"FINALIZADA":"ACTIVA",
+            committedCutIds:committed,cutHistory:history,lastCutId:cut.id,lastCutCode:cut.code||cut.id,lastCutMeters:v238Meters(actual),
+            lastCutAt:writeTime,lastCutByName:state.user?state.user.name:"",updatedAt:writeTime,updatedByName:state.user?state.user.name:""
+          };
+          tx.set(rollRef,update,{merge:true});
+          record=Object.assign(record,update,{id:rollSnap.id});
+        }
+        cut.rollRemainingBefore=v238Meters(before);cut.rollRemainingAfter=v238Meters(after);
+        cut.remanenteReal=v238Meters(after);cut.rollInventoryCommittedAt=cut.rollInventoryCommittedAt||writeTime;
+        cut.rollInventoryCommittedByName=state.user?state.user.name:"";
+        c.updatedAt=writeTime;c.updatedBy=state.user&&state.user.uid||c.updatedBy||"";c.updatedByName=state.user&&state.user.name||c.updatedByName||"";
+        c.flowRevision=expectedRevision+1;c.lastEventId=event.id;
+        tx.set(caseRef,cloneCaseWriteValue(c),{merge:true});
+        tx.set(db.collection("case_events").doc(event.id),cloneCaseWriteValue(event),{merge:false});
+        resultRecord=record;
+      });
     });
-  }).then(function(result){
-    cut.rollRemainingBefore=v238Meters(result.before);cut.rollRemainingAfter=v238Meters(result.after);
-    cut.remanenteReal=v238Meters(result.after);cut.rollInventoryCommittedAt=cut.rollInventoryCommittedAt||now();
-    cut.rollInventoryCommittedByName=state.user?state.user.name:"";
-    return db.collection("cases").doc(c.id).set({cutRequests:c.cutRequests,updatedAt:now()},{merge:true}).then(function(){
-      var rec=result.record;state.inventoryChips=sortByUpdated(uniqueById([rec].concat(state.inventoryChips||[])));
-      setTimeout(function(){v238OfferNextCut(c,cut,rec);},500);return rec;
-    });
+  }).then(function(){
+    var idx=state.cases.findIndex(function(row){return row.id===c.id;});if(idx>=0)state.cases[idx]=c;
+    state.events.unshift(event);try{queueEventNotification(event);}catch(notificationError){novaCaptureError(notificationError,"notificación posterior a inventario de corte");}
+    if(resultRecord)state.inventoryChips=sortByUpdated(uniqueById([resultRecord].concat(state.inventoryChips||[])));
+    if(resultRecord)setTimeout(function(){v238OfferNextCut(c,cut,resultRecord);},500);
+    return resultRecord;
+  }).catch(function(error){
+    if(error&&error.code==="FLOW_REVISION_CONFLICT"){try{loadData();}catch(reloadError){novaCaptureError(reloadError,"recarga posterior a conflicto de corte");}}
+    novaCaptureError(error,"descuento transaccional de rollo y pedido");throw error;
   });
+  var tracked=write.finally(function(){if(state.pendingCaseWrites[c.id]===tracked)delete state.pendingCaseWrites[c.id];});state.pendingCaseWrites[c.id]=tracked;return tracked;
 }
 function v238ResolveQueueItem(entry,refKey){
   var c=caseById(entry.caseId);if(!c)return null;
@@ -15258,33 +15494,26 @@ function v239SubmitCutUnavailable(c,cut,fd,candidates){
     }
   );
 
-  var batch=db.batch();
-  batch.set(db.collection("cases").doc(c.id),c,{merge:true});
-  if(child)batch.set(db.collection("cases").doc(child.id),child);
-  batch.commit().then(function(){
-    if(child)state.cases.unshift(child);
-    return v239UpdateRollUnavailable(cut,reason,detail,availableReported);
-  }).then(function(record){
-    var events=[
-      createEvent(enrichCaseEvent(c,{
-        caseId:c.id,type:"CUT_UNAVAILABLE_RECORDED",process:"corte_cable",
-        cutId:cut.id,
-        detail:"Corte no disponible · "+reason+" · "+detail+
-          (child?" · Envío parcial "+child.reference:" · Sin líneas listas para parcial"),
-        targetRole:"coordinador_logistico",
-        visibleRoles:["auxiliar_corte","coordinador_logistico","lider_logistico","jefe_logistica","facturacion","ventas","admin","super_admin","super_administrador"]
-      })).catch(function(){})
-    ];
-    if(child){
-      events.push(createEvent(enrichCaseEvent(child,{
-        caseId:child.id,type:"PARTIAL_SHIPMENT_SENT_TO_BILLING",
-        process:"facturacion",
-        detail:"Envío parcial "+child.partialSequence+" generado por corte no disponible desde "+(c.reference||c.id),
-        targetRole:"facturacion",
-        visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]
-      })).catch(function(){}));
+  var persistenceEntries=[{
+    case:c,
+    event:{
+      type:"CUT_UNAVAILABLE_RECORDED",process:"corte_cable",cutId:cut.id,
+      detail:"Corte no disponible · "+reason+" · "+detail+(child?" · Envío parcial "+child.reference:" · Sin líneas listas para parcial"),
+      targetRole:"coordinador_logistico",
+      visibleRoles:["auxiliar_corte","coordinador_logistico","lider_logistico","jefe_logistica","facturacion","ventas","admin","super_admin","super_administrador"]
     }
-    return Promise.all(events).then(function(){return record;});
+  }];
+  if(child)persistenceEntries.push({
+    case:child,
+    event:{
+      type:"PARTIAL_SHIPMENT_SENT_TO_BILLING",process:"facturacion",
+      detail:"Envío parcial "+child.partialSequence+" generado por corte no disponible desde "+(c.reference||c.id),
+      targetRole:"facturacion",
+      visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]
+    }
+  });
+  persistCaseGroup(persistenceEntries).then(function(){
+    return v239UpdateRollUnavailable(cut,reason,detail,availableReported);
   }).then(function(record){
     closeDrawer();
     state.route="corte_cable";
@@ -15359,12 +15588,12 @@ upsertCutInventoryChip=function(c,cut){
       c.cutUnavailableOpen=(c.cutRequests||[]).some(function(x){
         return String(x.id)!==String(cut.id)&&v239IsCutUnavailable(x);
       });
-      db.collection("cases").doc(c.id).set({
-        cutRequests:c.cutRequests,
-        cutUnavailableNotes:c.cutUnavailableNotes||[],
-        cutUnavailableOpen:c.cutUnavailableOpen,
-        updatedAt:now()
-      },{merge:true}).catch(function(){});
+      return persistCase(c,{
+        type:"CUT_UNAVAILABLE_RESOLVED",process:"corte_cable",cutId:cut.id,
+        detail:"La incidencia de disponibilidad del corte "+(cut.code||cut.id)+" quedó resuelta al finalizar el corte.",
+        targetRole:"coordinador_logistico",
+        visibleRoles:["auxiliar_corte","coordinador_logistico","jefe_logistica","admin","super_admin","super_administrador","auditoria"]
+      }).catch(function(error){novaCaptureError(error,"cierre de incidencia de disponibilidad");}).then(function(){return result;});
     }
     return result;
   });
@@ -16878,10 +17107,109 @@ function v246Restore(){
 }
 function v246QueueDoc(collection,docId,data,merge){var id="firestore:"+collection+":"+docId;return v246Put(V246_OUTBOX,{id:id,kind:"firestore",collection:collection,docId:docId,data:v246Plain(data),merge:merge!==false,createdAt:Date.now(),updatedAt:Date.now(),attempts:0,lastError:""}).then(function(){state.v246.pendingCaseIds[collection+":"+docId]=true;v246RefreshBanner();return{queued:true,id:id};});}
 function v246Write(collection,docId,data,merge){if(!db||navigator.onLine===false)return v246QueueDoc(collection,docId,data,merge);var ref=db.collection(collection).doc(docId),write=merge===false?ref.set(v246Plain(data)):ref.set(v246Plain(data),{merge:true});return promiseWithTimeout(write,10000,"La red no confirmó el guardado.").then(function(){delete state.v246.pendingCaseIds[collection+":"+docId];return{queued:false};}).catch(function(error){if(v246Retryable(error))return v246QueueDoc(collection,docId,data,merge);throw error;});}
+function v246QueuePreparedCaseGroup(prepared,relatedWrites){
+  if((relatedWrites||[]).length)return Promise.reject(new Error("La operación relacionada requiere conexión y no puede quedar en cola local."));
+  prepared=(prepared||[]).filter(function(item){return item&&item.writeCase&&item.writeCase.id;});
+  if(!prepared.length)return Promise.reject(new Error("No hay pedidos preparados para guardar sin conexión."));
+  var entries=prepared.map(function(item){
+    return {
+      caseId:String(item.writeCase.id),
+      expectedRevision:Number(item.expectedRevision||0),
+      writeCase:v246Plain(item.writeCase),
+      writeEvent:item.writeEvent?v246Plain(item.writeEvent):null
+    };
+  });
+  var signature=entries.map(function(item){return item.caseId+"@"+String(item.writeCase.flowRevision||0)+"@"+String(item.writeEvent&&item.writeEvent.id||"sin_evento");}).join("|");
+  var op={id:"case_tx:"+signature,kind:"case_transaction",entries:entries,createdAt:Date.now(),updatedAt:Date.now(),attempts:0,lastError:""};
+  return v246Put(V246_OUTBOX,op).then(function(){
+    prepared.forEach(function(item){
+      replaceCaseInState(item.caseObj);
+      state.v246.pendingCaseIds["cases:"+item.caseObj.id]=true;
+      if(item.eventObj&&!(state.events||[]).some(function(existing){return existing&&existing.id===item.eventObj.id;}))state.events.unshift(item.eventObj);
+    });
+    v246CacheSoon();
+    v246RefreshBanner();
+    return prepared.map(function(item){return item.caseObj;});
+  });
+}
 function v246Event(e){e=e||{};e.id=e.id||uid("ev");e.timestamp=e.timestamp||now();e.userId=e.userId||(state.user?state.user.uid:"");e.userName=e.userName||(state.user?state.user.name:"Usuario");e.createdBy=e.createdBy||e.userId;e.createdByRole=e.createdByRole||(state.user?state.user.role:"");e.sourceRole=e.sourceRole||(state.user?state.user.role:"");e.visibleRoles=uniqueArray(e.visibleRoles||notificationVisibleRolesForEvent(null,e));return e;}
-createEvent=function(e){e=v246Event(e);if(!(state.events||[]).some(function(x){return x&&x.id===e.id;}))state.events.unshift(e);v246CacheSoon();return v246Write("case_events",e.id,e,false).then(function(result){try{queueEventNotification(e);}catch(x){novaCaptureError(x,"operación heredada");}return result;});};
-persistCase=function(c,event){if(!c||!c.id)return Promise.reject(new Error("Caso sin identificador"));if(event){event=Object.assign({caseId:c.id,process:c.currentProcess,timestamp:now()},event);appendFlowTraceFromEvent(c,event);}c.updatedAt=now();replaceCaseInState(c);v246CacheSoon();var enriched=event?enrichCaseEvent(c,event):null;return v246Write("cases",c.id,c,true).then(function(result){if(enriched)return createEvent(enriched).then(function(){return result;});return result;});};
-function v246FlushDocs(rows){var list=(rows||[]).filter(function(x){return x.kind==="firestore";}).sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);}),chain=Promise.resolve();list.forEach(function(op){chain=chain.then(function(){if(navigator.onLine===false)return;var ref=db.collection(op.collection).doc(op.docId),write=op.merge===false?ref.set(op.data):ref.set(op.data,{merge:true});return promiseWithTimeout(write,12000,"Sincronización agotada").then(function(){delete state.v246.pendingCaseIds[op.collection+":"+op.docId];return v246Delete(V246_OUTBOX,op.id);}).catch(function(error){op.attempts=Number(op.attempts||0)+1;op.lastError=String(error&&error.message||error||"").slice(0,300);op.updatedAt=Date.now();return v246Put(V246_OUTBOX,op).then(function(){if(!v246Retryable(error))throw error;});});});});return chain;}
+var v246CanonicalCreateEvent=createEvent;
+createEvent=function(e){
+  e=v246Event(e);
+  if(!db||navigator.onLine===false){
+    if(!(state.events||[]).some(function(x){return x&&x.id===e.id;}))state.events.unshift(e);
+    v246CacheSoon();
+    return v246QueueDoc("case_events",e.id,e,false);
+  }
+  return v246CanonicalCreateEvent(e).then(function(result){v246CacheSoon();return result;}).catch(function(error){
+    if(!v246Retryable(error))throw error;
+    if(!(state.events||[]).some(function(x){return x&&x.id===e.id;}))state.events.unshift(e);
+    v246CacheSoon();
+    return v246QueueDoc("case_events",e.id,e,false);
+  });
+};
+persistCase=function(c,event){
+  if(!c||!c.id)return Promise.reject(new Error("Caso sin identificador"));
+  return persistCaseGroup([{case:c,event:event||null}]).then(function(rows){v246CacheSoon();return rows[0];});
+};
+function v246FlushCaseTransactions(rows){
+  var list=(rows||[]).filter(function(item){return item.kind==="case_transaction";}).sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);});
+  var chain=Promise.resolve();
+  list.forEach(function(op){
+    chain=chain.then(function(){
+      if(navigator.onLine===false)return;
+      var entries=(op.entries||[]).filter(function(item){return item&&item.caseId&&item.writeCase;});
+      if(!entries.length)return v246Delete(V246_OUTBOX,op.id);
+      return promiseWithTimeout(db.runTransaction(function(tx){
+        var caseRefs=entries.map(function(item){return db.collection("cases").doc(item.caseId);});
+        return Promise.all(caseRefs.map(function(ref){return tx.get(ref);})).then(function(snaps){
+          var already=snaps.map(function(snap,index){
+            if(!snap.exists)return false;
+            var remote=snap.data()||{},entry=entries[index];
+            if(entry.writeEvent&&String(remote.lastEventId||"")===String(entry.writeEvent.id||"")&&Number(remote.flowRevision||0)>=Number(entry.writeCase.flowRevision||0))return true;
+            return !entry.writeEvent&&Number(remote.flowRevision||0)===Number(entry.writeCase.flowRevision||0);
+          });
+          if(already.every(Boolean))return;
+          if(already.some(Boolean)){
+            var mixed=new Error("La transacción local quedó parcialmente confirmada y requiere revisión de integridad.");
+            mixed.code="FLOW_PARTIAL_COMMIT";
+            throw mixed;
+          }
+          snaps.forEach(function(snap,index){
+            var remoteRevision=snap.exists?Number((snap.data()||{}).flowRevision||0):0;
+            if(snap.exists&&remoteRevision!==Number(entries[index].expectedRevision||0)){
+              var conflict=new Error("El pedido "+entries[index].caseId+" cambió antes de sincronizar la operación local.");
+              conflict.code="FLOW_REVISION_CONFLICT";
+              conflict.caseId=entries[index].caseId;
+              throw conflict;
+            }
+          });
+          entries.forEach(function(entry,index){
+            tx.set(caseRefs[index],entry.writeCase,{merge:true});
+            if(entry.writeEvent)tx.set(db.collection("case_events").doc(entry.writeEvent.id),entry.writeEvent,{merge:false});
+          });
+        });
+      }),20000,"Sincronización transaccional agotada").then(function(){
+        entries.forEach(function(entry){delete state.v246.pendingCaseIds["cases:"+entry.caseId];});
+        return v246Delete(V246_OUTBOX,op.id);
+      }).catch(function(error){
+        op.attempts=Number(op.attempts||0)+1;
+        op.lastError=String(error&&error.message||error||"").slice(0,500);
+        op.updatedAt=Date.now();
+        return v246Put(V246_OUTBOX,op).then(function(){if(!v246Retryable(error))throw error;});
+      });
+    });
+  });
+  return chain;
+}
+function v246FlushDocs(rows){
+  var all=rows||[];
+  return v246FlushCaseTransactions(all).then(function(){
+    var list=all.filter(function(x){return x.kind==="firestore";}).sort(function(a,b){return Number(a.createdAt||0)-Number(b.createdAt||0);}),chain=Promise.resolve();
+    list.forEach(function(op){chain=chain.then(function(){if(navigator.onLine===false)return;var ref=db.collection(op.collection).doc(op.docId),write=op.merge===false?ref.set(op.data):ref.set(op.data,{merge:true});return promiseWithTimeout(write,12000,"Sincronización agotada").then(function(){delete state.v246.pendingCaseIds[op.collection+":"+op.docId];return v246Delete(V246_OUTBOX,op.id);}).catch(function(error){op.attempts=Number(op.attempts||0)+1;op.lastError=String(error&&error.message||error||"").slice(0,300);op.updatedAt=Date.now();return v246Put(V246_OUTBOX,op).then(function(){if(!v246Retryable(error))throw error;});});});});
+    return chain;
+  });
+}
 function v246StoreFiles(files){files=(files||[]).slice(0,10);var total=files.reduce(function(s,f){return s+Number(f&&f.size||0);},0);if(total>80*1024*1024)return Promise.reject(new Error("Los archivos superan 80 MB"));var records=[],chain=Promise.resolve();files.forEach(function(file,index){chain=chain.then(function(){var record={id:uid("OFFFILE"),blob:file,name:file.name||("archivo_"+(index+1)),type:file.type||"application/octet-stream",size:Number(file.size||0),lastModified:Number(file.lastModified||Date.now()),createdAt:Date.now()};records.push(record);return v246Put(V246_FILES,record);});});return chain.then(function(){return records;});}
 function v246File(record){if(!record)return null;try{return new File([record.blob],record.name||"archivo",{type:record.type||"application/octet-stream",lastModified:record.lastModified||Date.now()});}catch(e){var blob=record.blob;try{Object.defineProperty(blob,"name",{value:record.name||"archivo"});}catch(x){novaCaptureError(x,"operación heredada");}return blob;}}
 function v246QueueEvidence(c,files,options){options=options||{};return v246StoreFiles(files).then(function(records){var job={id:"evidence:"+uid("OFFEVD"),kind:"evidence",mode:options.mode||"general",caseId:c.id,processKey:options.processKey||c.currentProcess,processName:options.processName||processTitle(options.processKey||c.currentProcess),evidenceType:options.evidenceType||"EVIDENCIA_PROCESO",deliveryKey:options.deliveryKey||"",detail:options.detail||"",fileIds:records.map(function(r){return r.id;}),fileNames:records.map(function(r){return r.name;}),createdAt:Date.now(),updatedAt:Date.now(),attempts:0,lastError:""};return v246Put(V246_OUTBOX,job).then(function(){v246RefreshBanner();return job;});});}
@@ -17747,12 +18075,33 @@ createPartialShipment=function(id,fd){
         return item.sinCorteConfigurado===true;
       })
     };
-    replaceCaseInState(child);replaceCaseInState(c);v246CacheSoon();
-    return v246Write("cases",child.id,child,false).then(function(){
-      return persistCase(c,{type:"PARTIAL_SHIPMENT_CREATED",detail:"Envío parcial "+sequence+" creado con "+selected.length+" líneas. El pedido original queda abierto.",targetRole:"coordinador_logistico",visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]});
-    }).then(function(){
-      return createEvent(enrichCaseEvent(child,{caseId:child.id,type:"PARTIAL_SHIPMENT_SENT_TO_BILLING",process:"facturacion",detail:"Envío parcial "+sequence+" enviado desde "+(c.reference||c.id),targetRole:"facturacion",visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]}));
-    }).then(function(){closeDrawer();state.detailId=c.id;renderDetail(c.id);return true;});
+    return persistCaseGroup([
+      {
+        case:c,
+        event:{
+          type:"PARTIAL_SHIPMENT_CREATED",
+          detail:"Envío parcial "+sequence+" creado con "+selected.length+" líneas. El pedido original queda abierto.",
+          targetRole:"coordinador_logistico",
+          visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]
+        }
+      },
+      {
+        case:child,
+        event:{
+          type:"PARTIAL_SHIPMENT_SENT_TO_BILLING",
+          process:"facturacion",
+          detail:"Envío parcial "+sequence+" enviado desde "+(c.reference||c.id),
+          targetRole:"facturacion",
+          visibleRoles:["coordinador_logistico","lider_logistico","jefe_logistica","facturacion","admin","super_admin","super_administrador"]
+        }
+      }
+    ]).then(function(){
+      v246CacheSoon();
+      closeDrawer();
+      state.detailId=c.id;
+      renderDetail(c.id);
+      return true;
+    });
   }).catch(function(error){showError(error.message||error);return false;}).finally(function(){state.v246PartialLocks[id]=false;});
 };
 
@@ -17776,6 +18125,12 @@ function v247PendingCasesFromOutbox(rows){
       row.docId
     ){
       map[row.docId]=row.data||{};
+      return;
+    }
+    if(row&&row.kind==="case_transaction"){
+      (row.entries||[]).forEach(function(entry){
+        if(entry&&entry.caseId&&entry.writeCase)map[entry.caseId]=entry.writeCase;
+      });
     }
   });
 
@@ -18707,7 +19062,6 @@ state.v252=state.v252||{
   pendingData:false,
   lastSilentRefreshAt:0,
   lastSilentFlushAt:0,
-  cut4582Checked:false,
   cutRecoveryInFlight:null
 };
 
@@ -19399,42 +19753,9 @@ function v252RecoverCutOrder(reference,options){
 }
 
 window.EI_RECOVER_CUT_ORDER=function(reference){
-  return v252RecoverCutOrder(
-    reference||"4582",
-    {silent:false}
-  );
-};
-
-/* Al aplicar Casos, Corte verifica una sola vez el pedido 4582. */
-var v252LegacyApplyCases=v250ApplyCases;
-v250ApplyCases=function(rows,outboxRows,source){
-  var result=v252LegacyApplyCases(
-    rows,
-    outboxRows,
-    source
-  );
-
-  if(
-    (isCutRuntimeUser()||
-     normalizeRole(state.user&&state.user.role)==="auxiliar_corte")&&
-    !state.v252.cut4582Checked
-  ){
-    state.v252.cut4582Checked=true;
-
-    setTimeout(function(){
-      v252RecoverCutOrder(
-        "4582",
-        {silent:true}
-      ).then(function(report){
-        console.info(
-          "[V254] Recuperación Corte 4582:",
-          report
-        );
-      });
-    },500);
-  }
-
-  return result;
+  reference=String(reference||"").trim();
+  if(!reference)return Promise.reject(new Error("Indique el número o referencia del pedido que desea recuperar."));
+  return v252RecoverCutOrder(reference,{silent:false});
 };
 
 /* Las acciones explícitas permiten un único repintado controlado. */
@@ -19474,9 +19795,8 @@ document.addEventListener("click",function(event){
 
   event.preventDefault();
 
-  var reference=
-    button.getAttribute("data-ref")||
-    "4582";
+  var reference=String(button.getAttribute("data-ref")||"").trim();
+  if(!reference){showError("Indique el número o referencia del pedido que desea recuperar.");return;}
 
   v252RecoverCutOrder(
     reference,
@@ -19495,856 +19815,7 @@ setTimeout(function(){
   v252HideLegacyStatusOverlays();
 },0);
 
-/* ============================================================
-   V254 · REPARACIÓN IDEMPOTENTE DEL PEDIDO 4582
-   - Completo: mueve el pedido original a Facturación.
-   - Parcial: crea un hijo determinista con líneas encontradas.
-   - Nunca crea duplicados ni exige corte para esta reparación.
-============================================================ */
-state.v254=state.v254||{
-  autoAttempted:false,
-  inFlight:null,
-  lastResult:null
-};
-
-function v254CanRepair4582(){
-  if(!state.user)return false;
-
-  var role=normalizeRole(state.user.role);
-
-  return (
-    currentUserIsAdminOrSuper()||
-    isAdminRoleValue(role)||
-    role==="gerencia"||
-    role==="jefe_logistica"||
-    role==="coordinador_logistico"||
-    role==="lider_logistico"||
-    role==="lider_logistica"||
-    role==="aux_logistica"||
-    role==="auxiliar_logistica"||
-    role==="auxiliar_corte"
-  );
-}
-function v254Clone(value){
-  return JSON.parse(
-    JSON.stringify(value||{})
-  );
-}
-function v254PendingQty(line){
-  if(typeof v241PendingQty==="function"){
-    return v241PendingQty(line);
-  }
-
-  var requested=partialQtyParse(
-    line&&(
-      line.cantidad||
-      line.qty||
-      line.quantity
-    )
-  );
-
-  var dispatched=partialQtyParse(
-    line&&line.partialDispatchedQty||0
-  );
-
-  return Math.max(
-    0,
-    requested-dispatched
-  );
-}
-function v254LineReadyForBilling(line){
-  if(!line||v254PendingQty(line)<=0){
-    return false;
-  }
-
-  var status=String(
-    line.alistamientoStatus||
-    ""
-  ).toUpperCase();
-
-  var operational=String(
-    line.estado||
-    ""
-  ).toUpperCase();
-
-  if(
-    status==="NO_ENCONTRADO"||
-    status==="NOVEDAD"||
-    status==="PENDIENTE"
-  ){
-    return false;
-  }
-
-  return !!(
-    status==="ENCONTRADO"||
-    line.encontrado===true||
-    operational==="ALISTADO"||
-    operational==="CORTE_ALISTADO"||
-    operational==="CORTE_FINALIZADO"||
-    operational==="CORTE_COMPLETADO"||
-    operational==="LISTO_FACTURACION"||
-    operational==="ALISTADO_PARCIAL_SIN_CORTE"
-  );
-}
-function v254SelectOrder4582(rows){
-  rows=uniqueById(rows||[]).filter(function(c){
-    return (
-      c&&
-      !c.isPartialShipment&&
-      v252CaseMatchesReference(c,"4582")
-    );
-  });
-
-  rows.sort(function(a,b){
-    var aExact=normalizeRefText(
-      a.reference||a.pedido||""
-    ).indexOf("4582")>=0?1:0;
-
-    var bExact=normalizeRefText(
-      b.reference||b.pedido||""
-    ).indexOf("4582")>=0?1:0;
-
-    if(aExact!==bExact)return bExact-aExact;
-
-    return v247Time(
-      b.updatedAt||b.createdAt
-    )-v247Time(
-      a.updatedAt||a.createdAt
-    );
-  });
-
-  return rows[0]||null;
-}
-function v254FindOrder4582(){
-  var local=v254SelectOrder4582(
-    state.cases||[]
-  );
-
-  if(local){
-    return Promise.resolve(local);
-  }
-
-  return v252FindCutOrderRemote("4582").then(function(rows){
-    var selected=v254SelectOrder4582(rows||[]);
-
-    if(selected){
-      replaceCaseInState(selected);
-    }
-
-    return selected;
-  });
-}
-function v254BuildRepairPlan(c){
-  var pending=[];
-  var ready=[];
-  var blocked=[];
-
-  (c.orderItems||[]).forEach(function(line,index){
-    var quantity=v254PendingQty(line);
-
-    if(quantity<=0)return;
-
-    var row={
-      line:line,
-      index:index,
-      quantity:quantity
-    };
-
-    pending.push(row);
-
-    if(v254LineReadyForBilling(line)){
-      ready.push(row);
-    }else{
-      blocked.push(row);
-    }
-  });
-
-  var alreadyInBilling=
-    c.currentProcess==="facturacion";
-
-  var existingPartial=(c.partialShipments||[])
-    .filter(function(shipment){
-      return (
-        shipment&&
-        shipment.repairKey==="V254_4582_FACTURACION"
-      );
-    })[0]||null;
-
-  if(
-    alreadyInBilling||
-    existingPartial
-  ){
-    return {
-      mode:"already_done",
-      ready:ready,
-      blocked:blocked,
-      pending:pending,
-      existingPartial:existingPartial
-    };
-  }
-
-  if(!pending.length){
-    return {
-      mode:"full",
-      ready:ready,
-      blocked:blocked,
-      pending:pending,
-      reason:"Pedido sin líneas pendientes registradas"
-    };
-  }
-
-  if(
-    ready.length&&
-    blocked.length
-  ){
-    return {
-      mode:"partial",
-      ready:ready,
-      blocked:blocked,
-      pending:pending,
-      reason:"Líneas encontradas enviadas; saldo permanece en el pedido original"
-    };
-  }
-
-  if(
-    ready.length&&
-    !blocked.length
-  ){
-    return {
-      mode:"full",
-      ready:ready,
-      blocked:blocked,
-      pending:pending,
-      reason:"Todas las líneas pendientes están disponibles"
-    };
-  }
-
-  return {
-    mode:"blocked",
-    ready:ready,
-    blocked:blocked,
-    pending:pending,
-    reason:"No existen líneas marcadas como encontradas para enviar"
-  };
-}
-function v254PrepareFullBillingCase(c,stamp){
-  var updated=v254Clone(c);
-
-  try{
-    stopActive(updated);
-  }catch(e){novaCaptureError(e,"operación heredada");}
-
-  updated.currentProcess="facturacion";
-  updated.status="asignado";
-  updated.assignedRole=primaryOwnerRole("facturacion");
-  updated.assignedName=processOwnerTitle("facturacion");
-  updated.assignedTo="";
-  updated.assignedUid="";
-  updated.assignedEmail="";
-  updated.assignedUsers=[];
-  updated.assignedUserIds=[];
-  updated.openRequirement=null;
-  updated.waitStartedAt=null;
-  updated.updatedAt=stamp;
-  updated.cutRecoveryPinned=false;
-  updated.billingOverride={
-    key:"V254_4582_FACTURACION",
-    mode:"PEDIDO_COMPLETO",
-    reason:"Reparación autorizada: traslado del pedido 4582 a Facturación.",
-    ignoresMissingCut:true,
-    executedAt:stamp,
-    executedBy:state.user.uid,
-    executedByName:state.user.name
-  };
-
-  updated.checklist={};
-
-  (processes.facturacion.checklist||[])
-    .forEach(function(item){
-      updated.checklist[item]="pending";
-    });
-
-  updated.processStats=updated.processStats||{};
-  procStats(updated,"facturacion").startedAt=stamp;
-
-  addStateHistory(
-    updated,
-    "v254_4582_facturacion",
-    "Pedido 4582 trasladado a Facturación mediante reparación autorizada. La ausencia de corte no bloqueó el traslado.",
-    {
-      tipo_estado:"valor",
-      toProcess:"facturacion",
-      repairKey:"V254_4582_FACTURACION"
-    }
-  );
-
-  return updated;
-}
-function v254PreparePartialBilling(parent,plan,stamp){
-  var updated=v254Clone(parent);
-
-  var selected=plan.ready.map(function(row){
-    var line=row.line;
-
-    return {
-      index:row.index,
-      lineId:line.id||
-        line.lineId||
-        String(row.index),
-      referencia:line.referencia||"",
-      descripcion:line.descripcion||"",
-      cantidad:partialQtyFormat(row.quantity),
-      unidad:line.unidad||"",
-      ubicacion:line.ubicacion||"",
-      sourceRequestedQty:partialQtyFormat(
-        partialQtyParse(
-          line.cantidad||
-          line.qty||
-          line.quantity
-        )
-      ),
-      sourcePendingBefore:partialQtyFormat(
-        row.quantity
-      ),
-      sourceRequiereCorte:!!line.requiereCorte,
-      partialWithoutConfiguredCut:true
-    };
-  });
-
-  var signature=selected.map(function(item){
-    return [
-      item.lineId,
-      item.referencia,
-      item.cantidad
-    ].join("|");
-  }).sort().join("~");
-
-  var repairKey="V254_4582_FACTURACION";
-  var childId=
-    "PAR_4582_V254_"+
-    v251HashText(
-      updated.id+"::"+signature
-    );
-
-  var sequence=
-    (updated.partialShipments||[]).length+1;
-
-  updated.partialShipments=
-    updated.partialShipments||[];
-
-  var existing=updated.partialShipments
-    .filter(function(shipment){
-      return (
-        shipment&&
-        (
-          shipment.id===childId||
-          shipment.repairKey===repairKey
-        )
-      );
-    })[0];
-
-  if(!existing){
-    updated.partialShipments.push({
-      id:childId,
-      repairKey:repairKey,
-      sequence:sequence,
-      status:"en_facturacion",
-      createdAt:stamp,
-      createdBy:state.user.uid,
-      createdByName:state.user.name,
-      reason:"Reparación autorizada del pedido 4582",
-      items:selected
-    });
-  }
-
-  updated.hasPartialShipment=true;
-  updated.partialShipmentOpen=true;
-  updated.partialPendingReason=
-    "Saldo pendiente del pedido 4582";
-
-  updated.orderItems=(updated.orderItems||[])
-    .map(function(line,index){
-      var selectedLine=selected.filter(function(item){
-        return Number(item.index)===index;
-      })[0];
-
-      if(!selectedLine)return line;
-
-      var requested=partialQtyParse(
-        line.cantidad||
-        line.qty||
-        line.quantity
-      );
-
-      var dispatched=
-        partialQtyParse(
-          line.partialDispatchedQty||0
-        )+
-        partialQtyParse(
-          selectedLine.cantidad
-        );
-
-      line.partialDispatchedQty=
-        partialQtyFormat(dispatched);
-
-      line.partialPendingQty=
-        partialQtyFormat(
-          Math.max(
-            0,
-            requested-dispatched
-          )
-        );
-
-      line.partialLastShipmentId=childId;
-      line.partialLastShipmentAt=stamp;
-      line.estado="ALISTADO_PARCIAL_SIN_CORTE";
-      line.alistamientoStatus="ENCONTRADO";
-      line.alistamientoNote=
-        "Línea enviada a Facturación mediante reparación V254 del pedido 4582.";
-
-      return line;
-    });
-
-  updated.updatedAt=stamp;
-  updated.billingOverride={
-    key:repairKey,
-    mode:"ENVIO_PARCIAL",
-    childCaseId:childId,
-    reason:"Reparación autorizada: líneas encontradas del pedido 4582 enviadas a Facturación.",
-    ignoresMissingCut:true,
-    executedAt:stamp,
-    executedBy:state.user.uid,
-    executedByName:state.user.name
-  };
-
-  addStateHistory(
-    updated,
-    "v254_4582_partial",
-    "Envío parcial del pedido 4582 creado para Facturación. El saldo permanece abierto en el pedido original.",
-    {
-      tipo_estado:"valor",
-      partialShipmentId:childId,
-      repairKey:repairKey
-    }
-  );
-
-  var child=v254Clone(updated);
-
-  child.id=childId;
-  child.parentCaseId=updated.id;
-  child.isPartialShipment=true;
-  child.partialSequence=sequence;
-  child.partialReason=
-    "Reparación autorizada del pedido 4582";
-
-  child.reference=
-    (updated.reference||
-     updated.pedido||
-     "4582")+
-    "-PARCIAL-V254";
-
-  child.description=
-    "Envío parcial del pedido 4582 trasladado a Facturación sin exigir corte configurado.";
-
-  child.currentProcess="facturacion";
-  child.status="asignado";
-  child.assignedRole=
-    primaryOwnerRole("facturacion");
-  child.assignedName=
-    processOwnerTitle("facturacion");
-  child.assignedTo="";
-  child.assignedUid="";
-  child.assignedEmail="";
-  child.assignedUsers=[];
-  child.assignedUserIds=[];
-  child.createdAt=stamp;
-  child.createdBy=state.user.uid;
-  child.createdByName=state.user.name;
-  child.updatedAt=stamp;
-  child.closedAt=null;
-  child.openRequirement=null;
-  child.cutRequests=[];
-  child.hasCuts=false;
-  child.cutRecoveryPinned=false;
-  child.partialShipments=[];
-  child.hasPartialShipment=false;
-  child.partialShipmentOpen=false;
-
-  child.orderItems=selected.map(function(item){
-    return {
-      id:item.lineId,
-      referencia:item.referencia,
-      descripcion:item.descripcion,
-      cantidad:item.cantidad,
-      unidad:item.unidad,
-      ubicacion:item.ubicacion,
-      sourceRequestedQty:item.sourceRequestedQty,
-      sourcePendingBefore:item.sourcePendingBefore,
-      sourceRequiereCorte:item.sourceRequiereCorte,
-      requiereCorte:false,
-      partialWithoutConfiguredCut:true,
-      partialCutDecision:"V254_4582_OVERRIDE",
-      partialCutNote:
-        "Traslado autorizado a Facturación sin corte configurado.",
-      alistamientoStatus:"ENCONTRADO",
-      estado:"PARCIAL_A_FACTURAR_SIN_CORTE"
-    };
-  });
-
-  child.checklist={};
-
-  (processes.facturacion.checklist||[])
-    .forEach(function(item){
-      child.checklist[item]="pending";
-    });
-
-  child.processStats={};
-  procStats(child,"facturacion").startedAt=stamp;
-
-  child.partialSource={
-    caseId:updated.id,
-    shipmentId:childId,
-    repairKey:repairKey,
-    sequence:sequence,
-    reason:
-      "Reparación autorizada del pedido 4582",
-    createdAt:stamp,
-    createdByName:state.user.name,
-    generatedFrom:"REPARACION_V254",
-    includesLinesWithoutConfiguredCut:true
-  };
-
-  child.billingOverride={
-    key:repairKey,
-    mode:"HIJO_PARCIAL",
-    parentCaseId:updated.id,
-    ignoresMissingCut:true,
-    executedAt:stamp,
-    executedBy:state.user.uid,
-    executedByName:state.user.name
-  };
-
-  return {
-    parent:updated,
-    child:child,
-    childId:childId,
-    selected:selected
-  };
-}
-function v254Commit4582ToBilling(c){
-  if(!db){
-    return Promise.reject(
-      new Error(
-        "Firebase no está disponible."
-      )
-    );
-  }
-
-  var caseId=c.id;
-  var parentRef=db
-    .collection("cases")
-    .doc(caseId);
-
-  return db.runTransaction(function(transaction){
-    return transaction.get(parentRef)
-      .then(function(snapshot){
-        if(!snapshot.exists){
-          throw new Error(
-            "El pedido 4582 ya no existe en Firebase."
-          );
-        }
-
-        var fresh=Object.assign(
-          {id:snapshot.id},
-          snapshot.data()||{}
-        );
-
-        var plan=v254BuildRepairPlan(fresh);
-        var stamp=now();
-
-        if(plan.mode==="already_done"){
-          return {
-            mode:"already_done",
-            parent:fresh,
-            child:null,
-            plan:plan
-          };
-        }
-
-        if(plan.mode==="blocked"){
-          throw new Error(
-            "El pedido 4582 fue localizado, pero no tiene líneas marcadas como Encontrado para enviar a Facturación."
-          );
-        }
-
-        if(plan.mode==="full"){
-          var full=v254PrepareFullBillingCase(
-            fresh,
-            stamp
-          );
-
-          transaction.set(
-            parentRef,
-            full,
-            {merge:false}
-          );
-
-          return {
-            mode:"full",
-            parent:full,
-            child:null,
-            plan:plan
-          };
-        }
-
-        var partial=v254PreparePartialBilling(
-          fresh,
-          plan,
-          stamp
-        );
-
-        var childRef=db
-          .collection("cases")
-          .doc(partial.childId);
-
-        return transaction.get(childRef)
-          .then(function(childSnapshot){
-            if(!childSnapshot.exists){
-              transaction.set(
-                childRef,
-                partial.child,
-                {merge:false}
-              );
-            }else{
-              partial.child=Object.assign(
-                {id:childSnapshot.id},
-                childSnapshot.data()||{}
-              );
-            }
-
-            transaction.set(
-              parentRef,
-              partial.parent,
-              {merge:false}
-            );
-
-            return {
-              mode:"partial",
-              parent:partial.parent,
-              child:partial.child,
-              plan:plan
-            };
-          });
-      });
-  });
-}
-function v254Send4582ToBilling(options){
-  options=options||{};
-
-  if(!v254CanRepair4582()){
-    return Promise.reject(
-      new Error(
-        "Este perfil no está autorizado para trasladar el pedido 4582."
-      )
-    );
-  }
-
-  if(state.v254.inFlight){
-    return state.v254.inFlight;
-  }
-
-  state.v254.inFlight=v254FindOrder4582()
-    .then(function(c){
-      if(!c){
-        throw new Error(
-          "No se encontró el pedido 4582."
-        );
-      }
-
-      return v254Commit4582ToBilling(c);
-    })
-    .then(function(result){
-      if(result.parent){
-        replaceCaseInState(result.parent);
-      }
-
-      if(result.child){
-        replaceCaseInState(result.child);
-      }
-
-      state.v254.lastResult={
-        mode:result.mode,
-        caseId:
-          result.parent&&result.parent.id||"",
-        childCaseId:
-          result.child&&result.child.id||"",
-        reference:
-          result.parent&&(
-            result.parent.reference||
-            result.parent.pedido
-          )||"4582",
-        completedAt:now()
-      };
-
-      window.EI_4582_BILLING_RESULT=
-        state.v254.lastResult;
-
-      v246CacheSoon();
-
-      var eventType=
-        result.mode==="partial"
-          ?"V254_4582_PARTIAL_SENT_TO_BILLING"
-          :(result.mode==="full"
-            ?"V254_4582_SENT_TO_BILLING"
-            :"V254_4582_ALREADY_IN_BILLING");
-
-      createEvent({
-        caseId:
-          result.child
-            ?result.child.id
-            :result.parent.id,
-        type:eventType,
-        process:"facturacion",
-        detail:
-          result.mode==="partial"
-            ?"Pedido 4582: líneas encontradas enviadas como parcial a Facturación; saldo conservado."
-            :(result.mode==="full"
-              ?"Pedido 4582 trasladado completamente a Facturación."
-              :"Pedido 4582 ya estaba trasladado; no se creó duplicado."),
-        targetRole:"facturacion",
-        visibleRoles:[
-          "facturacion",
-          "coordinador_logistico",
-          "lider_logistico",
-          "jefe_logistica",
-          "gerencia",
-          "admin",
-          "super_admin",
-          "super_administrador"
-        ]
-      }).catch(function(){
-        return null;
-      });
-
-      if(!options.silent){
-        showLiveToast(
-          result.mode==="partial"
-            ?"Parcial enviado a Facturación"
-            :(result.mode==="full"
-              ?"Pedido enviado a Facturación"
-              :"Pedido ya enviado"),
-          result.mode==="partial"
-            ?"Las líneas encontradas del pedido 4582 quedaron en Facturación y el saldo permanece abierto."
-            :(result.mode==="full"
-              ?"El pedido 4582 quedó asignado a Facturación."
-              :"La reparación ya estaba aplicada; no se generó un duplicado."),
-          false
-        );
-
-        if(
-          state.route==="corte_cable"&&
-          !v252ProtectedContext()
-        ){
-          renderCutsQueue();
-        }
-      }
-
-      console.info(
-        "[V254] Resultado pedido 4582:",
-        state.v254.lastResult
-      );
-
-      return state.v254.lastResult;
-    })
-    .catch(function(error){
-      if(!options.silent){
-        showError(
-          error&&error.message||
-          error||
-          "No fue posible pasar el pedido 4582 a Facturación."
-        );
-      }
-
-      console.warn(
-        "[V254] Reparación 4582 pendiente.",
-        error
-      );
-
-      throw error;
-    })
-    .finally(function(){
-      state.v254.inFlight=null;
-    });
-
-  return state.v254.inFlight;
-}
-
-window.EI_SEND_4582_TO_BILLING=function(){
-  return v254Send4582ToBilling({
-    silent:false
-  });
-};
-
-/* Ejecución automática una sola vez por sesión autorizada. */
-var v254LegacyApplyCases=v250ApplyCases;
-
-v250ApplyCases=function(rows,outboxRows,source){
-  var result=v254LegacyApplyCases(
-    rows,
-    outboxRows,
-    source
-  );
-
-  if(
-    v254CanRepair4582()&&
-    !state.v254.autoAttempted
-  ){
-    state.v254.autoAttempted=true;
-
-    setTimeout(function(){
-      v254Send4582ToBilling({
-        silent:true
-      }).catch(function(){});
-    },1200);
-  }
-
-  return result;
-};
-
-document.addEventListener("click",function(event){
-  var button=event.target&&event.target.closest
-    ?event.target.closest(
-      '[data-action="v254Send4582Billing"]'
-    )
-    :null;
-
-  if(!button)return;
-
-  event.preventDefault();
-  button.disabled=true;
-  button.textContent="Procesando 4582…";
-
-  v254Send4582ToBilling({
-    silent:false
-  }).finally(function(){
-    button.disabled=false;
-    button.textContent=
-      "Pasar 4582 a Facturación";
-  });
-},true);
-
-window.addEventListener("online",function(){
-  if(
-    v254CanRepair4582()&&
-    !state.v254.lastResult
-  ){
-    setTimeout(function(){
-      v254Send4582ToBilling({
-        silent:true
-      }).catch(function(){});
-    },5000);
-  }
-});
+/* V6.2: se retiró la reparación específica del pedido 4582. Los casos se gestionan únicamente mediante el flujo transaccional general. */
 
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 
