@@ -1,79 +1,42 @@
-# EI ERP Nova V6.1
+# EI ERP — Migración total Firebase → Supabase
 
-Plataforma empresarial de Electroingeniería reconstruida con una jerarquía clara:
+Este paquete migra de forma idempotente:
 
-```text
-Inicio de sesión obligatorio
-        ↓
-Portal de aplicativos
-        ↓
-Aplicativo autorizado
-        ↓
-Procesos del usuario
-        ↓
-Transacciones, bandejas y formularios
-        ↓
-Firebase y motor operativo
-```
+- Todas las colecciones y subcolecciones de Firestore.
+- Firebase Authentication: correos, teléfonos, estado, proveedores, claims, metadata y UID de origen.
+- Firebase Storage: archivos, rutas, MIME, metadata y hash SHA-256.
+- Perfiles y roles.
+- Tablas JSONB de respaldo sin pérdida.
+- Vistas SQL para VSM.
 
-## Contenido de esta versión
+## Seguridad obligatoria
 
-- Autenticación accesible con correo/contraseña y Google.
-- Perfil y rol Firestore obligatorios, sin inferencia por correo.
-- Portal empresarial preparado para varios aplicativos.
-- Trazabilidad logística organizada en 14 módulos y 32 transacciones.
-- Menú, buscador, pendientes y KPIs visibles según rol.
-- Ventas crea pedidos y solicitudes de crédito; Cartera revisa y decide.
-- Pedidos PVC, PVN, PVE y PVP.
-- VSM integrado dentro del entorno principal.
-- Perfiles dedicados para iOS, portátil compacto y pantalla cuadrada.
-- Sistema visual único para plataforma y motor embebido.
-- Conector externo Siesa retirado.
-- Motor operativo heredado aislado para proteger datos durante la migración.
+Las credenciales administrativas no deben guardarse en GitHub ni en archivos públicos. Use `.env` local o GitHub Actions Secrets. Después de una migración, rote la cuenta de servicio Firebase y todas las claves administrativas de Supabase que se hayan expuesto.
 
-## Estructura principal
+## Ejecución local en Windows
 
-```text
-index.html                  Inicio de sesión
-portal/                     Portal de aplicativos
-apps/trazabilidad/          Centro transaccional por rol
-core/                       Diseño, autenticación y configuración
-engine/                     Motor operativo aislado
-functions/                  Backend Firebase
-firestore.rules             Seguridad de datos
-storage.rules               Seguridad documental
-docs/                       Auditoría, arquitectura y aceptación
-tests/                      QA estructural y funcional
-```
+1. Instale Node.js 22 LTS.
+2. Copie `.env.example` como `.env` y complételo.
+3. Coloque la cuenta de servicio en `secrets/firebase-service-account.json`.
+4. Si no dispone de `SUPABASE_DB_URL`, ejecute una vez `sql/000_EJECUTAR_EN_SUPABASE.sql` desde Supabase SQL Editor.
+5. Ejecute `EJECUTAR_MIGRACION.ps1`.
+
+## Ejecución segura por GitHub Actions
+
+Configure estos secretos del repositorio:
+
+- `FIREBASE_SERVICE_ACCOUNT_B64`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_DB_URL`
+
+Ejecute primero con `dry_run=true`, revise el reporte y luego repita con `dry_run=false`.
+
+## Usuarios
+
+Los usuarios se crean en Supabase Auth y el UID de Firebase se conserva en `user_metadata.firebase_uid` y `profiles.firebase_uid`.
+
+Las contraseñas Firebase SCRYPT no pueden importarse mediante la Admin API de Supabase. Para usuarios de correo/contraseña se marca `must_reset_password=true`; deben restablecerla. Para evitar interrupción durante el cambio, puede habilitar temporalmente Firebase como Third-party Auth en Supabase.
 
 ## Validación
 
-```bash
-npm install
-npm run qa
-```
-
-Resultado de la entrega:
-
-```text
-0 hallazgos críticos automatizados
-3 advertencias residuales documentadas
-10 controles de auditoría superados
-336 referencias locales verificadas
-4 pruebas unitarias aprobadas
-```
-
-## Despliegue
-
-Esta versión reemplaza por completo el contenido versionado anterior; no debe copiarse como parche. Consulte:
-
-- `docs/REEMPLAZO_TOTAL_GITHUB.md`
-- `docs/PLAN_PRUEBAS_ACEPTACION.md`
-- `docs/RESULTADO_QA_FINAL.md`
-- `docs/REGISTRO_DE_HALLAZGOS.md`
-
-Antes de producción deben existir respaldo, prueba en Firebase de pruebas, aceptación por cada rol y validación en dispositivos reales.
-
-## Alcance pendiente
-
-La aplicación de Inventario cíclico no se incluyó porque su carpeta no fue suministrada. El portal queda preparado para integrarla como aplicativo independiente cuando se disponga del código.
+`npm run validate` compara cantidades de documentos y archivos entre el manifiesto Firebase y Supabase. El total de usuarios se revisa adicionalmente por `profiles.firebase_uid`, porque el destino puede tener usuarios preexistentes.
