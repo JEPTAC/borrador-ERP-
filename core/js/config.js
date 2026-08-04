@@ -1,7 +1,7 @@
 (function(){
   "use strict";
   window.EI_NOVA_CONFIG=Object.freeze({
-    version:"7.0.0",
+    version:"8.0.0",
     build:"2026-08-04.1",
     company:"Electroingeniería",
     product:"EI ERP Nova",

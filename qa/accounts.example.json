@@ -1,11 +1,14 @@
 {
   "admin": { "email": "superadmin@empresa.com", "password": "CAMBIAR", "role": "super_admin" },
+  "management": { "email": "gerencia@empresa.com", "password": "CAMBIAR", "role": "gerencia" },
+  "logistics_manager": { "email": "jefelogistica@empresa.com", "password": "CAMBIAR", "role": "jefe_logistica" },
   "sales": { "email": "ventas@empresa.com", "password": "CAMBIAR", "role": "ventas" },
   "purchases": { "email": "compras@empresa.com", "password": "CAMBIAR", "role": "compras" },
-  "reception": { "email": "recepcion@empresa.com", "password": "CAMBIAR", "role": "lider_recepcion" },
-  "logistics_local": { "email": "duvan@empresa.com", "password": "CAMBIAR", "role": "coordinador_logistico" },
-  "logistics_national": { "email": "javier@empresa.com", "password": "CAMBIAR", "role": "coordinador_logistico" },
+  "goods_reception": { "email": "recepcion@empresa.com", "password": "CAMBIAR", "role": "recepcion_mercancia" },
+  "picking": { "email": "auxiliar.logistica@empresa.com", "password": "CAMBIAR", "role": "aux_logistica" },
   "cut": { "email": "corte@empresa.com", "password": "CAMBIAR", "role": "auxiliar_corte" },
+  "local_dispatch": { "email": "duvan@empresa.com", "password": "CAMBIAR", "role": "coordinador_logistico" },
+  "national_dispatch": { "email": "javier@empresa.com", "password": "CAMBIAR", "role": "despacho_nacional" },
   "cash": { "email": "caja@empresa.com", "password": "CAMBIAR", "role": "caja" },
   "credit": { "email": "cartera@empresa.com", "password": "CAMBIAR", "role": "cartera" },
   "audit": { "email": "auditoria@empresa.com", "password": "CAMBIAR", "role": "auditoria" }

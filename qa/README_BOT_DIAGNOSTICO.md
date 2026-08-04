@@ -12,15 +12,16 @@ Este bot usa Playwright y GitHub Actions para operar la aplicación como un usua
 6. Carga de archivos PNG y CSV en soportes, recepción y evidencias.
 7. Exploración automática de acciones visibles hasta cierre o bloqueo.
 8. Persistencia en `public.cases`, cuando se configura `SUPABASE_SERVICE_ROLE_KEY`.
-9. Limpieza de registros cuyo número comienza por `QA-BOT-*`.
+9. Validación de la matriz exacta de rutas permitidas y denegadas para cada rol configurado.
+10. Limpieza de registros cuyo número comienza por `QA-BOT-*`.
 
 ## Modos
 
 - `smoke`: 8 combinaciones críticas.
 - `pairwise`: conjunto mínimo que cubre todos los pares de valores entre dimensiones.
-- `exhaustive`: 240 combinaciones: 4 tipos × 3 prioridades × 5 entregas × 4 pagos.
+- `exhaustive`: 192 combinaciones válidas: 4 tipos × 2 prioridades × 2 estados del cliente × 4 entregas × 3 pagos.
 
-El modo `exhaustive` escribe 240 pedidos de prueba. Debe usarse con la limpieza habilitada y la `service_role` configurada.
+El modo `exhaustive` escribe 192 pedidos de prueba. Debe usarse con la limpieza habilitada y la `service_role` configurada.
 
 ## Configuración de GitHub
 
@@ -40,7 +41,7 @@ Pegue la clave Legacy `service_role`. Se usa únicamente dentro del runner priva
 2. Seleccione `Bot diagnóstico ERP`.
 3. Pulse `Run workflow`.
 4. Indique la URL pública del ERP o deje el campo vacío para usar GitHub Pages.
-5. Seleccione `smoke`, `pairwise` o `exhaustive`.
+5. Seleccione `smoke`, `pairwise` o `exhaustive`. Para auditar permisos use la suite `roles`.
 6. Al terminar, descargue el artefacto `diagnostico-erp-*`.
 
 ## Archivos del resultado

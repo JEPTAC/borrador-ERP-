@@ -43,7 +43,7 @@ var feedbackAssets = {
   success:appResource("shared/assets/feedback/hands-up-ok-gauss.gif")
 };
 
-var EI_CANONICAL_APP_VERSION = "v7.1.0-diagnostico-routing-20260804";
+var EI_CANONICAL_APP_VERSION = "v8.0.0-role-first-20260804";
 try{
   window.EI_CANONICAL_APP_VERSION=EI_CANONICAL_APP_VERSION;
   window.EI_BUILD_LOADED=EI_CANONICAL_APP_VERSION;
@@ -243,6 +243,10 @@ var state = {
   receptionStickerDraftRows: [],
   projectOrders: [],
   reports: [],
+  caseComments: {},
+  caseCommentsLoading: {},
+  workflowRequests: [],
+  workflowRequestsLoaded: false,
   inventoryChips: [],
   dataLoading: false,
   filters: { search:"", status:"", process:"" },
@@ -441,22 +445,19 @@ function ensureV221UiFixes(){
 }
 
 var roles = {
-  admin:"Administrador / Desarrollador",
-  super_admin:"Super administrador",
-  super_administrador:"Super administrador",
+  super_admin:"Super Admin",
   gerencia:"Gerencia",
   ventas:"Ventas",
   compras:"Compras",
-  proyectos:"Proyectos",
   jefe_logistica:"Jefe de logística",
-  lider_logistico:"Logística / despacho (unificado)",
-  coordinador_logistico:"Logística / despacho (unificado)",
-  aux_logistica:"Auxiliar logística",
+  coordinador_logistico:"Coordinador logístico local",
+  despacho_nacional:"Despacho nacional",
+  aux_logistica:"Auxiliar logístico",
   auxiliar_corte:"Auxiliar de corte",
   caja:"Caja",
   cartera:"Cartera",
-  inventarios:"Inventarios",
-  lider_recepcion:"Líder de recepción",
+  recepcion_mercancia:"Recepción de mercancía",
+  lider_recepcion:"Recepción de mercancía",
   auditoria:"Auditoría"
 };
 
@@ -483,7 +484,7 @@ var processes = {
     next:["recepcion_pedidos"]
   },
   recepcion_pedidos:{
-    code:"S-PR-2", title:"Recepción de pedidos", ownerRoles:["coordinador_logistico"], icon:"RP",
+    code:"S-PR-2", title:"Recepción de pedidos", ownerRoles:["coordinador_logistico","despacho_nacional"], icon:"RP",
     checklist:["Pedido registrado por ventas","PDF del pedido cargado en recepción","Documento legible y completo","Número de pedido identificado","Cliente identificado","Referencias del pedido identificadas","Cantidades y unidades de medida identificadas","Cortes automáticos detectados si aplica","Tipo PVC/PVN validado","Tipo de entrega definido","Forma de pago definida","Mercancía reservada y validada","Observaciones revisadas","Pedido listo para alistamiento"],
     waits:["Falta PDF del pedido","PDF ilegible","Falta referencia","Falta cantidad","Falta unidad de medida","Falta tipo de entrega","Falta forma de pago","Mercancía sin comprometer","Falta autorización comercial","Falta aclaración del asesor","Pedido no coincide con lo registrado por ventas"],
     next:["alistamiento"]
@@ -515,7 +516,7 @@ var processes = {
     next:["facturacion"]
   },
   facturacion:{
-    code:"S-PR-5", title:"Facturación del pedido", ownerRoles:["facturacion","coordinador_logistico"], icon:"FC",
+    code:"S-PR-5", title:"Facturación del pedido", ownerRoles:["coordinador_logistico","despacho_nacional"], icon:"FC",
     checklist:["Pedido recibido para facturar","Compromiso ratificado por facturación","Tipo de pedido validado","Si es PVC, continúa facturación logística","Si no es PVC, relevar a caja","Factura generada correctamente","Documento validado","Tipo de entrega seleccionado","Factura entregada a despacho"],
     waits:["Pago pendiente","Soporte incompleto","Error en la generación de factura","Error de factura electrónica","Documento rechazado","Falta autorización de cartera","Cliente con datos incompletos"],
     next:["caja","cliente_punto","cliente_recoge","despacho_local","despacho_nacional"]
@@ -551,13 +552,13 @@ var processes = {
     next:["cierre_caso"]
   },
   despacho_nacional:{
-    code:"S-PR-6", title:"Despacho nacional", ownerRoles:["coordinador_logistico"], icon:"DN",
+    code:"S-PR-6", title:"Despacho nacional", ownerRoles:["despacho_nacional"], icon:"DN",
     checklist:["Factura coincide con pedido","Producto coincide con factura","Número de unidades definido","Dimensiones registradas","Destino validado","Condiciones de envío definidas","Transportadora coordinada","Foto de mercancía rotulada cargada","Logística finalizada, espera transportadora","Guía de transportadora / soporte final cargado","Cierre de despacho registrado"],
     waits:["Falta guía","Falta flete","Transportadora no recoge","Plataforma no disponible","Falta datos de destino","Falta confirmación de recogida","Pedido no liberado"],
     next:["cierre_despacho_nacional"]
   },
   cierre_despacho_nacional:{
-    code:"S-PR-6", title:"Cierre despacho nacional", ownerRoles:["coordinador_logistico"], icon:"CD",
+    code:"S-PR-6", title:"Cierre despacho nacional", ownerRoles:["despacho_nacional"], icon:"CD",
     checklist:["Foto de mercancía rotulada cargada","Logística finalizada, espera transportadora","Guía de transportadora / soporte final cargado","Confirmación de entrega validada","Proceso cerrado"],
     waits:["Transportadora no confirma entrega","Falta guía","Falta soporte","Pendiente reporte","Novedad sin cierre"],
     next:["cierre_caso"]
@@ -592,8 +593,8 @@ function deliveryRouteOptions(selected){
   return opts.map(function(o){return '<option value="'+o[0]+'" '+(selected===o[0]?'selected':'')+'>'+esc(o[1])+'</option>';}).join("");
 }
 var deliveryRouteOwnerRules=[
-  {key:"local_delivery",label:"Duvan Díaz · entregas locales",routes:["cliente_punto","cliente_recoge","despacho_local"],ownerRoles:["coordinador_logistico"],ownerEmails:["d.diaz@ei.com.co"],ownerNames:["DUVAN DIAZ"],ownerUids:["vZLFnB5MlvfHDNbQzZ52SjIJfUJ2"],operationalProcesses:["recepcion_pedidos","facturacion","cliente_punto","cliente_recoge","despacho_local"]},
-  {key:"national_delivery",label:"Javier Laverde · despacho nacional",routes:["despacho_nacional","cierre_despacho_nacional"],ownerRoles:["coordinador_logistico"],ownerEmails:["j.laverde@ei.com.co"],ownerNames:["JAVIER LAVERDE"],ownerUids:["Be68UgYTnDU3winX2l5NoeWqqHt2"],operationalProcesses:["recepcion_pedidos","facturacion","despacho_nacional","cierre_despacho_nacional"]}
+  {key:"local_delivery",label:"Coordinación logística local",routes:["cliente_punto","cliente_recoge","despacho_local"],ownerRoles:["coordinador_logistico"],ownerEmails:["d.diaz@ei.com.co"],ownerNames:["DUVAN DIAZ"],ownerUids:["vZLFnB5MlvfHDNbQzZ52SjIJfUJ2"],operationalProcesses:["recepcion_pedidos","facturacion","cliente_punto","cliente_recoge","despacho_local"]},
+  {key:"national_delivery",label:"Despacho nacional",routes:["despacho_nacional","cierre_despacho_nacional"],ownerRoles:["despacho_nacional"],ownerEmails:["j.laverde@ei.com.co"],ownerNames:["JAVIER LAVERDE"],ownerUids:["Be68UgYTnDU3winX2l5NoeWqqHt2"],operationalProcesses:["recepcion_pedidos","facturacion","despacho_nacional","cierre_despacho_nacional"]}
 ];
 function routeKeyForCase(c){
   if(!c)return "";
@@ -639,7 +640,7 @@ function currentUserDeliveryOwnerRule(){
   if(!state.user)return null;
   if(canSeeAll() || isAdminRoleValue(state.user.role))return null;
   var role=normalizeRole(state.user.role);
-  if(["coordinador_logistico","aux_logistica"].indexOf(role)<0)return null;
+  if(["coordinador_logistico","despacho_nacional"].indexOf(role)<0)return null;
   return deliveryOwnerRuleForUser(state.user);
 }
 function currentUserAllowedByDeliveryRoute(c){
@@ -687,7 +688,7 @@ function deliveryRouteAssignableUsers(processKey){
     x.id=x.uid||String(u.id||u.uid||u.email||u.name||"").trim();
     x.name=u.name||u.displayName||u.email||x.id;
     x.email=u.email||"";
-    x.role=normalizeRole(u.role||"coordinador_logistico");
+    x.role=normalizeRole(u.role||(rule.ownerRoles||[])[0]||"coordinador_logistico");
     x.uidAliases=uniqueArray((u.uidAliases||[]).concat([x.uid,x.id,u.userId,u.authUid,u.profileUid,u.email,u.name,u.displayName]).map(function(v){return String(v||"").trim();}).filter(Boolean));
     return x;
   });
@@ -840,24 +841,26 @@ function daysBetweenInclusive(a,b){var ms=toDayStart(b)-toDayStart(a);return Mat
 function normalizeRole(r){
   var raw=stripAccents(String(r||"").trim().toLowerCase());
   var x=raw.replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g,"").replace(/_+/g,"_");
-  if(x==="sa"||x==="superadmin"||x==="super_admin"||x==="super_administrador"||x==="superadministrador"||x==="super_administracion"||(x.indexOf("super")>=0&&(x.indexOf("admin")>=0||x.indexOf("administrador")>=0||x.indexOf("administracion")>=0)))return "super_admin";
-  if(x==="admin"||x==="administrador"||x==="administracion"||x==="administrador_desarrollador"||x==="admin_desarrollador"||x==="desarrollador"||x==="developer"||x==="administrator")return "admin";
-  if(x==="compras"||x==="compra"||x==="area_compras"||x==="comprador"||x==="pve_compras"||x==="gestion_compras")return "compras";
-  if(x==="asesor"||x==="asesor_ventas"||x==="asesor_de_ventas"||x==="vendedor"||x==="comercial")return "ventas";
-  if(x==="cartera"||x==="credito"||x==="creditos"||x==="area_cartera"||x==="analista_cartera")return "cartera";
-  if(x==="jefe_logistico")return "jefe_logistica";
-  if(x==="auxiliar_de_corte"||x==="operario_corte"||x==="operario_de_corte"||x==="corte"||x==="cortes"||x==="area_corte"||x==="modulo_corte"||x==="cortador"||x==="aux_corte")return "auxiliar_corte";
-  if(x==="auxiliar_logistica"||x==="auxiliar_de_logistica"||x==="aux_logistico"||x==="auxiliar_despacho")return "aux_logistica";
-  if(x==="lider_logistica"||x==="lider_logistico"||x==="lider_de_logistica"||x==="lider_despacho"||x==="coordinador_logistica"||x==="coordinador_logistico"||x==="logistica_despacho_unificado"||x==="logistica_despacho_unificada"||x==="logistica_despacho"||x==="logistica_y_despacho"||x==="despacho_logistica"||x==="despacho_logistico"||x==="logistica"||x==="despacho")return "coordinador_logistico";
-  if((x.indexOf("logistica")>=0||x.indexOf("logistico")>=0) && (x.indexOf("despacho")>=0||x.indexOf("unificado")>=0||x.indexOf("unificada")>=0))return "coordinador_logistico";
-  if(x==="lider_de_recepcion"||x==="recepcion_mercancia"||x==="recepcionista")return "lider_recepcion";
-  if(x==="proyecto"||x==="proyectos"||x==="rol_proyectos"||x==="area_proyectos"||x==="modulo_proyectos"||x==="projects")return "proyectos";
-  if(x==="auditoria"||x==="auditor"||x==="auditor_operativo"||x==="auditoría"||x==="solo_lectura"||x==="consulta"||x==="consulta_general")return "auditoria";
-  return x;
+  var aliases={
+    sa:"super_admin",superadmin:"super_admin",super_administrador:"super_admin",superadministrador:"super_admin",
+    admin:"super_admin",administrador:"super_admin",administracion:"super_admin",
+    gerente:"gerencia",manager:"gerencia",
+    asesor:"ventas",asesor_ventas:"ventas",asesor_de_ventas:"ventas",vendedor:"ventas",comercial:"ventas",
+    compra:"compras",area_compras:"compras",comprador:"compras",
+    jefe_logistico:"jefe_logistica",jefe_de_logistica:"jefe_logistica",
+    auxiliar_logistica:"aux_logistica",auxiliar_de_logistica:"aux_logistica",aux_logistico:"aux_logistica",
+    auxiliar_de_corte:"auxiliar_corte",operario_corte:"auxiliar_corte",operario_de_corte:"auxiliar_corte",corte:"auxiliar_corte",cortes:"auxiliar_corte",cortador:"auxiliar_corte",aux_corte:"auxiliar_corte",
+    lider_de_recepcion:"recepcion_mercancia",lider_recepcion:"recepcion_mercancia",recepcion:"recepcion_mercancia",recepcionista:"recepcion_mercancia",
+    despacho:"despacho_nacional",despachos:"despacho_nacional",auxiliar_despacho:"despacho_nacional",
+    coordinador_logistica:"coordinador_logistico",lider_logistico:"coordinador_logistico",lider_logistica:"coordinador_logistico",
+    credito:"cartera",creditos:"cartera",analista_cartera:"cartera",
+    auditor:"auditoria",solo_lectura:"auditoria",consulta:"auditoria"
+  };
+  return aliases[x]||x;
 }
 function roleTitle(r){var nr=normalizeRole(r);return roles[nr]||roles[r]||r||"Sin rol";}
-function isAdminRoleValue(r){var nr=normalizeRole(r);return nr==="admin"||nr==="super_admin"||nr==="superadministrador";}
-function isPrivilegedKpiRole(r){var nr=normalizeRole(r);return nr==="admin"||nr==="super_admin"||nr==="gerencia"||nr==="jefe_logistica";}
+function isAdminRoleValue(r){return normalizeRole(r)==="super_admin";}
+function isPrivilegedKpiRole(r){var nr=normalizeRole(r);return nr==="super_admin"||nr==="gerencia"||nr==="jefe_logistica";}
 function isSuperAdminRoleValue(r){return normalizeRole(r)==="super_admin";}
 function isCutRoleRuntimeUser(){
   return !!(state.user && normalizeRole(state.user.role)==="auxiliar_corte");
@@ -913,10 +916,9 @@ function migrateLegacyCaseInMemory(c, reason){
 function processOwnerRoles(p){return processes[p] ? uniqueArray(processes[p].ownerRoles||[]) : [];}
 function activeProcessKeys(){return Object.keys(processes).filter(function(k){return !processes[k].hidden;});}
 function canAccessProcess(role,p){
+  if(window.EI_ROLE_POLICY)return window.EI_ROLE_POLICY.canAccessProcess(role,p);
   if(currentUserIsSuperAdmin&&currentUserIsSuperAdmin())return true;
-  if(isAdminRoleValue(role))return true;
-  var nr=normalizeRole(role);
-  return processOwnerRoles(p).map(normalizeRole).indexOf(nr)>=0;
+  return processOwnerRoles(p).map(normalizeRole).indexOf(normalizeRole(role))>=0;
 }
 function userIdentityAliases(u){
   u=u||{};
@@ -1075,6 +1077,7 @@ function currentUserBlockedByAssignment(c){
 }
 function canOperateCurrentProcess(c){
   if(!state.user || !c)return false;
+  if(window.EI_ROLE_POLICY)return window.EI_ROLE_POLICY.canOperateCase(state.user,c);
   if(isAdminRoleValue(state.user.role))return true;
   if(!currentUserAllowedByDeliveryRoute(c))return false;
   if(currentUserBlockedByAssignment(c))return false;
@@ -1113,7 +1116,7 @@ function separationRetentionMs(c){
 function canReleaseSeparationPayment(c){
   if(!state.user || !separationPaymentPending(c))return false;
   var r=normalizeRole(state.user.role);
-  return isAdminRoleValue(r) || canSeeAll() || r==="jefe_logistica" || r==="gerencia" || r==="coordinador_logistico" || r==="lider_logistico" || r==="lider_logistica" || r==="aux_logistica" || r==="caja" || r==="cartera" || canOperateCurrentProcess(c);
+  return r==="super_admin"||r==="caja"||r==="cartera";
 }
 function canSalesRequestSeparation(c){
   if(!isSalesRole() || !c || c.closedAt || separationActive(c))return false;
@@ -1160,28 +1163,24 @@ function currentUserDirectlyAssigned(c){
 function canAssignAlistamientoFromReception(c){
   if(!state.user || !c || c.closedAt || c.currentProcess!=="recepcion_pedidos")return false;
   var r=normalizeRole(state.user.role);
-  if(isAdminRoleValue(r) || r==="jefe_logistica" || r==="gerencia" || r==="coordinador_logistico")return true;
-  if(canAccessProcess(r,"recepcion_pedidos"))return true;
-  if(normalizeRole(c.assignedRole)===r)return true;
-  if(currentUserDirectlyAssigned(c))return true;
-  if(currentRoleInCaseList(c,"visibleRoles") || currentRoleInCaseList(c,"targetRoles"))return true;
-  return false;
+  if(r==="super_admin")return true;
+  if(r!=="coordinador_logistico"&&r!=="despacho_nacional")return false;
+  return canOperateCurrentProcess(c);
 }
 function canManageAlistamientoAssignment(c){
   if(!state.user || !c || c.closedAt)return false;
-  var r=normalizeRole(state.user.role);
   if(c.currentProcess==="recepcion_pedidos")return canAssignAlistamientoFromReception(c);
-  return isAdminRoleValue(r)||r==="jefe_logistica"||r==="gerencia"||r==="coordinador_logistico"||canOperateCurrentProcess(c);
+  return normalizeRole(state.user.role)==="super_admin";
 }
-function noDeliveryVisibleRoles(){return ["coordinador_logistico","lider_logistico","lider_logistica","aux_logistica","jefe_logistica","gerencia","admin","super_admin","super_administrador","ventas","caja"];}
-function noDeliveryManagementRoles(){return ["coordinador_logistico","lider_logistico","lider_logistica","aux_logistica","jefe_logistica","gerencia","admin","super_admin","super_administrador"];}
+function noDeliveryVisibleRoles(){return ["coordinador_logistico","despacho_nacional","jefe_logistica","gerencia","super_admin","ventas","caja","cartera"];}
+function noDeliveryManagementRoles(){return ["coordinador_logistico","despacho_nacional","jefe_logistica","gerencia","super_admin"];}
 function isNoDeliveryCase(c){return !!(c && (c.status==="no_entregado" || c.status==="devolucion_caja" || c.noDelivery===true || c.noDeliveryStatus==="ABIERTO" || c.noDeliveryStatus==="GESTION_LOGISTICA" || c.noDeliveryStatus==="DEVOLUCION_CAJA" || (c.openRequirement && c.openRequirement.source==="no_entrega")));}
 function isOpenNoDeliveryCase(c){return !!(c && isNoDeliveryCase(c) && c.noDeliveryStatus!=="CERRADO_SOLUCIONADO" && c.status!=="cerrado_conforme" && c.status!=="cerrado_con_novedad" && c.status!=="cancelado");}
 function noDeliveryProcess(c){
-  var p=(c&&(c.deliveryType||c.requestedDelivery||c.currentProcess))||"despacho_nacional";
+  var p=(c&&(c.deliveryType||c.requestedDelivery||c.currentProcess))||"";
   if(isDeliveryProcess(p))return p;
   if(p==="cierre_despacho_nacional")return "despacho_nacional";
-  return "despacho_nacional";
+  return "";
 }
 function canManageNoDelivery(c){
   if(!state.user || !c)return false;
@@ -1201,27 +1200,22 @@ function canCloseCaseFromRole(c){
   if(c.closedAt && !isOpenNoDeliveryCase(c))return false;
   var r=normalizeRole(state.user.role);
   if(isOpenNoDeliveryCase(c)){
-    if(isAdminRoleValue(r) || r==="jefe_logistica" || r==="gerencia" || r==="coordinador_logistico")return true;
-    if(r==="ventas" && caseBelongsToCurrentSalesUser(c))return true;
+    if(isAdminRoleValue(r))return true;
     if(r==="caja" && c.status==="devolucion_caja")return true;
-    if(noDeliveryManagementRoles().map(normalizeRole).indexOf(r)>=0)return true;
-    if(canOperateCurrentProcess(c))return true;
+    if((r==="coordinador_logistico"||r==="despacho_nacional") && canOperateCurrentProcess(c))return true;
   }
   return c.status==="en_proceso" && canOperateCurrentProcess(c) && canCloseHere(c);
 }
 function canCancelOrderWithSupport(c){
-  if(!state.user || !c)return false;
-  if(c.closedAt || String(c.status||"")==="cancelado" || c.cancelledAt)return false;
+  if(!state.user || !c || c.closedAt || c.cancelledAt)return false;
   var r=normalizeRole(state.user.role);
-  var logistics=["coordinador_logistico","lider_logistico","lider_logistica","jefe_logistica","aux_logistica"];
-  return isAdminRoleValue(r) || logistics.indexOf(r)>=0 || currentUserIsSuperAdmin();
+  return ["super_admin","jefe_logistica","gerencia"].indexOf(r)>=0;
 }
 function canRequestOrderCancellation(c){
-  if(!state.user || !c)return false;
-  if(c.closedAt || String(c.status||"")==="cancelado" || c.cancelledAt)return false;
+  if(!state.user || !c || c.closedAt || c.cancelledAt)return false;
   var r=normalizeRole(state.user.role);
   if(r==="ventas")return caseBelongsToCurrentSalesUser(c);
-  if(r==="caja")return c.currentProcess==="caja" || normalizeRole(c.assignedRole)==="caja" || !!c.cashBilling || !!c.salesHold;
+  if(["caja","cartera","coordinador_logistico","despacho_nacional","aux_logistica","auxiliar_corte"].indexOf(r)>=0)return canOperateCurrentProcess(c);
   return false;
 }
 function reportIsCancellationRequest(r){
@@ -1229,9 +1223,7 @@ function reportIsCancellationRequest(r){
 }
 function canManageCancellationReport(r){
   if(!state.user || !reportIsCancellationRequest(r))return false;
-  var role=normalizeRole(state.user.role);
-  var logistics=["coordinador_logistico","lider_logistico","lider_logistica","jefe_logistica","aux_logistica"];
-  return currentUserIsAdminOrSuper() || isAdminRoleValue(role) || role==="gerencia" || logistics.indexOf(role)>=0;
+  return ["super_admin","jefe_logistica","gerencia"].indexOf(normalizeRole(state.user.role))>=0;
 }
 function reportTargetCaption(r){
   if(reportIsCancellationRequest(r))return "Debe gestionar Logística";
@@ -1397,12 +1389,16 @@ function isPvcOrder(c){return orderKindCode(c)==="PVC";}
 function isPvnOrder(c){return orderKindCode(c)==="PVN";}
 function isPvpOrder(c){return orderKindCode(c)==="PVP";}
 function financialProcessForOrder(c){
-  var k=orderKindCode(c);
-  return (k==="PVC"||k==="PVE")?"cartera":"caja";
+  c=c||{};
+  var hold=String(c.clientFinancialStatus||((c.salesHold||{}).status)||"").toUpperCase();
+  if(c.clientOnHold===true||c.clientInArrears===true||/MORA|RETEN/.test(hold))return "cartera";
+  var payment=stripAccents(String(c.paymentCondition||"").toUpperCase());
+  if(/CONTADO|MIXTO|ANTICIPO|CASH|CONSIGNACION|TRANSFERENCIA/.test(payment))return "caja";
+  return "";
 }
-function financialRoleTitleForOrder(c){return financialProcessForOrder(c)==="cartera"?"Cartera":"Caja";}
+function financialRoleTitleForOrder(c){var p=financialProcessForOrder(c);return p==="cartera"?"Cartera":(p==="caja"?"Caja":"Sin puerta financiera");}
 function financialVisibleRolesForOrder(c){
-  return uniqueArray(["ventas",financialProcessForOrder(c),"caja","cartera","jefe_logistica","gerencia","admin","super_admin","super_administrador"]);
+  return uniqueArray(["ventas",financialProcessForOrder(c),"caja","cartera","jefe_logistica","gerencia","super_admin","coordinador_logistico","despacho_nacional"].filter(Boolean));
 }
 function isFinancialProcess(p){return p==="caja"||p==="cartera";}
 function carteraSupportHtml(c){
@@ -1492,7 +1488,16 @@ function shouldShowToCarteraDespiteCaja(c){
 }
 
 
-function nextProcessAfterCommercialGate(c){return orderKindCode(c)==="PVE"?"compras":"recepcion_pedidos";}
+function nextProcessAfterCommercialGate(c){
+  c=c||{};
+  var current=String(c.currentProcess||"");
+  var hold=String(c.clientFinancialStatus||((c.salesHold||{}).status)||"").toUpperCase();
+  var inArrears=c.clientOnHold===true||c.clientInArrears===true||/MORA|RETEN/.test(hold);
+  var payment=stripAccents(String(c.paymentCondition||"").toUpperCase());
+  if(current!=="cartera" && inArrears && !(c.carteraApproval&&c.carteraApproval.approvedAt))return "cartera";
+  if(current!=="caja" && /CONTADO|MIXTO|ANTICIPO|CASH|CONSIGNACION|TRANSFERENCIA/.test(payment) && !(c.cashApproval&&c.cashApproval.approvedAt))return "caja";
+  return orderKindCode(c)==="PVE"?"compras":"recepcion_pedidos";
+}
 function purchasesVisibleRoles(){return ["compras","ventas","coordinador_logistico","lider_logistico","lider_logistica","jefe_logistica","gerencia","admin","super_admin","super_administrador"];}
 function purchaseGateReleased(c){
   if(!c)return false;
@@ -1605,21 +1610,21 @@ function resetChecklistForProcess(c,p){
   ((processes[p]||{}).checklist||[]).forEach(function(item){c.checklist[item]=item==="Pedido registrado por ventas"||item==="Orden PVE recibida desde ventas"?"ok":"pending";});
   return c.checklist;
 }
-function isLeader(){return state.user && (isAdminRoleValue(state.user.role) || normalizeRole(state.user.role)==="coordinador_logistico");}
+function isLeader(){var r=normalizeRole(state.user&&state.user.role);return !!state.user&&(r==="super_admin"||r==="coordinador_logistico"||r==="despacho_nacional");}
 function isCutOperator(){return state.user && normalizeRole(state.user.role)==="auxiliar_corte";}
 function isJefeLogistica(){return state.user && normalizeRole(state.user.role)==="jefe_logistica";}
 function isExecutive(){return state.user && normalizeRole(state.user.role)==="gerencia";}
-function canManageUsers(){return state.user && (currentUserIsAdminOrSuper() || normalizeRole(state.user.role)==="gerencia");}
-function canApprovePriority(){return state.user && normalizeRole(state.user.role)==="gerencia";}
+function canManageUsers(){return state.user && currentUserIsSuperAdmin();}
+function canApprovePriority(){var r=normalizeRole(state.user&&state.user.role);return r==="gerencia"||r==="super_admin";}
 function canSeeAll(){return state.user && (isPrivilegedKpiRole(state.user.role)||currentUserIsSuperAdmin());}
 function isProjectsRole(){return state.user && normalizeRole(state.user.role)==="proyectos";}
 function canCreate(){return state.user && (normalizeRole(state.user.role)==="ventas" || currentUserIsAdminOrSuper());}
 function canAccessProjectsModule(){return state.user && (isProjectsRole() || currentUserIsAdminOrSuper() || canAuditViewAll());}
-function canAccessReceptionGoods(){return state.user && (normalizeRole(state.user.role)==="lider_recepcion" || currentUserIsAdminOrSuper() || canAuditViewAll());}
+function canAccessReceptionGoods(){var r=normalizeRole(state.user&&state.user.role);return !!state.user&&(r==="recepcion_mercancia"||r==="super_admin"||r==="gerencia"||r==="jefe_logistica"||r==="auditoria");}
 function canDeleteReceptionGoods(){return state.user && currentUserIsSuperAdmin();}
 function canDeleteReceptionStickers(){return state.user && currentUserIsSuperAdmin();}
-function canAccessReportsModule(){return !!state.user;}
-function canManageReports(){var r=state.user?normalizeRole(state.user.role):"";return currentUserIsAdminOrSuper()||isAdminRoleValue(r)||r==="gerencia"||r==="jefe_logistica";}
+function canAccessReportsModule(){var r=normalizeRole(state.user&&state.user.role);return ["super_admin","gerencia","jefe_logistica","auditoria"].indexOf(r)>=0;}
+function canManageReports(){var r=state.user?normalizeRole(state.user.role):"";return r==="super_admin"||r==="jefe_logistica"||r==="gerencia";}
 function reportHasSalesAssignee(r){return !!(r && (r.targetSalesUid||r.targetSalesEmail||r.targetSalesName||r.assignedSalesUid||r.assignedSalesEmail||r.assignedSalesName));}
 function reportAssignedToCurrentSalesUser(r){
   if(!state.user || !r || normalizeRole(state.user.role)!=="ventas")return false;
@@ -3695,26 +3700,21 @@ function statusChip(st){
 function routes(){
   if(!state.user)return{main:[],processes:[]};
   var r=normalizeRole(state.user.role);
-  if(currentUserIsSuperAdmin())return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin","diagnostico_erp"],processes:activeProcessKeys()};
-  if(currentUserIsAdminOrSuper())return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin"],processes:activeProcessKeys()};
-  if(r==="auditoria")return{main:["dashboard","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users"],processes:activeProcessKeys()};
-  if(r==="auxiliar_corte")return{main:["corte_cable","cut_diag","inventario","reports"],processes:[]};
-  if(r==="lider_recepcion")return{main:["dashboard","reception_goods","inventario","reports"],processes:[]};
-  if(r==="proyectos")return{main:["projects","inventario","reports"],processes:[]};
-  if(r==="compras")return{main:["compras","requirements","inventario","reports"],processes:[]};
-  if(r==="gerencia")return{main:["indicators","approvals","inventario","reports","users","admin","dashboard"],processes:[]};
-  if(isAdminRoleValue(r))return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin"],processes:activeProcessKeys()};
-  if(r==="jefe_logistica"){
-    return{main:["dashboard","cases","requirements","approvals","inventario","reports","indicators","admin"],processes:activeProcessKeys().filter(function(k){return k!=="caja";})};
-  }
-  var own=activeProcessKeys().filter(function(k){return canAccessProcess(r,k);});
-  var routeRule=currentUserDeliveryOwnerRule();
-  if(routeRule){
-    own=own.filter(function(k){return !isDeliveryProcess(k) || routeRule.routes.indexOf(k)>=0;});
-  }
-  return{main:["dashboard"].concat(canCreate()?["create","sales_reports"]:[]).concat(canAccessProjectsModule()?["projects"]:[]).concat(["inventario","reports","requirements"]),processes:own};
+  if(r==="super_admin")return{main:["dashboard","create","sales_reports","reception_goods","inventario","cases","approvals","indicators","users","admin","diagnostico_erp"],processes:activeProcessKeys()};
+  if(r==="auditoria")return{main:["dashboard","sales_reports","reception_goods","inventario","cases","approvals","indicators"],processes:activeProcessKeys()};
+  if(r==="gerencia")return{main:["dashboard","sales_reports","inventario","cases","approvals","indicators"],processes:[]};
+  if(r==="jefe_logistica")return{main:["dashboard","inventario","cases","approvals","indicators"],processes:["recepcion_pedidos","alistamiento","corte_cable","facturacion","cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"]};
+  if(r==="ventas")return{main:["dashboard","create","sales_reports"],processes:[]};
+  if(r==="compras")return{main:["dashboard"],processes:["compras"]};
+  if(r==="recepcion_mercancia")return{main:["dashboard","reception_goods"],processes:[]};
+  if(r==="aux_logistica")return{main:["dashboard"],processes:["alistamiento"]};
+  if(r==="auxiliar_corte")return{main:["dashboard"],processes:["corte_cable"]};
+  if(r==="coordinador_logistico")return{main:["dashboard"],processes:["recepcion_pedidos","facturacion","cliente_punto","cliente_recoge","despacho_local"]};
+  if(r==="despacho_nacional")return{main:["dashboard"],processes:["recepcion_pedidos","facturacion","despacho_nacional","cierre_despacho_nacional"]};
+  if(r==="caja")return{main:["dashboard"],processes:["caja"]};
+  if(r==="cartera")return{main:["dashboard"],processes:["cartera"]};
+  return{main:["dashboard"],processes:[]};
 }
-
 function navBtn(r){
   var p=processes[r];var label=p?p.title:(routeInfo[r]?routeInfo[r][0]:r);var icon=p?p.icon:(routeInfo[r]?routeInfo[r][1]:"•");
   return '<button class="'+(state.route===r?'active':'')+'" data-route="'+r+'"><span class="nav-icon">'+esc(icon)+'</span><span>'+esc(label)+'</span></button>';
@@ -3722,18 +3722,20 @@ function navBtn(r){
 
 function mobileItems(){
   var r=state.user?normalizeRole(state.user.role):"";
-  if(r==="auditoria")return [["dashboard","Inicio","⌂"],["cases","Casos","▤"],["reports","Nov.","RP"],["indicators","VSM","VS"]];
+  if(r==="ventas")return [["create","Crear","+"],["sales_reports","Mis ventas","RV"],["dashboard","Inicio","⌂"]];
+  if(r==="aux_logistica")return [["alistamiento","Alistar","AL"],["dashboard","Inicio","⌂"]];
   if(r==="auxiliar_corte")return [["corte_cable","Cortes","CT"],["dashboard","Inicio","⌂"]];
-  if(r==="lider_recepcion")return [["reception_goods","Recepción","RM"],["dashboard","Inicio","⌂"]];
-  if(r==="proyectos")return [["projects","Proyectos","PR"],["dashboard","Inicio","⌂"]];
-  if(r==="compras")return [["compras","Compras","CO"],["requirements","Req.","↗"],["reports","Nov.","RP"]];
-  if(r==="gerencia")return [["dashboard","Inicio","⌂"],["approvals","Aprob.","✓"],["requirements","Req.","↗"]];
-  if(r==="ventas")return [["create","Crear","+"],["sales_reports","Registro","RV"],["requirements","Req.","↗"],["dashboard","Inicio","⌂"]];
-  if(r==="jefe_logistica")return [["dashboard","Inicio","⌂"],["cases","Casos","▤"],["requirements","Req.","↗"],["approvals","Aprob.","✓"]];
-  if(isAdminRoleValue(r)||currentUserIsAdminOrSuper())return [["dashboard","Inicio","⌂"],["cases","Casos","▤"],["indicators","VSM","VS"],["admin","Admin","AD"]];
-  var rs=routes();return [["dashboard","Inicio","⌂"],[rs.processes[0]||"cases","Panel","▤"],["requirements","Req.","↗"]];
+  if(r==="coordinador_logistico")return [["recepcion_pedidos","Recepción","RP"],["facturacion","Facturar","FA"],["dashboard","Inicio","⌂"]];
+  if(r==="despacho_nacional")return [["recepcion_pedidos","Recepción","RP"],["despacho_nacional","Despacho","DN"],["dashboard","Inicio","⌂"]];
+  if(r==="caja")return [["caja","Caja","CJ"],["dashboard","Inicio","⌂"]];
+  if(r==="cartera")return [["cartera","Cartera","CA"],["dashboard","Inicio","⌂"]];
+  if(r==="compras")return [["compras","Compras","CO"],["dashboard","Inicio","⌂"]];
+  if(r==="recepcion_mercancia")return [["reception_goods","Mercancía","RM"],["dashboard","Inicio","⌂"]];
+  if(r==="jefe_logistica"||r==="gerencia")return [["dashboard","Inicio","⌂"],["cases","Pedidos","▤"],["approvals","Aprobar","✓"],["indicators","VSM","VS"]];
+  if(r==="auditoria")return [["dashboard","Inicio","⌂"],["cases","Pedidos","▤"],["indicators","VSM","VS"]];
+  if(r==="super_admin")return [["dashboard","Inicio","⌂"],["cases","Pedidos","▤"],["indicators","VSM","VS"],["admin","Admin","AD"]];
+  return [["dashboard","Inicio","⌂"]];
 }
-
 function mobileRouteAllowed(route){
   var r=state.user?normalizeRole(state.user.role):"";
   if(currentUserIsAdminOrSuper()||currentUserIsSuperAdmin()||r==="auditoria")return true;
@@ -4222,8 +4224,17 @@ function renderCases(){
 }
 
 function renderCreate(){
-  if(!canCreate()){layout(header("Crear pedido","Acceso restringido.")+'<div class="empty">Solo ventas inicia pedidos. Los demás roles reciben por secuencia.</div>');return;}
-  layout(header("Crear pedido","Ventas registra el pedido y define si entra normal, retenido financiero o prioritario.",'<a class="btn" href="'+esc(appResource("modules/creditos/?route=credit_new"))+'">Crear solicitud de crédito</a>')+createOrderGuidePanel()+'<section class="card"><form class="form" id="caseForm"><div class="notice"><strong>Regla financiera:</strong> Caja gestiona PVN y PVP. Cartera gestiona PVC y PVE. Si el pedido queda retenido, debe anexarse soporte de conversación o gestión comercial.</div><div class="grid grid-2"><label class="field"><span>Número / nombre del pedido</span><input class="input" name="reference" id="reference" required placeholder="PVC-0000 / PVN-0000 / PVE-0000 / PVP-0000"></label><label class="field"><span>Orden de compra / OC</span><input class="input" name="purchaseOrder" id="purchaseOrder" placeholder="OC, orden de compra o referencia comercial"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de pedido</span><select class="select" name="orderKind" id="orderKind" required><option value="PVC">PVC</option><option value="PVN">PVN</option><option value="PVE">PVE</option><option value="PVP">PVP</option></select></label><label class="field"><span>Cliente</span><input class="input" name="client" id="client" placeholder="Nombre del cliente"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de gestión</span><select class="select" name="priorityMode" id="priorityMode"><option value="normal">Pedido normal</option><option value="retenido_caja">Pedido retenido financiero · Caja/Cartera según tipo</option><option value="gerencia">Pedido prioritario / salida especial a gerencia</option></select></label><label class="field"><span>Motivo / soporte de gestión</span><input class="input" name="priorityReason" placeholder="Retención, pago, autorización, cliente crítico"></label></div><label class="field"><span>Soporte de conversación o gestión comercial cuando esté retenido</span><input class="input" type="file" name="retainedSupport" id="retainedSupport" accept="image/*,application/pdf" data-mobile-upload="true"><small class="muted">Para PVC/PVE retenido se guarda en Supabase comprimido. En PDF use archivo liviano.</small></label><div class="grid grid-2"><label class="field"><span>Tipo de entrega esperado</span><select class="select" name="requestedDelivery" id="requestedDelivery"><option value="">Sin definir</option><option value="cliente_punto">Cliente en punto</option><option value="cliente_recoge">Cliente recoge</option><option value="despacho_local">Despacho local</option><option value="despacho_nacional">Despacho nacional</option></select></label><label class="field"><span>Condición de pago</span><select class="select" name="paymentCondition" id="paymentCondition"><option value="">Sin definir</option><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option><option value="ANTICIPO">Anticipo / mixto</option></select></label></div><label class="field"><span>Observación comercial</span><textarea class="textarea" name="description" id="description" placeholder="Aclaraciones del asesor, condición especial o instrucción inicial."></textarea></label><button class="btn btn-primary" type="submit">Crear pedido</button></form></section>');
+  if(!canCreate()){layout(header("Crear pedido","Acceso restringido.")+'<div class="empty">Solo Ventas y Super Admin pueden crear pedidos.</div>');return;}
+  layout(header("Crear pedido","Registre únicamente la información necesaria para enrutar el pedido correctamente.",'<a class="btn" href="'+esc(appResource("modules/creditos/?route=credit_new"))+'">Crear solicitud de crédito</a>')+
+  '<section class="card"><form class="form" id="caseForm">'+
+  '<div class="grid grid-2"><label class="field"><span>Número del pedido *</span><input class="input" name="reference" required placeholder="PVC-0000 / PVN-0000 / PVE-0000 / PVP-0000"></label><label class="field"><span>Orden de compra / OC</span><input class="input" name="purchaseOrder"></label></div>'+
+  '<div class="grid grid-2"><label class="field"><span>Tipo de pedido *</span><select class="select" name="orderKind" required><option value="PVC">PVC</option><option value="PVN">PVN</option><option value="PVE">PVE</option><option value="PVP">PVP</option></select></label><label class="field"><span>Cliente *</span><input class="input" name="client" required></label></div>'+
+  '<div class="grid grid-2"><label class="field"><span>Modalidad de entrega *</span><select class="select" name="requestedDelivery" required><option value="" disabled selected>Seleccione</option><option value="cliente_punto">Cliente en punto</option><option value="cliente_recoge">Cliente recoge</option><option value="despacho_local">Despacho local</option><option value="despacho_nacional">Despacho nacional</option></select></label><label class="field"><span>Condición de pago *</span><select class="select" name="paymentCondition" required><option value="" disabled selected>Seleccione</option><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option><option value="MIXTO">Mixto</option></select></label></div>'+
+  '<div class="grid grid-2"><label class="field"><span>Estado financiero del cliente *</span><select class="select" name="clientFinancialStatus" required><option value="AL_DIA">Al día</option><option value="MORA">En mora / retenido</option></select></label><label class="field"><span>Prioridad</span><select class="select" name="priorityMode"><option value="normal">Normal</option><option value="gerencia">Requiere aprobación de Gerencia</option></select></label></div>'+
+  '<label class="field"><span>Motivo de mora, retención o prioridad</span><textarea class="textarea" name="priorityReason" placeholder="Obligatorio cuando el cliente está en mora o se solicita prioridad."></textarea></label>'+
+  '<label class="field"><span>Soporte financiero cuando exista mora</span><input class="input" type="file" name="retainedSupport" accept="image/*,application/pdf" data-mobile-upload="true"></label>'+
+  '<label class="field"><span>Comentario inicial</span><textarea class="textarea" name="description" placeholder="Instrucción necesaria para el proceso."></textarea></label>'+
+  '<button class="btn btn-primary" type="submit">Crear y enviar</button></form></section>');
   qs("#caseForm").onsubmit=function(e){e.preventDefault();createCase(new FormData(e.target));};
 }
 
@@ -4761,7 +4772,7 @@ function fileIsImage(file){
 }
 function isCashPaymentValue(value){
   var txt=stripAccents(String(value||"").toUpperCase());
-  return /\bCONTADO\b|PAGO\s*DE\s*CONTADO|CASH|CONSIGNACION|TRANSFERENCIA/.test(txt);
+  return /\bCONTADO\b|\bMIXTO\b|ANTICIPO|PAGO\s*DE\s*CONTADO|CASH|CONSIGNACION|TRANSFERENCIA/.test(txt);
 }
 function isCashOrder(c){
   if(!c)return false;
@@ -5892,52 +5903,58 @@ extractPedidoItems = function(text){
 };
 
 function createCase(fd){
-  var created=now(), orderKind=orderKindCodeFromValue(fd.get("orderKind")||"PVN",fd.get("reference")||""), reference=fd.get("reference")||"", p=firstProcessForSalesOrder(orderKind,reference), def=processes[p], priority=fd.get("priorityMode")==="gerencia";
-  var retained=fd.get("priorityMode")==="retenido_caja", financialDest=financialProcessForOrder({orderKind:orderKind,reference:reference});
-  if(retained){p=financialDest;def=processes[p];priority=false;}
+  var created=now(),orderKind=orderKindCodeFromValue(fd.get("orderKind")||"",fd.get("reference")||""),
+      reference=String(fd.get("reference")||"").trim(),client=String(fd.get("client")||"").trim(),
+      requestedDelivery=normalizedDeliveryRoute(fd.get("requestedDelivery")||""),
+      paymentCondition=String(fd.get("paymentCondition")||"").trim().toUpperCase(),
+      financialStatus=String(fd.get("clientFinancialStatus")||"AL_DIA").toUpperCase(),
+      priority=fd.get("priorityMode")==="gerencia",reason=String(fd.get("priorityReason")||"").trim();
+  if(!reference||!orderKind||!client||!requestedDelivery||!paymentCondition){alert("Número, tipo, cliente, modalidad de entrega y condición de pago son obligatorios.");return;}
+  if(financialStatus==="MORA"&&!reason){alert("Debe explicar la mora o retención del cliente.");return;}
+  if(priority&&!reason){alert("Debe explicar por qué solicita prioridad a Gerencia.");return;}
   var supportFiles=(typeof fd.getAll==="function"?fd.getAll("retainedSupport"):[fd.get("retainedSupport")]).filter(function(f){return f&&f.name;});
-  if(supportFiles.length>10){alert("Puede adjuntar máximo 10 soportes.");return;}
-  var supportFile=supportFiles[0]||null;
-  if(retained && !supportFiles.length){alert("Debe anexar pantallazo, imagen, PDF o archivo de la conversación/gestión comercial para pedidos retenidos.");return;}
-  var assignedRole=retained?financialDest:(priority?"gerencia":primaryOwnerRole(p));
-  var assignedName=retained?processTitle(financialDest):(priority?"Gerencia":processOwnerTitle(p));
-  var routeDetail=p==="compras"?"Pedido PVE registrado por ventas y enviado a Compras":(retained?"Pedido retenido por ventas y enviado a "+processTitle(financialDest):"Pedido registrado por ventas y enviado a recepción");
-  var c={id:uid("PED"),type:"pedido_venta",procedureCode:def.code,currentProcess:p,status:retained?"asignado":(priority?"pendiente_gerencia":"asignado"),priority:priority?"Pendiente gerencia":(retained?"Retenido "+processTitle(financialDest):"Normal"),reference:reference,purchaseOrder:fd.get("purchaseOrder")||"",orderKind:orderKind,tipoPedido:orderKind,client:fd.get("client"),description:fd.get("description"),requestedDelivery:fd.get("requestedDelivery"),deliveryType:"",paymentCondition:fd.get("paymentCondition")||"",cashBilling:(isCashPaymentValue(fd.get("paymentCondition"))?{required:true,status:"pendiente",source:"ventas",createdAt:created,createdByName:state.user.name}:null),salesAdvisor:state.user.name,createdByEmail:(state.user&&state.user.email)||"",assignedRole:assignedRole,assignedName:assignedName,assignedTo:"",createdAt:created,createdBy:state.user.uid,createdByName:state.user.name,salesNotes:(String(fd.get("description")||fd.get("priorityReason")||"").trim()?[{id:uid("SN"),type:"Nota inicial de Ventas",detail:String(fd.get("description")||fd.get("priorityReason")||"").trim(),createdAt:created,createdBy:state.user.uid,createdByName:state.user.name,createdByEmail:(state.user&&state.user.email)||""}]:[]),updatedAt:created,activeStartedAt:null,waitStartedAt:priority?created:null,deadStartedAt:priority?null:created,totalRequirements:0,checklist:{},openRequirement:null,salesHold:retained?{status:financialDest==="cartera"?"EN_CARTERA":"EN_CAJA",destination:financialDest,createdAt:created,createdByName:state.user.name,reason:fd.get("priorityReason")||fd.get("description")||"Pedido retenido desde ventas",purchaseOrder:fd.get("purchaseOrder")||"",history:[{at:created,by:state.user.name,action:"Ventas envía pedido retenido a "+processTitle(financialDest)}]}:null,priorityApproval:priority?{status:"pendiente",reason:fd.get("priorityReason")||"Solicitud prioritaria",requestedAt:created,requestedByName:state.user.name}:null,evidence:[],pdfExtraction:null,orderItems:[],cutRequests:[],hasCuts:false,documentFlow:{salesRegisteredAt:created,salesRegisteredBy:state.user.name,receptionPdfLoadedAt:null,initialCommitmentStatus:p==="compras"?"PENDIENTE_COMPRAS":(p==="cartera"?"PENDIENTE_CARTERA":"PENDIENTE_RECEPCION"),initialCommitmentDetail:p==="compras"?"PVE debe ser gestionado y liberado por Compras antes de Recepción":(p==="cartera"?"Cartera debe aprobar gestión financiera antes de continuar":"")},processStats:{}};
-  if(p==="compras"){c.visibleRoles=purchasesVisibleRoles();c.targetRoles=purchasesVisibleRoles();c.purchaseFlow={required:true,status:"PENDIENTE_COMPRAS",createdAt:created,createdByName:state.user.name,source:"ventas_pve"};}
-  if(retained){c.visibleRoles=financialVisibleRolesForOrder(c);c.targetRoles=c.visibleRoles;}
-  procStats(c,p).startedAt=created;
-  if(priority){procStats(c,p).waitMs=0;} else {procStats(c,p).deadMs=0;}
-  resetChecklistForProcess(c,p);
-  addStateHistory(c,"creacion",routeDetail,{tipo_estado:"creacion",fecha_hora_inicio_estado:created});
-  ensurePvePurchasingMetadata(c,"Creación V221: pedido PVE debe pasar por Compras antes de Recepción");
-  var finish=function(){
-    return persistCase(c,{type:"CASE_CREATED",detail:routeDetail,targetRole:assignedRole,visibleRoles:c.visibleRoles||[assignedRole,"ventas","admin","super_admin","super_administrador","jefe_logistica"]}).then(function(){state.route="dashboard";render();});
+  if(financialStatus==="MORA"&&!supportFiles.length){alert("Debe anexar soporte de la mora o gestión comercial.");return;}
+  var gateCase={orderKind:orderKind,reference:reference,paymentCondition:paymentCondition,clientFinancialStatus:financialStatus,clientInArrears:financialStatus==="MORA"};
+  var financialDest=financialProcessForOrder(gateCase);
+  var p=priority?(orderKind==="PVE"?"compras":"recepcion_pedidos"):(financialDest||(orderKind==="PVE"?"compras":"recepcion_pedidos"));
+  var def=processes[p]||processes.recepcion_pedidos;
+  var assignedRole=priority?"gerencia":(financialDest||primaryOwnerRole(p));
+  var assignedName=priority?"Gerencia":(financialDest?processTitle(financialDest):processOwnerTitle(p));
+  var c={
+    id:uid("PED"),type:"pedido_venta",procedureCode:def.code,currentProcess:p,
+    status:priority?"pendiente_gerencia":"asignado",priority:priority?"Pendiente gerencia":"Normal",
+    reference:reference,purchaseOrder:String(fd.get("purchaseOrder")||"").trim(),orderKind:orderKind,tipoPedido:orderKind,
+    client:client,description:String(fd.get("description")||"").trim(),requestedDelivery:requestedDelivery,deliveryType:"",
+    paymentCondition:paymentCondition,clientFinancialStatus:financialStatus,clientInArrears:financialStatus==="MORA",
+    cashBilling:(financialDest==="caja"?{required:true,status:"pendiente",source:"ventas",createdAt:created,createdByName:state.user.name}:null),
+    salesAdvisor:state.user.name,createdByEmail:(state.user&&state.user.email)||"",assignedRole:assignedRole,assignedName:assignedName,assignedTo:"",
+    createdAt:created,createdBy:state.user.uid,createdByName:state.user.name,updatedAt:created,
+    activeStartedAt:null,waitStartedAt:priority?created:null,deadStartedAt:priority?null:created,totalRequirements:0,
+    checklist:{},openRequirement:null,evidence:[],pdfExtraction:null,orderItems:[],cutRequests:[],hasCuts:false,processStats:{},
+    salesNotes:[],caseComments:[],
+    salesHold:(financialDest?{status:financialDest==="cartera"?"EN_CARTERA":"EN_CAJA",destination:financialDest,createdAt:created,createdByName:state.user.name,reason:reason||("Validación "+processTitle(financialDest)),history:[{at:created,by:state.user.name,action:"Ventas envía a "+processTitle(financialDest)}]}:null),
+    priorityApproval:(priority?{status:"pendiente",reason:reason,requestedAt:created,requestedByName:state.user.name}:null),
+    documentFlow:{salesRegisteredAt:created,salesRegisteredBy:state.user.name,receptionPdfLoadedAt:null,initialCommitmentStatus:p==="compras"?"PENDIENTE_COMPRAS":(p==="cartera"?"PENDIENTE_CARTERA":(p==="caja"?"PENDIENTE_CAJA":"PENDIENTE_RECEPCION"))}
+  };
+  var initialComment=String(fd.get("description")||reason||"").trim();
+  if(initialComment){
+    var note={id:uid("COM"),type:"Comentario inicial",detail:initialComment,comment:initialComment,createdAt:created,createdBy:state.user.uid,createdByName:state.user.name,createdByEmail:(state.user&&state.user.email)||"",process:"ventas"};
+    c.salesNotes.push(note);c.caseComments.push(note);
+  }
+  if(!priority&&!financialDest&&p==="recepcion_pedidos")applyOperationalRouteAssignment(c,"recepcion_pedidos");
+  if(p==="compras"){c.visibleRoles=purchasesVisibleRoles();c.targetRoles=c.visibleRoles;c.purchaseFlow={required:true,status:"PENDIENTE_COMPRAS",createdAt:created,createdByName:state.user.name,source:"ventas_pve"};}
+  if(financialDest){c.visibleRoles=financialVisibleRolesForOrder(c);c.targetRoles=c.visibleRoles;}
+  procStats(c,p).startedAt=created;resetChecklistForProcess(c,p);
+  addStateHistory(c,"creacion","Pedido creado por Ventas. Ruta: "+processTitle(requestedDelivery)+(financialDest?" · puerta "+processTitle(financialDest):"")+(priority?" · pendiente Gerencia":""),{tipo_estado:"creacion",fecha_hora_inicio_estado:created});
+  ensurePvePurchasingMetadata(c,"PVE debe pasar por Compras antes de Recepción");
+  var persist=function(){
+    return persistCase(c,{type:"CASE_CREATED",detail:"Pedido creado y enrutado según pago, mora, tipo y modalidad.",targetRole:c.assignedRole,visibleRoles:c.visibleRoles||[c.assignedRole,"ventas","jefe_logistica","gerencia","super_admin"]}).then(function(){state.route="dashboard";render();});
   };
   var chain=Promise.resolve();
-  if(retained){
-    var retainedDetail=fd.get("priorityReason")||fd.get("description")||"Soporte retenido financiero";
-    chain=inlineFinancialSupportFile(supportFile,c,retainedDetail).then(function(up){
-      c.financialSupport=up;
-      c.salesHold.supportInline=up;
-      appendEvidence(c,up,"Soporte principal de conversación/gestión comercial para "+processTitle(financialDest));
-      if(supportFiles.length<=1)return [];
-      return eiV221UploadGallery(supportFiles.slice(1),c,{
-        processName:processTitle(financialDest),
-        processKey:financialDest,
-        evidenceType:"SOPORTES_ADICIONALES_CARTERA_VENTAS",
-        fileNamePrefix:"SOPORTE_RETENIDO"
-      }).then(function(uploads){
-        c.financialSupportGallery=eiV221GalleryFromUploads(uploads);
-        appendEvidenceGallery(c,uploads,"Soportes adicionales de conversación/gestión comercial para "+processTitle(financialDest),{
-          processKey:financialDest,
-          processName:processTitle(financialDest),
-          evidenceType:"SOPORTES_ADICIONALES_CARTERA_VENTAS"
-        });
-        return uploads;
-      });
-    });
+  if(financialStatus==="MORA"&&supportFiles.length){
+    chain=inlineFinancialSupportFile(supportFiles[0],c,reason).then(function(up){c.financialSupport=up;c.salesHold.supportInline=up;appendEvidence(c,up,"Soporte de mora o retención");});
   }
-  chain.then(finish).catch(function(e){showError((e&&e.message)||e||"No se pudo crear el pedido.");});
+  chain.then(persist).catch(function(e){showError((e&&e.message)||e||"No se pudo crear el pedido.");});
 }
 
 function initialCheckFromPdf(item,x){if(!x)return"pending";if(item==="Contenido del pedido completo")return x.orderNumber&&x.client?"ok":"pending";if(item==="Cliente identificado")return x.client?"ok":"pending";if(item==="Forma de pago definida")return x.paymentCondition?"ok":"pending";return"pending";}
@@ -5966,6 +5983,143 @@ function checklistPanelHtml(c,def){
   var checklistActions=note+extra+'<div class="checklist-actions"><button class="btn btn-success" data-action="closeChecklist" data-id="'+c.id+'">Guardar checklist</button><button class="btn" data-action="discardChecklist" data-id="'+c.id+'">Descartar cambios</button></div>';
   return '<article class="card"><h3>'+title+'</h3>'+checklistActions+'<div class="checklist">'+checks+'</div></article>';
 }
+function v8SupabaseClient(){return window.EI_SUPABASE&&window.EI_SUPABASE.state&&window.EI_SUPABASE.state.client;}
+function canAddCaseComment(c){
+  if(!state.user||!c)return false;
+  var r=normalizeRole(state.user.role);
+  return r!=="auditoria" && caseRelevantToCurrentUser(c);
+}
+function normalizeServerComment(row){
+  row=row||{};
+  return {id:row.comment_id||row.id||uid("COM"),type:row.comment_type||row.type||"COMMENT",detail:row.body||row.detail||row.comment||"",createdAt:row.created_at||row.createdAt||now(),createdByName:row.created_by_name||row.createdByName||"",createdByRole:row.created_by_role||row.createdByRole||"",server:true};
+}
+function loadCaseComments(caseId,force){
+  caseId=String(caseId||"");if(!caseId)return Promise.resolve([]);
+  if(!force&&state.caseComments[caseId])return Promise.resolve(state.caseComments[caseId]);
+  if(state.caseCommentsLoading[caseId])return state.caseCommentsLoading[caseId];
+  var client=v8SupabaseClient();if(!client)return Promise.resolve([]);
+  state.caseCommentsLoading[caseId]=client.from("case_comments").select("comment_id,case_id,comment_type,body,created_by_name,created_by_role,created_at,metadata").eq("case_id",caseId).order("created_at",{ascending:true}).then(function(result){
+    if(result.error)throw result.error;
+    state.caseComments[caseId]=(result.data||[]).map(normalizeServerComment);
+    return state.caseComments[caseId];
+  }).catch(function(error){console.warn("Comentarios del pedido no disponibles",error);return state.caseComments[caseId]||[];}).finally(function(){delete state.caseCommentsLoading[caseId];});
+  return state.caseCommentsLoading[caseId];
+}
+function mergedCaseComments(c){
+  var out=[],seen={};
+  function add(x){x=normalizeServerComment(x);var body=String(x.detail||"").trim();if(!body)return;var key=[body,x.createdAt||"",x.createdByName||""].join("|");if(seen[key])return;seen[key]=1;out.push(x);}
+  (state.caseComments[c.id]||[]).forEach(add);
+  (c.caseComments||[]).forEach(add);
+  (c.salesNotes||[]).forEach(add);
+  return out.sort(function(a,b){return new Date(a.createdAt||0)-new Date(b.createdAt||0);});
+}
+function caseCommentsPanel(c){
+  if(!c)return "";
+  var list=mergedCaseComments(c),rows=list.map(function(x){return '<div style="border-bottom:1px solid #e5e7eb;padding:10px 0"><strong>'+esc(x.createdByName||roleTitle(x.createdByRole)||"Usuario")+'</strong><small style="display:block;color:#64748b">'+esc(fmtDate(x.createdAt))+' · '+esc(x.type||"Comentario")+'</small><p style="margin:6px 0 0">'+esc(x.detail||"")+'</p></div>';}).join("");
+  var add=canAddCaseComment(c)?'<button class="btn btn-primary btn-small" data-action="addCaseComment" data-id="'+esc(c.id)+'">Agregar comentario</button>':'';
+  return '<section class="card" style="margin-top:16px"><div class="section-title"><div><h3>Comentarios y novedades</h3><p>Historial interno del pedido. No cambia la etapa por sí solo.</p></div>'+add+'</div>'+(rows||'<div class="empty">Sin comentarios registrados.</div>')+'</section>';
+}
+function openCaseComment(id){
+  var c=caseById(id);if(!c||!canAddCaseComment(c)){alert("No tiene permiso para comentar este pedido.");return;}
+  drawer(modal("Agregar comentario",'<form class="form" id="v8CaseCommentForm"><label class="field"><span>Tipo</span><select class="select" name="type"><option value="COMMENT">Comentario</option><option value="NOVELTY">Novedad</option><option value="NO_DELIVERY">No entrega</option><option value="PAYMENT">Pago</option><option value="STOCK">Inventario</option><option value="SUPERVISION">Supervisión</option></select></label><label class="field"><span>Detalle *</span><textarea class="textarea" name="body" required maxlength="4000" placeholder="Registre el hecho, la acción realizada y lo que sigue."></textarea></label><button class="btn btn-primary" type="submit">Guardar comentario</button></form>'));
+  qs("#v8CaseCommentForm").onsubmit=function(e){
+    e.preventDefault();var fd=new FormData(e.target),body=String(fd.get("body")||"").trim(),type=String(fd.get("type")||"COMMENT");if(!body)return;
+    var client=v8SupabaseClient();if(!client){showError("Supabase no está disponible.");return;}
+    insertCaseComment(c,type,body,{}).then(function(){return createEvent({type:"CASE_COMMENT_ADDED",caseId:c.id,detail:body,targetRole:c.assignedRole,visibleRoles:c.visibleRoles||[]}).catch(function(){return null;});}).then(function(){closeDrawer();renderDetail(c.id);}).catch(function(error){showError((error&&error.message)||error);});
+  };
+}
+
+
+function insertCaseComment(c,type,body,metadata){
+  var client=v8SupabaseClient();
+  if(!client)return Promise.reject(new Error("Supabase no está disponible."));
+  body=String(body||"").trim();
+  if(!c||!body)return Promise.reject(new Error("El comentario está vacío."));
+  return client.from("case_comments").insert({case_id:c.id,comment_type:type||"COMMENT",body:body,created_by_name:state.user&&state.user.name||"",metadata:Object.assign({process:c.currentProcess,status:c.status},metadata||{})}).select().single().then(function(result){
+    if(result.error)throw result.error;
+    state.caseComments[c.id]=state.caseComments[c.id]||[];
+    state.caseComments[c.id].push(normalizeServerComment(result.data));
+    return result.data;
+  });
+}
+function requestWorkflowApproval(c,type,reason,metadata){
+  var client=v8SupabaseClient();
+  if(!client)return Promise.reject(new Error("Supabase no está disponible."));
+  if(!c)return Promise.reject(new Error("Pedido no encontrado."));
+  return client.rpc("erp_request_approval",{p_case_id:c.id,p_type:type,p_reason:String(reason||"").trim(),p_metadata:metadata||{}}).then(function(result){
+    if(result.error)throw result.error;
+    state.workflowRequestsLoaded=false;
+    return result.data;
+  });
+}
+function normalizeWorkflowRequest(row){
+  row=row||{};
+  return {id:row.request_id||row.id,caseId:row.case_id||row.caseId,type:row.request_type||row.type,status:row.status||"PENDING",reason:row.reason||"",requestedByName:row.requested_by_name||"",requestedByRole:row.requested_by_role||"",assignedRoles:row.assigned_roles||[],assignedUserUids:row.assigned_user_uids||[],decision:row.decision||"",decisionReason:row.decision_reason||"",decidedByName:row.decided_by_name||"",createdAt:row.created_at||row.createdAt,decidedAt:row.decided_at||row.decidedAt,metadata:row.metadata||{}};
+}
+function loadWorkflowRequests(force){
+  if(state.workflowRequestsLoaded&&!force)return Promise.resolve(state.workflowRequests||[]);
+  var client=v8SupabaseClient();if(!client)return Promise.resolve([]);
+  return client.from("workflow_requests").select("request_id,case_id,request_type,status,reason,requested_by_name,requested_by_role,assigned_roles,assigned_user_uids,decision,decision_reason,decided_by_name,created_at,decided_at,metadata").order("created_at",{ascending:false}).limit(500).then(function(result){
+    if(result.error)throw result.error;
+    state.workflowRequests=(result.data||[]).map(normalizeWorkflowRequest);
+    state.workflowRequestsLoaded=true;
+    return state.workflowRequests;
+  }).catch(function(error){console.warn("Solicitudes de flujo no disponibles",error);state.workflowRequestsLoaded=true;state.workflowRequests=[];return [];});
+}
+function workflowRequestTypeLabel(type){
+  var labels={priority:"Prioridad",cancellation:"Cancelación",route_change:"Cambio de entrega",stock_exception:"Excepción de inventario",flow_exception:"Excepción de flujo",reopen:"Reapertura",data_correction:"Corrección de datos",payment_exception:"Excepción financiera",no_delivery:"No entrega"};
+  return labels[type]||type||"Solicitud";
+}
+function workflowRequestCanDecide(req){
+  if(!state.user||!req||req.status!=="PENDING")return false;
+  var r=normalizeRole(state.user.role),mine=[state.user.uid,state.user.id,state.user.email].map(function(x){return String(x||"").toLowerCase();}).filter(Boolean);
+  var exact=(req.assignedUserUids||[]).map(function(x){return String(x||"").toLowerCase();});
+  return (req.assignedRoles||[]).map(normalizeRole).indexOf(r)>=0 || mine.some(function(x){return exact.indexOf(x)>=0;});
+}
+function workflowSupportOptionsForRole(role){
+  role=normalizeRole(role);var out=[{value:"data_correction",label:"Corrección de datos por Ventas"},{value:"flow_exception",label:"Excepción o bloqueo del flujo"},{value:"cancellation",label:"Solicitud de cancelación"}];
+  if(["compras","aux_logistica","auxiliar_corte","coordinador_logistico","despacho_nacional","recepcion_mercancia"].indexOf(role)>=0)out.push({value:"stock_exception",label:"Inventario, material o remanente"});
+  if(["coordinador_logistico","despacho_nacional"].indexOf(role)>=0)out.push({value:"route_change",label:"Cambio de modalidad de entrega"});
+  if(["caja","cartera"].indexOf(role)>=0)out.push({value:"payment_exception",label:"Excepción financiera"});
+  return out;
+}
+function openWorkflowSupportRequest(id){
+  var c=caseById(id);if(!c||!canOperateCurrentProcess(c)){alert("Solo el responsable operativo actual puede crear esta solicitud.");return;}
+  var options=workflowSupportOptionsForRole(state.user.role).map(function(x){return '<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>';}).join("");
+  drawer(modal("Solicitar apoyo o decisión",'<form class="form" id="v8SupportRequestForm"><div class="notice"><strong>El pedido no cambia de etapa.</strong> La solicitud queda asignada al usuario o aprobador correcto y el detalle también se registra como comentario.</div><label class="field"><span>Tipo de solicitud</span><select class="select" name="type">'+options+'</select></label><label class="field"><span>Detalle *</span><textarea class="textarea" name="reason" required maxlength="4000" placeholder="Describa el problema, qué verificó y qué decisión necesita."></textarea></label><button class="btn btn-primary" type="submit">Enviar solicitud</button></form>'));
+  qs("#v8SupportRequestForm").onsubmit=function(e){e.preventDefault();var fd=new FormData(e.target),type=String(fd.get("type")||"flow_exception"),reason=String(fd.get("reason")||"").trim();if(!reason)return;insertCaseComment(c,type==="stock_exception"?"STOCK":"NOVELTY",workflowRequestTypeLabel(type)+": "+reason,{requestType:type}).then(function(){return requestWorkflowApproval(c,type,reason,{process:c.currentProcess,status:c.status,route:normalizedDeliveryRoute(c)});}).then(function(){closeDrawer();alert("Solicitud enviada. Puede consultarla en Mis solicitudes y aprobaciones.");renderDetail(id);}).catch(function(error){showError((error&&error.message)||error);});};
+}
+function startNoDeliveryFromWorkflow(req){
+  var c=caseById(req.caseId);if(!c)return Promise.reject(new Error("El pedido no está cargado en la bandeja."));
+  var returnProcess=noDeliveryProcess(c)||normalizedDeliveryRoute(c)||c.currentProcess;
+  var owner=deliveryRouteOwner(c);
+  if(!owner)return Promise.reject(new Error("El pedido no tiene modalidad de entrega válida."));
+  stopActive(c);stopWait(c);
+  c.currentProcess="no_entregado";c.status="no_entregado";c.noDelivery=true;c.noDeliveryStatus="ABIERTO";c.requirementType="no_entrega";
+  c.closedAt=null;c.closedBy=null;c.closedByName="";c.waitStartedAt=now();c.activeStartedAt=null;
+  c.assignedRole=owner;c.assignedName=roleTitle(owner);c.assignedTo="";c.assignedUid="";
+  c.openRequirement={reason:"Novedad de no entrega reportada por Ventas",detail:req.reason,targetRole:owner,visibleRoles:noDeliveryVisibleRoles(),sentAt:req.createdAt||now(),sentByName:req.requestedByName||"Ventas",returnProcess:returnProcess,source:"no_entrega",workflowRequestId:req.id};
+  c.noDeliveryReports=c.noDeliveryReports||[];
+  c.noDeliveryReports.push({id:req.id,detail:req.reason,createdAt:req.createdAt||now(),createdByName:req.requestedByName||"Ventas",status:"ABIERTO",targetProcess:returnProcess,workflowRequestId:req.id});
+  addStateHistory(c,"no_entregado",req.reason||"Novedad de no entrega",{tipo_estado:"no_entregado",workflowRequestId:req.id,returnProcess:returnProcess});
+  return persistCase(c,{type:"NO_DELIVERY_STARTED",detail:req.reason,targetRole:owner,visibleRoles:noDeliveryVisibleRoles()});
+}
+function decideWorkflowRequest(id,decision){
+  var req=(state.workflowRequests||[]).find(function(x){return String(x.id)===String(id);});
+  if(!req||!workflowRequestCanDecide(req)){alert("La solicitud no está disponible o no tiene permiso para decidirla.");return;}
+  var label=decision==="APPROVED"?"aprobar":"rechazar";
+  var reason=prompt("Motivo para "+label+" la solicitud:","");
+  if(reason===null)return;
+  var client=v8SupabaseClient();if(!client){showError("Supabase no está disponible.");return;}
+  var preparation=Promise.resolve();
+  if(decision==="APPROVED"&&req.type==="no_delivery")preparation=startNoDeliveryFromWorkflow(req);
+  preparation.then(function(){return client.rpc("erp_decide_approval",{p_request_id:req.id,p_decision:decision,p_reason:String(reason||"").trim()});}).then(function(result){
+    if(result.error)throw result.error;
+    var c=caseById(req.caseId);
+    if(c)return insertCaseComment(c,"SUPERVISION",workflowRequestTypeLabel(req.type)+" "+(decision==="APPROVED"?"aprobada":"rechazada")+" por "+(state.user.name||"Usuario")+(reason?": "+reason:""),{workflowRequestId:req.id,decision:decision}).catch(function(){return null;});
+  }).then(function(){state.workflowRequestsLoaded=false;return loadData();}).then(function(){return loadWorkflowRequests(true);}).then(renderApprovals).catch(function(error){showError((error&&error.message)||error);});
+}
+
 function renderDetail(id){
   state.detailId=id;
   var c=caseById(id)||cachedDetailCase(id);
@@ -5978,6 +6132,7 @@ function renderDetail(id){
   }
   if(!caseRelevantToCurrentUser(c) && !userIsGlobalVisibilityRole()){layout(header("Acceso no disponible","Este pedido o requerimiento pertenece a otra área o no está delegado a su usuario.",'<button class="btn" data-route="dashboard">Volver al inicio</button>')+'<div class="empty">No se muestra para evitar confusiones operativas.</div>');return;}
   cacheDetailCase(c);
+  if(!state.caseComments[c.id]&&!state.caseCommentsLoading[c.id])loadCaseComments(c.id,false).then(function(){if(state.detailId===c.id)renderDetail(c.id);});
   var correctedOnOpen=false;
   if(migrateCajaToCarteraIfNeeded(c,"Corrección automática V221: PVC/PVE debe ir a Cartera, no Caja."))correctedOnOpen=true;
   if(caseLooksBlockedInSales(c)){
@@ -6006,9 +6161,8 @@ function renderDetail(id){
     if(canDeleteReceptionPedidosCase(c))actions+='<button class="btn btn-danger" data-action="deleteReceptionPedidoCase" data-id="'+c.id+'">Eliminar de recepción</button>';
     if(canCancelOrderWithSupport(c))actions+='<button class="btn btn-danger" data-action="cancelOrder" data-id="'+c.id+'">Cancelar pedido</button>';
     if(canRequestOrderCancellation(c))actions+='<button class="btn btn-danger" data-action="requestCancelOrder" data-id="'+c.id+'">Enviar pedido a cancelar</button>';
-    if(c.status==="en_proceso"&&canOperate)actions+='<button class="btn btn-gold" data-action="wait" data-id="'+c.id+'">Requerimiento / espera</button>';
-    if(c.status==="en_proceso"&&canOperate)actions+='<button class="btn btn-danger" data-action="reportNonConformity" data-id="'+c.id+'">Reportar inconformidad</button>';
-    if(canAccessReportsModule())actions+='<button class="btn btn-gold" data-action="generalReport" data-id="'+c.id+'">Reportar novedad interna</button>';
+    if(c.status==="en_proceso"&&canOperate)actions+='<button class="btn btn-gold" data-action="supportRequest" data-id="'+c.id+'">Solicitar apoyo / decisión</button>';
+    if(canAddCaseComment(c))actions+='<button class="btn" data-action="addCaseComment" data-id="'+c.id+'">Agregar comentario</button>';
     if(canForceReleaseSalesBlocks()&&caseLooksBlockedInSales(c))actions+='<button class="btn btn-success" data-action="forceReleaseOneSalesBlock" data-id="'+c.id+'">Liberar bloqueo Ventas</button>';
     if(c.status==="espera_ventas"&&normalizeRole(state.user.role)==="ventas")actions+='<button class="btn btn-primary" data-action="answer" data-id="'+c.id+'">Responder</button>';
     if(c.status==="en_espera"&&normalizeRole(state.user.role)===normalizeRole(c.assignedRole))actions+='<button class="btn btn-primary" data-action="answer" data-id="'+c.id+'">'+(normalizeRole(state.user.role)==="jefe_logistica"?"Aprobar / resolver":"Resolver")+'</button>';
@@ -6029,8 +6183,8 @@ function renderDetail(id){
       }
       else if(c.currentProcess==="caja"){
         if(c.salesHold&&c.salesHold.status!=="CERRADO")actions+='<button class="btn btn-gold" data-action="boxHold" data-id="'+c.id+'">Gestionar retenido</button>';
-        else if(cashBillingPending(c))actions+='<button class="btn btn-primary" data-action="cashInvoice" data-id="'+c.id+'">Subir factura contado y devolver a logística</button>';
-        else actions+='<button class="btn btn-primary" data-action="delivery" data-id="'+c.id+'">Confirmar caja / enviar a despacho</button>';
+        else if(cashBillingPending(c))actions+='<button class="btn btn-primary" data-action="cashInvoice" data-id="'+c.id+'">Subir factura/soporte y liberar pedido</button>';
+        else actions+='<button class="btn btn-primary" data-action="delivery" data-id="'+c.id+'">Confirmar Caja y continuar flujo</button>';
       }
       else actions+=nextActionButtons(c);
     }
@@ -6041,11 +6195,13 @@ function renderDetail(id){
   var checklistPanel=checklistPanelHtml(c,def);
   var deliveryMismatchPanel=c.deliveryRouteMismatchWarning?'<section class="notice" style="margin-top:16px"><strong>Revisión de ruta:</strong> '+esc(c.deliveryRouteMismatchWarning)+'</section>':'';
   var cutAlertPanel=(c.cutReturnAlerts||[]).length?'<section class="card" style="margin-top:16px"><h3>Carretos disponibles para empaletar</h3><div class="table-wrap"><table><thead><tr><th>Corte</th><th>Referencia</th><th>Metros</th><th>Hora</th><th>Acción</th></tr></thead><tbody>'+(c.cutReturnAlerts||[]).slice().reverse().map(function(a){return '<tr><td>'+esc(a.cutCode||a.cutId||'')+'</td><td>'+esc(a.reference||'')+'</td><td>'+esc(a.meters||'')+'</td><td>'+esc(fmtDate(a.returnedAt))+'</td><td>'+esc(a.detail||'Recoger en corte y empaletar para facturación.')+'</td></tr>';}).join('')+'</tbody></table></div></section>':'';
-  var caseDataPanel='<article class="card case-data-panel mobile-desktop-extra"><h3>Datos del caso</h3>'+caseInfo(c)+'<h3 style="margin-top:18px">Secuencia y tiempos</h3>'+timeline(c)+flowTracePanel(c)+'<h3 style="margin-top:18px">Eventos recientes</h3>'+eventList(c.id)+'</article>';
-  var detailPanels=checklistPanel?'<section class="grid grid-2 detail-panels" style="margin-top:16px">'+checklistPanel+caseDataPanel+'</section>':'<section class="mobile-desktop-extra" style="margin-top:16px">'+caseDataPanel+'</section>';
+  var oversightDetail=!!(window.EI_ROLE_POLICY&&window.EI_ROLE_POLICY.isOversight(state.user&&state.user.role));
+  var caseDataPanel=oversightDetail?'<article class="card case-data-panel"><h3>Datos del caso</h3>'+caseInfo(c)+'<h3 style="margin-top:18px">Secuencia y tiempos</h3>'+timeline(c)+flowTracePanel(c)+'<h3 style="margin-top:18px">Eventos recientes</h3>'+eventList(c.id)+'</article>':'';
+  var detailPanels=checklistPanel?'<section class="grid '+(oversightDetail?'grid-2':'grid-1')+' detail-panels" style="margin-top:16px">'+checklistPanel+caseDataPanel+'</section>':(caseDataPanel?'<section style="margin-top:16px">'+caseDataPanel+'</section>':'');
+  var metricsPanel=oversightDetail?'<section class="grid grid-4 detail-metrics"><article class="card kpi"><span>Lead Time</span><strong style="font-size:1.45rem">'+fmtHours(totalMs(c))+'</strong><small>Total del pedido</small></article><article class="card kpi time-va"><span>Ocupación</span><strong style="font-size:1.45rem">'+fmtHours(activeMs(c))+'</strong><small>Tiempo tramitando</small></article><article class="card kpi time-wait"><span>Espera / bloqueo</span><strong style="font-size:1.45rem">'+fmtHours(waitMs(c))+'</strong><small>Retenciones y pausas</small></article><article class="card kpi time-dead"><span>NVA</span><strong style="font-size:1.45rem">'+fmtHours(deadMs(c))+'</strong><small>Tiempo muerto</small></article></section>':'';
   var activeReqActions=(c.openRequirement&&canManageNoDelivery(c))?'<div style="margin-top:10px"><button class="btn btn-danger" data-action="manageNoDelivery" data-id="'+c.id+'">Resolver requerimiento / gestionar no entrega</button></div>':'';
   var headerActions=compactDetailActions(actions);
-  layout(header(caseDisplayTitle(c),processTitle(c.currentProcess)+" · "+caseDisplaySubtitle(c),headerActions)+mobileSimpleCasePanel(c)+separationNoticePanel(c)+cancellationNoticePanel(c)+salesNotesPanel(c)+pveMerchandisePanel(c)+carteraPanel(c)+processGuidePanel(c)+'<section class="grid grid-4 detail-metrics mobile-desktop-extra"><article class="card kpi"><span>Lead Time</span><strong style="font-size:1.45rem">'+fmtHours(totalMs(c))+'</strong><small>Total del pedido</small></article><article class="card kpi time-va"><span>Ocupación</span><strong style="font-size:1.45rem">'+fmtHours(activeMs(c))+'</strong><small>Tiempo tramitando</small></article><article class="card kpi time-wait"><span>Espera / bloqueo</span><strong style="font-size:1.45rem">'+fmtHours(waitMs(c))+'</strong><small>Retenciones y pausas</small></article><article class="card kpi time-dead"><span>NVA</span><strong style="font-size:1.45rem">'+fmtHours(deadMs(c))+'</strong><small>Tiempo muerto</small></article></section>'+deliveryMismatchPanel+'<div class="mobile-desktop-extra">'+pdfDocumentCard(c,false)+'</div>'+(c.openRequirement?'<section class="notice" style="margin-top:16px"><strong>Requerimiento activo:</strong> '+esc(c.openRequirement.reason)+' · '+esc(c.openRequirement.detail||"")+activeReqActions+'</section>':"")+(isNoDeliveryCase(c)?'<section class="notice danger" style="margin-top:16px"><strong>Estado no entregado:</strong> el pedido está en requerimiento de entrega y debe ser gestionado por Logística/Líder/Jefe/Gerencia/Super Admin. Si aplica devolución, se debe reenviar a Caja.</section>':"")+cutAlertPanel+orderItemsPanel(c)+'<div class="mobile-desktop-extra">'+cutsPanel(c)+'</div>'+cashBillingDownloadPanel(c)+deliveryEvidencePanel(c)+'<div class="mobile-desktop-extra">'+evidencePanel(c)+'</div>'+detailPanels);
+  layout(header(caseDisplayTitle(c),processTitle(c.currentProcess)+" · "+caseDisplaySubtitle(c),headerActions)+mobileSimpleCasePanel(c)+separationNoticePanel(c)+cancellationNoticePanel(c)+caseCommentsPanel(c)+pveMerchandisePanel(c)+carteraPanel(c)+processGuidePanel(c)+metricsPanel+deliveryMismatchPanel+'<div class="mobile-desktop-extra">'+pdfDocumentCard(c,false)+'</div>'+(c.openRequirement?'<section class="notice" style="margin-top:16px"><strong>Requerimiento activo:</strong> '+esc(c.openRequirement.reason)+' · '+esc(c.openRequirement.detail||"")+activeReqActions+'</section>':"")+(isNoDeliveryCase(c)?'<section class="notice danger" style="margin-top:16px"><strong>Estado no entregado:</strong> el pedido está en gestión de no entrega por el responsable de la ruta. Jefatura y Super Admin supervisan; Caja interviene únicamente si existe devolución de dinero.</section>':"")+cutAlertPanel+orderItemsPanel(c)+'<div class="mobile-desktop-extra">'+cutsPanel(c)+'</div>'+cashBillingDownloadPanel(c)+deliveryEvidencePanel(c)+'<div class="mobile-desktop-extra">'+evidencePanel(c)+'</div>'+detailPanels);
 }
 
 
@@ -8406,21 +8562,21 @@ function cutApprovalsForRole(){
   return rows;
 }
 function renderApprovals(){
-  var cutRows=cutApprovalsForRole();
-  var title="Aprobaciones";
-  var subtitle="Aprobaciones de remanente, prioridades y requerimientos críticos.";
-  var cutHtml=cutRows.length?'<section class="card" style="margin-bottom:16px"><h3>Aprobaciones de corte</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Corte</th><th>Referencia</th><th>Sobrante</th><th>Solicita</th><th>Acción</th></tr></thead><tbody>'+cutRows.map(function(r){return '<tr><td>'+esc(r.caseObj.reference||"")+'</td><td>'+esc(r.caseObj.client||"")+'</td><td>'+esc(r.cut.code||r.cut.id)+'</td><td>'+esc(r.cut.referencia||"")+'</td><td>'+esc(r.cut.remanenteProyectado||"")+'</td><td>'+esc(r.cut.approverLabel||roleTitle(r.cut.approverRole))+'</td><td><button class="btn btn-small btn-primary" data-action="launchCut" data-id="'+esc(r.caseObj.id)+'" data-cut="'+esc(r.cut.id)+'">Revisar</button></td></tr>';}).join('')+'</tbody></table></div></section>':'';
-  var list;
-  if(state.user && normalizeRole(state.user.role)==="jefe_logistica"){
-    title="Aprobaciones logísticas";
-    subtitle="Validaciones de corte igual a 50 m, excepciones y casos detenidos.";
-    list=state.cases.filter(function(c){return !c.closedAt && (c.assignedRole==="jefe_logistica" || (c.openRequirement && c.openRequirement.targetRole==="jefe_logistica") || c.priority==="Alta" || c.status==="en_espera" || c.status==="espera_ventas");});
-  }else{
-    list=state.cases.filter(function(c){return c.status==="pendiente_gerencia";});
+  if(!state.workflowRequestsLoaded){
+    layout(header("Solicitudes y aprobaciones","Cargando solicitudes autorizadas para su rol...")+'<div class="empty">Consultando Supabase.</div>');
+    loadWorkflowRequests(true).then(renderApprovals);return;
   }
-  layout(header(title,subtitle)+cutHtml+caseList(list));
+  var cutRows=cutApprovalsForRole();
+  var cutHtml=cutRows.length?'<section class="card" style="margin-bottom:16px"><h3>Aprobaciones de corte</h3><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Corte</th><th>Referencia</th><th>Sobrante</th><th>Acción</th></tr></thead><tbody>'+cutRows.map(function(r){return '<tr><td>'+esc(r.caseObj.reference||"")+'</td><td>'+esc(r.caseObj.client||"")+'</td><td>'+esc(r.cut.code||r.cut.id)+'</td><td>'+esc(r.cut.referencia||"")+'</td><td>'+esc(r.cut.remanenteProyectado||"")+'</td><td><button class="btn btn-small btn-primary" data-action="launchCut" data-id="'+esc(r.caseObj.id)+'" data-cut="'+esc(r.cut.id)+'">Revisar</button></td></tr>';}).join('')+'</tbody></table></div></section>':'';
+  var requests=(state.workflowRequests||[]).filter(function(r){return r.status==="PENDING"||workflowRequestCanDecide(r);});
+  var reqHtml='<section class="card"><div class="section-title"><div><h3>Solicitudes de flujo</h3><p>Cancelaciones, no entregas, cambios de ruta y excepciones. Las novedades normales permanecen como comentarios dentro del pedido.</p></div><button class="btn btn-small" data-action="refreshApprovals">Actualizar</button></div>';
+  if(!requests.length)reqHtml+='<div class="empty">No hay solicitudes pendientes para su rol.</div>';
+  else reqHtml+='<div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Pedido</th><th>Solicita</th><th>Motivo</th><th>Fecha</th><th>Acción</th></tr></thead><tbody>'+requests.map(function(r){var c=caseById(r.caseId),actions='<button class="btn btn-small" data-action="open" data-id="'+esc(r.caseId)+'">Abrir pedido</button>';if(workflowRequestCanDecide(r))actions+='<button class="btn btn-small btn-success" data-action="workflowApprove" data-id="'+esc(r.id)+'">Aprobar</button><button class="btn btn-small btn-danger" data-action="workflowReject" data-id="'+esc(r.id)+'">Rechazar</button>';return '<tr><td><strong>'+esc(workflowRequestTypeLabel(r.type))+'</strong></td><td>'+esc(c&&c.reference||r.caseId)+'</td><td>'+esc(r.requestedByName||roleTitle(r.requestedByRole))+'</td><td>'+esc(r.reason)+'</td><td>'+esc(fmtDate(r.createdAt))+'</td><td><div class="top-actions">'+actions+'</div></td></tr>';}).join('')+'</tbody></table></div>';
+  reqHtml+='</section>';
+  var priorityCases=state.cases.filter(function(c){return c.status==="pendiente_gerencia";});
+  var priorityHtml=priorityCases.length?'<section style="margin-top:16px"><h3>Prioridades pendientes</h3>'+caseList(priorityCases)+'</section>':'';
+  layout(header("Solicitudes y aprobaciones","Solo aparecen solicitudes propias y decisiones asignadas expresamente a su rol.")+cutHtml+reqHtml+priorityHtml);
 }
-
 
 function bars(items){
   items=(items||[]).filter(function(x){return x&&Number.isFinite(Number(x.value||0));});
@@ -8491,7 +8647,7 @@ function renderUsers(){
   layout(header("Usuarios",canAuditViewAll()?"Directorio de usuarios en modo auditoría solo lectura.":"Gestión completa de perfiles: crear usuarios, cambiar roles, activar/inactivar y eliminar perfiles operativos.",canManageUsers()?'<button class="btn btn-primary" data-action="userModal">Crear usuario</button>':"")+auditReadOnlyNotice()+'<section class="grid grid-3"><article class="card kpi"><span>Usuarios activos</span><strong>'+active+'</strong><small>'+state.users.length+' perfiles cargados</small></article><article class="card kpi"><span>Gerencia</span><strong>'+ger+'/2</strong><small>Límite operativo</small></article><article class="card kpi"><span>Roles</span><strong>'+uniqueRoles()+'</strong><small>Incluye líder recepción</small></article></section><section class="card" style="margin-top:16px"><div class="notice"><strong>Control administrativo:</strong> El botón eliminar borra el perfil de Supabase y bloquea el acceso operativo. Para eliminar también la cuenta de Supabase Authentication se requiere hacerlo desde Supabase Console o una Edge Function segura.</div><h3>Directorio</h3><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">No hay usuarios cargados.</td></tr>')+'</tbody></table></div></section>');
 }
 function uniqueRoles(){var m={};state.users.forEach(function(u){if(u&&u.role)m[normalizeRole(u.role)]=1;});return Object.keys(m).length;}
-function roleOptionsHtml(selected){return Object.keys(roles).filter(function(r){return r!=="lider_logistico";}).map(function(r){return '<option value="'+esc(r)+'" '+(normalizeRole(selected)===normalizeRole(r)?'selected':'')+'>'+esc(roles[r])+'</option>';}).join('');}
+function roleOptionsHtml(selected){return Object.keys(roles).filter(function(r){return ["super_admin","gerencia","ventas","compras","jefe_logistica","coordinador_logistico","despacho_nacional","aux_logistica","auxiliar_corte","caja","cartera","recepcion_mercancia","auditoria"].indexOf(r)>=0;}).map(function(r){return '<option value="'+esc(r)+'" '+(normalizeRole(selected)===normalizeRole(r)?'selected':'')+'>'+esc(roles[r])+'</option>';}).join('');}
 function openEditUserRole(id){
   if(!canManageUsers())return;
   var u=state.users.filter(function(x){return x.id===id;})[0];if(!u){alert("Usuario no encontrado.");return;}
@@ -10774,7 +10930,7 @@ function openCashInvoiceBox(id){
       c.cashBilling=Object.assign({},c.cashBilling||{},{required:true,status:"cargada",invoiceUrl:first.url||first.driveUrl||"",invoiceFileName:(uploads.length===1?(first.fileName||first.name||firstFile.name):(uploads.length+" archivos de factura")),invoiceFileId:first.fileId||"",invoiceGallery:gallery,uploadedAt:first.uploadedAt||now(),uploadedBy:state.user.uid,uploadedByName:state.user.name,returnedToLogisticsAt:now()});
       c.checklist=c.checklist||{};
       appendEvidenceGallery(c,uploads,fd.get("detail")||"Factura de Caja pedido contado",{processKey:"caja",processName:"Caja - pedido contado",evidenceType:"FACTURA_CAJA_CONTADO"});
-      var next=normalizedDeliveryRoute(c.pendingDeliveryType||c.deliveryType||c.requestedDelivery)||"despacho_nacional";
+      var next=normalizedDeliveryRoute(c.pendingDeliveryType||c.deliveryType||c.requestedDelivery);if(!next)throw new Error("El pedido no tiene modalidad de entrega definida.");
       c.cashBilling.nextProcess=next;
       c.cashBilling.returnedToProcess=next;
       c.deliveryType=next;
@@ -10852,8 +11008,8 @@ function openDelivery(id){
     if(!isFin && billingType){
       c.orderKind=billingType;c.tipoPedido=billingType;c.billingType=billingType;
     }
-    if(!isFin && isCashOrder(c)){
-      var finCash=financialProcessForOrder(c);
+    if(!isFin && isCashOrder(c) && isPvnOrder(c)){
+      var finCash="caja";
       c.pendingDeliveryType=next;c.deliveryType=next;c.billingType=billingType;c.cashBilling=Object.assign({},c.cashBilling||{},{required:true,status:"pendiente",source:"facturacion",requestedAt:now(),requestedByName:state.user.name,nextProcess:next});
       assignToProcess(c,finCash,fd.get("detail")||"Pedido al contado: "+processTitle(finCash)+" debe validar antes de continuar a "+processTitle(next)).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});
       return;
@@ -10885,27 +11041,12 @@ function openClose(id){
     persistCase(c,{type:isNoDelivery?"NO_DELIVERY_CLOSED":"CASE_CLOSED",detail:detail,visibleRoles:isNoDelivery?noDeliveryVisibleRoles():undefined}).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});};
 }
 function openRequestCancelOrder(id){
-  var c=caseById(id);
-  if(!c)return;
-  if(!canRequestOrderCancellation(c)){alert("Solo Ventas o Caja pueden enviar este pedido a cancelar cuando les corresponde. Si usted es Logística, use Cancelar pedido con PDF soporte.");return;}
-  var existing=cancellationRequestOpenForCase(c);
-  drawer(modal("Enviar pedido a cancelar",'<form class="form" id="requestCancelOrderForm"><div class="notice warning"><strong>Solicitud a Logística:</strong> esta acción no cancela el pedido. Crea una novedad para que Logística valide y, si procede, cancele/anule con PDF soporte.</div>'+(existing?'<div class="notice danger"><strong>Ya existe una solicitud abierta:</strong> puede crear una nueva solo si hay una novedad adicional clara.</div>':'')+'<label class="field"><span>Tipo solicitado *</span><select class="select" name="cancelType" required><option value="PEDIDO_CANCELADO">Pedido cancelado</option><option value="PEDIDO_ANULADO">Pedido anulado</option></select></label><label class="field"><span>Motivo / soporte informado *</span><textarea class="textarea" name="detail" required placeholder="Explique quién solicitó cancelar/anular, por qué, fecha del correo o soporte, y cualquier instrucción para logística."></textarea></label><button class="btn btn-danger" type="submit">Enviar a novedades de Logística</button></form>'));
+  var c=caseById(id);if(!c)return;
+  if(!canRequestOrderCancellation(c)){alert("No tiene permiso para solicitar la cancelación de este pedido.");return;}
+  drawer(modal("Solicitar cancelación / anulación",'<form class="form" id="requestCancelOrderForm"><div class="notice warning"><strong>Solicitud controlada:</strong> el pedido no se cancela todavía. Jefatura logística, Gerencia o Super Admin deben aprobarla y posteriormente registrar el PDF soporte.</div><label class="field"><span>Tipo solicitado *</span><select class="select" name="cancelType" required><option value="PEDIDO_CANCELADO">Pedido cancelado</option><option value="PEDIDO_ANULADO">Pedido anulado</option></select></label><label class="field"><span>Motivo *</span><textarea class="textarea" name="detail" required maxlength="4000" placeholder="Indique quién solicitó la cancelación, por qué y cuál es el soporte disponible."></textarea></label><button class="btn btn-danger" type="submit">Enviar solicitud</button></form>'));
   qs("#requestCancelOrderForm").onsubmit=function(e){
-    e.preventDefault();
-    var fd=new FormData(e.target);
-    var detail=String(fd.get("detail")||"").trim();
-    var cancelType=String(fd.get("cancelType")||"PEDIDO_CANCELADO");
-    var label=cancelType==="PEDIDO_ANULADO"?"Pedido anulado":"Pedido cancelado";
-    if(!detail){alert("Explique el motivo de la solicitud de cancelación/anulación.");return;}
-    var stamp=now();
-    var report={id:uid("REP"),title:"Solicitud de cancelación · "+(c.reference||c.id),category:"Solicitud de cancelación/anulación",sourceModule:"solicitud_cancelacion_pedido",sourceType:"case",sourceId:c.id,sourceReference:c.reference||c.id,process:c.currentProcess,processName:processTitle(c.currentProcess),status:"PENDIENTE_LOGISTICA",severity:"Alta",description:label+" solicitado por "+(state.user.name||"Usuario")+". "+detail,detail:detail,caseClient:c.client||"",createdAt:stamp,updatedAt:stamp,createdBy:state.user.uid,createdByName:state.user.name,createdByRole:state.user.role,managementComments:[],cancellationRequest:true,requestedCancellationType:cancelType,requestedCancellationLabel:label,cancellationRequestedAt:stamp,cancellationRequestedBy:state.user.uid,cancellationRequestedByName:state.user.name,targetLogisticsName:"Logística / Super Admin",assignedLogisticsName:"Logística / Super Admin",reportTo:["coordinador_logistico","lider_logistico","jefe_logistica","aux_logistica","admin","super_admin"],visibleRoles:["admin","super_admin","super_administrador","gerencia","jefe_logistica","coordinador_logistico","lider_logistico","lider_logistica","aux_logistica","ventas","caja",c.assignedRole].filter(Boolean)};
-    c.cancellationRequests=c.cancellationRequests||[];
-    c.cancellationRequests.push({id:report.id,type:cancelType,label:label,detail:detail,status:"PENDIENTE_LOGISTICA",createdAt:stamp,createdBy:state.user.uid,createdByName:state.user.name,createdByRole:state.user.role});
-    c.cancellationRequestStatus="PENDIENTE_LOGISTICA";
-    c.lastCancellationRequestId=report.id;
-    c.lastCancellationRequestAt=stamp;
-    addStateHistory(c,"solicitud_cancelacion",label+" solicitado a Logística. "+detail,{tipo_estado:"novedad",motivo_novedad:"Solicitud de cancelación/anulación",fecha_hora_inicio_estado:stamp});
-    saveReportDocument(report).then(function(){return persistCase(c,{type:"ORDER_CANCELLATION_REQUESTED",detail:label+" solicitado por "+state.user.name+": "+detail,targetRole:"coordinador_logistico",visibleRoles:report.visibleRoles});}).then(function(){return createEvent({type:"ORDER_CANCELLATION_REQUESTED",caseId:c.id,detail:label+" solicitado para "+(c.reference||c.id)+" por "+state.user.name,targetRole:"coordinador_logistico",visibleRoles:report.visibleRoles}).catch(function(){return null;});}).then(loadData).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError((e&&e.message)||e||"No se pudo enviar el pedido a cancelar.");});
+    e.preventDefault();var fd=new FormData(e.target),detail=String(fd.get("detail")||"").trim(),cancelType=String(fd.get("cancelType")||"PEDIDO_CANCELADO");if(!detail)return;
+    insertCaseComment(c,"NOVELTY","Solicitud de "+(cancelType==="PEDIDO_ANULADO"?"anulación":"cancelación")+": "+detail,{requestType:"cancellation"}).then(function(){return requestWorkflowApproval(c,"cancellation",detail,{cancelType:cancelType,process:c.currentProcess,status:c.status});}).then(function(){closeDrawer();alert("Solicitud enviada para aprobación.");renderDetail(id);}).catch(function(error){showError((error&&error.message)||error);});
   };
 }
 
@@ -11071,7 +11212,7 @@ function openCertificateModal(){
 
 function openUserModal(){
   var ger=state.users.filter(function(u){return u.role==="gerencia";}).length;
-  drawer(modal("Crear usuario",'<form class="form" id="uForm"><label class="field"><span>Nombre</span><input class="input" name="name" required></label><label class="field"><span>Correo</span><input class="input" name="email" type="email" required></label><label class="field"><span>Contraseña temporal</span><input class="input" name="password" type="password" required minlength="6"></label><label class="field"><span>Rol</span><select class="select" name="role">'+Object.keys(roles).filter(function(r){return r!=="lider_logistico";}).map(function(r){return'<option value="'+r+'" '+(r==="gerencia"&&ger>=2?"disabled":"")+'>'+esc(roles[r])+(r==="gerencia"?" · "+ger+"/2":"")+'</option>';}).join("")+'</select></label><button class="btn btn-primary" type="submit">Crear</button></form>'));
+  drawer(modal("Crear usuario",'<form class="form" id="uForm"><label class="field"><span>Nombre</span><input class="input" name="name" required></label><label class="field"><span>Correo</span><input class="input" name="email" type="email" required></label><label class="field"><span>Contraseña temporal</span><input class="input" name="password" type="password" required minlength="6"></label><label class="field"><span>Rol</span><select class="select" name="role">'+Object.keys(roles).filter(function(r){return ["super_admin","gerencia","ventas","compras","jefe_logistica","coordinador_logistico","despacho_nacional","aux_logistica","auxiliar_corte","caja","cartera","recepcion_mercancia","auditoria"].indexOf(r)>=0;}).map(function(r){return'<option value="'+r+'" '+(r==="gerencia"&&ger>=2?"disabled":"")+'>'+esc(roles[r])+(r==="gerencia"?" · "+ger+"/2":"")+'</option>';}).join("")+'</select></label><button class="btn btn-primary" type="submit">Crear</button></form>'));
   qs("#uForm").onsubmit=function(e){e.preventDefault();createUser(new FormData(e.target));};
 }
 function createUser(fd){
@@ -11087,7 +11228,7 @@ function createUser(fd){
 function approve(id){
   var c=caseById(id), next=nextProcessAfterCommercialGate(c);
   stopWait(c);
-  c.currentProcess=next;c.status="asignado";c.assignedRole=primaryOwnerRole(next);c.assignedName=processOwnerTitle(next);c.deadStartedAt=now();c.priority="Alta";c.managerApproved=true;
+  c.currentProcess=next;c.status="asignado";c.assignedRole=primaryOwnerRole(next);c.assignedName=processOwnerTitle(next);if(next==="recepcion_pedidos")applyOperationalRouteAssignment(c,next);c.deadStartedAt=now();c.priority="Alta";c.managerApproved=true;
   if(c.priorityApproval)c.priorityApproval.status="aprobado";
   resetChecklistForProcess(c,next);
   if(next==="compras"){c.visibleRoles=purchasesVisibleRoles();c.targetRoles=purchasesVisibleRoles();c.purchaseFlow=c.purchaseFlow||{required:true,status:"PENDIENTE_COMPRAS",source:"gerencia_pve"};}
@@ -11484,45 +11625,16 @@ function openSalesSeparation(id){
 }
 
 function openSalesNoDelivery(id){
-  var c=caseById(id);if(!c)return;
-  drawer(modal('Novedad de no entrega a logística','<form class="form" id="noDeliveryForm"><div class="notice danger"><strong>Estado no entregado:</strong> registre la novedad cuando el cliente informe que no recibió el producto. El pedido pasará al estado <strong>No entregado</strong> y quedará en Requerimientos visible para Logística/Líder/Jefe/Gerencia/Super Admin.</div><label class="field"><span>Detalle de la novedad *</span><textarea class="textarea" name="detail" required placeholder="Cliente, factura/guía, transportadora, fecha esperada, contacto y qué solicita el cliente."></textarea></label><label class="field"><span>Soporte opcional</span><input class="input" type="file" name="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" multiple data-mobile-upload="true"></label><small class="muted">Puede tomar fotos, elegir de la galería o seleccionar hasta 10 archivos. Todos quedarán en la evidencia.</small><button class="btn btn-primary" type="submit">Marcar como no entregado y enviar a requerimientos</button></form>'));
+  var c=caseById(id);if(!c||!caseBelongsToCurrentSalesUser(c)){alert("Solo el asesor propietario puede reportar esta novedad.");return;}
+  drawer(modal('Reportar no entrega','<form class="form" id="noDeliveryForm"><div class="notice warning"><strong>La novedad no altera el pedido directamente.</strong> Quedará como comentario y solicitud para el responsable de la ruta, Jefatura logística y Super Admin.</div><label class="field"><span>Detalle de la novedad *</span><textarea class="textarea" name="detail" required maxlength="4000" placeholder="Indique contacto, fecha esperada, guía/factura, transportadora y respuesta solicitada."></textarea></label><label class="field"><span>Soporte opcional</span><input class="input" type="file" name="file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" multiple data-mobile-upload="true"></label><button class="btn btn-primary" type="submit">Enviar novedad</button></form>'));
   qs('#noDeliveryForm').onsubmit=function(e){
-    e.preventDefault();
-    var fd=new FormData(e.target),files=eiV221Files(e.target.file,"soportes",false)||[],detail=String(fd.get('detail')||'');
-    var chain=Promise.resolve();
-    if(files.length){
-      chain=eiV221UploadGallery(files,c,{processKey:'ventas',processName:'Ventas - no entrega',evidenceType:'NO_ENTREGA',fileNamePrefix:'NO_ENTREGA'}).then(function(uploads){
-        appendEvidenceGallery(c,uploads,'Soportes novedad no entrega: '+detail,{processKey:'ventas',processName:'Ventas - no entrega',evidenceType:'NO_ENTREGA'});
-      });
-    }
-    chain.then(function(){
-      var targetProcess=noDeliveryProcess(c), visible=noDeliveryVisibleRoles();
-      stopActive(c);stopWait(c);
-      c.currentProcess=targetProcess;
-      c.closedAt=null;
-      c.closedByName='';
-      c.status='no_entregado';
-      c.noDelivery=true;
-      c.noDeliveryStatus='ABIERTO';
-      c.requirementType='no_entrega';
-      c.visibleRoles=visible;
-      c.targetRoles=visible;
-      c.waitStartedAt=now();
-      c.activeStartedAt=null;
-      c.assignedRole='coordinador_logistico';
-      c.assignedName=roleTitle('coordinador_logistico');
-      c.assignedTo='';c.assignedUid='';
-      c.openRequirement={reason:'Pedido confirmado como no entregado por Ventas',detail:detail,targetRole:'coordinador_logistico',visibleRoles:visible,sentAt:now(),sentBy:state.user.uid,sentByName:state.user.name,returnProcess:targetProcess,source:'no_entrega'};
-      c.requirements=c.requirements||[];
-      c.requirements.push({id:uid('REQ'),source:'no_entrega',sourceProcess:'ventas',reason:'Pedido confirmado como no entregado',detail:detail,targetRole:'coordinador_logistico',visibleRoles:visible,sentAt:now(),sentBy:state.user.uid,sentByName:state.user.name,status:'pendiente'});
-      c.noDeliveryReports=c.noDeliveryReports||[];
-      c.noDeliveryReports.push({id:uid('NE'),detail:detail,createdAt:now(),createdByName:state.user.name,status:'ABIERTO',targetProcess:targetProcess,visibleRoles:visible,history:[{at:now(),by:state.user.name,action:'Marcado como no entregado',detail:detail}]});
-      c.totalRequirements=Number(c.totalRequirements||0)+1;
-      addStateHistory(c,'no_entregado',detail||'Pedido confirmado como no entregado por Ventas',{tipo_estado:'no_entregado',motivo_novedad:'No entrega confirmada por asesor'});
-      return persistCase(c,{type:'NO_DELIVERY_REQUIREMENT',detail:detail,targetRole:'coordinador_logistico',visibleRoles:visible});
-    }).then(function(){closeDrawer();if(state.route==='sales_reports')renderSalesReports();else renderDetail(id);}).catch(function(e){showError(e.message||e);});
+    e.preventDefault();var fd=new FormData(e.target),files=eiV221Files(e.target.file,"soportes",false)||[],detail=String(fd.get('detail')||'').trim();if(!detail)return;
+    var uploaded=[];var chain=Promise.resolve();
+    if(files.length)chain=eiV221UploadGallery(files,c,{processKey:'ventas',processName:'Ventas - no entrega',evidenceType:'NO_ENTREGA',fileNamePrefix:'NO_ENTREGA'}).then(function(x){uploaded=(x||[]).map(function(u){return {fileId:u.fileId||"",fileName:u.fileName||u.name||"",url:u.url||u.driveUrl||"",mimeType:u.mimeType||""};});});
+    chain.then(function(){return insertCaseComment(c,"NO_DELIVERY",detail,{attachments:uploaded,route:normalizedDeliveryRoute(c)});}).then(function(){return requestWorkflowApproval(c,"no_delivery",detail,{attachments:uploaded,route:normalizedDeliveryRoute(c),returnProcess:noDeliveryProcess(c)});}).then(function(){closeDrawer();alert("Novedad enviada al responsable de la ruta.");if(state.route==='sales_reports')renderSalesReports();else renderDetail(id);}).catch(function(error){showError((error&&error.message)||error);});
   };
 }
+
 function openNoDeliveryManagement(id){
   var c=caseById(id);if(!c)return;
   if(!canManageNoDelivery(c)){alert('No tiene permiso para gestionar esta no entrega.');return;}
@@ -11564,11 +11676,11 @@ function openNoDeliveryManagement(id){
       }
       var proc=noDeliveryProcess(c);
       stopWait(c);
-      c.currentProcess=proc;c.closedAt=null;c.closedByName='';c.status='en_proceso';c.noDelivery=true;c.noDeliveryStatus='GESTION_LOGISTICA';c.requirementType='no_entrega';c.visibleRoles=c.visibleRoles||noDeliveryVisibleRoles();c.targetRoles=c.targetRoles||noDeliveryVisibleRoles();c.assignedRole='coordinador_logistico';c.assignedName=roleTitle('coordinador_logistico');c.activeStartedAt=now();c.waitStartedAt=null;c.openRequirement=null;
+      c.currentProcess=proc;c.closedAt=null;c.closedByName='';c.status='en_proceso';c.noDelivery=true;c.noDeliveryStatus='GESTION_LOGISTICA';c.requirementType='no_entrega';c.visibleRoles=c.visibleRoles||noDeliveryVisibleRoles();c.targetRoles=c.targetRoles||noDeliveryVisibleRoles();applyDeliveryRouteAssignment(c,proc);c.activeStartedAt=now();c.waitStartedAt=null;c.openRequirement=null;
       resolveNoDeliveryRequirements(c,detail);
       if(report)report.status='GESTION_LOGISTICA';
       addStateHistory(c,'solucion_entrega',detail||'Solución logística/reprogramación de entrega',{tipo_estado:'valor',motivo_novedad:'Solución logística no entrega'});
-      return persistCase(c,{type:'NO_DELIVERY_LOGISTICS_SOLUTION',detail:detail,targetRole:'coordinador_logistico',visibleRoles:noDeliveryVisibleRoles()});
+      return persistCase(c,{type:'NO_DELIVERY_LOGISTICS_SOLUTION',detail:detail,targetRole:c.assignedRole,visibleRoles:noDeliveryVisibleRoles()});
     }).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});
   };
 }
@@ -11793,10 +11905,10 @@ function renderErpDiagnostics(){
   var report=state.erpDiagnosticReport||null,summary=erpDiagnosticSummary(report),running=state.erpDiagnosticRunning===true;
   var actions='<button class="btn btn-primary" data-action="runErpDiagnostic" '+(running?'disabled':'')+'>'+(running?'Diagnosticando…':'Ejecutar diagnóstico completo')+'</button>'+
     '<button class="btn" data-action="testDiagnosticDrive" '+(running?'disabled':'')+'>Probar archivo en Drive</button>'+
-    '<button class="btn btn-gold" data-action="triggerErpBot" '+(running?'disabled':'')+'>Ejecutar bot E2E 240 combinaciones</button>'+
+    '<button class="btn btn-gold" data-action="triggerErpBot" '+(running?'disabled':'')+'>Ejecutar bot E2E 192 combinaciones</button>'+
     '<button class="btn" data-action="repairLogisticsRoutes" '+(running?'disabled':'')+'>Reparar rutas Javier / Duvan</button>'+
     (report?'<button class="btn" data-action="downloadErpDiagnostic">Descargar JSON</button>':'');
-  var intro='<section class="card"><div class="grid grid-3"><div><span class="muted">Acceso</span><strong>Solo Super Admin</strong></div><div><span class="muted">Cobertura combinatoria</span><strong>240 escenarios</strong></div><div><span class="muted">Última ejecución</span><strong>'+esc(report&&report.finishedAt?fmtDate(report.finishedAt):'Sin ejecutar')+'</strong></div></div><p class="muted">Verifica sesión, perfil, cliente único de Supabase, snapshots, usuarios, pedidos, inventario, persistencia, guardián de flujo, reglas Javier/Duvan y preparación de archivos. El botón E2E activa las pruebas reales de navegador mediante la Edge Function protegida.</p></section>';
+  var intro='<section class="card"><div class="grid grid-3"><div><span class="muted">Acceso</span><strong>Solo Super Admin</strong></div><div><span class="muted">Cobertura combinatoria</span><strong>192 combinaciones válidas</strong></div><div><span class="muted">Última ejecución</span><strong>'+esc(report&&report.finishedAt?fmtDate(report.finishedAt):'Sin ejecutar')+'</strong></div></div><p class="muted">Verifica sesión, perfil, cliente único de Supabase, snapshots, usuarios, pedidos, inventario, persistencia, guardián de flujo, reglas Javier/Duvan y preparación de archivos. El botón E2E activa las pruebas reales de navegador mediante la Edge Function protegida.</p></section>';
   var route='<section class="card"><h3>Regla operativa obligatoria</h3><div class="grid grid-2"><div class="notice"><strong>Duvan Díaz · operación local</strong><br>Cliente en punto, cliente recoge y despacho local. Recibe el pedido en Recepción, lo envía a Alistamiento, lo retoma en Facturación, despacha y cierra.</div><div class="notice"><strong>Javier Laverde · operación nacional</strong><br>Despacho nacional. Recibe el pedido en Recepción, lo envía a Alistamiento, lo retoma en Facturación, despacha, realiza cierre nacional y cierra el caso.</div></div></section>';
   var results='';
   if(running)results='<section class="card"><div class="notice warning"><strong>Diagnóstico en ejecución.</strong> No cierre esta pantalla.</div></section>';
@@ -11809,7 +11921,7 @@ function runErpDiagnostic(){
   if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede ejecutar el diagnóstico.");return;}
   if(state.erpDiagnosticRunning)return;
   state.erpDiagnosticRunning=true;state.erpDiagnosticReport=null;renderErpDiagnostics();
-  var report={version:"7.1.0",startedAt:now(),finishedAt:null,user:{uid:state.user.uid,email:state.user.email,name:state.user.name,role:state.user.role},results:[],routing:{},consoleSnapshot:(state.loadWarnings||[]).slice()};
+  var report={version:"8.0.0",startedAt:now(),finishedAt:null,user:{uid:state.user.uid,email:state.user.email,name:state.user.name,role:state.user.role},results:[],routing:{},consoleSnapshot:(state.loadWarnings||[]).slice()};
   function push(status,area,name,detail,data){report.results.push({status:status,area:area,name:name,detail:String(detail||""),data:data||null,at:now()});}
   function check(area,name,fn,opts){opts=opts||{};return Promise.resolve().then(fn).then(function(value){
     var status=opts.warnWhen&&opts.warnWhen(value)?"WARN":"PASS";
@@ -11826,7 +11938,7 @@ function runErpDiagnostic(){
   },{warnWhen:function(v){return v.sdkScripts>1;},detail:function(v){return "Cliente compartido: "+(v.singleton?"sí":"no")+" · scripts SDK: "+v.sdkScripts;}});});
   chain=chain.then(function(){return check("Compatibilidad","Snapshot con forEach",function(){return db.collection("users").limit(3).get().then(function(snap){if(typeof snap.forEach!=="function")throw new Error("El snapshot no implementa forEach.");if(!Array.isArray(snap.docs))throw new Error("El snapshot no expone docs.");snapshotUsers=docsToList(snap);return {size:snap.size,users:snapshotUsers.map(function(u){return u.email||u.name||u.id;})};});},{detail:function(v){return "Contrato correcto · "+v.size+" perfil(es) leídos en muestra.";}});});
   chain=chain.then(function(){return check("Usuarios","Directorio de perfiles",function(){return client.from("profiles").select("firebase_uid,auth_user_id,email,display_name,role_code,active,raw_profile").order("email").then(function(r){if(r.error)throw r.error;return r.data||[];});},{warnWhen:function(v){return !v.length||v.some(function(u){return u.active===true&&!u.auth_user_id;});},detail:function(v){var active=v.filter(function(u){return u.active===true;}).length,unlinked=v.filter(function(u){return u.active===true&&!u.auth_user_id;}).length;return "Perfiles: "+v.length+" · activos: "+active+" · activos sin vínculo Auth: "+unlinked;}});});
-  chain=chain.then(function(){return check("Enrutamiento","Perfiles de Javier y Duvan",function(){return client.from("profiles").select("firebase_uid,auth_user_id,email,display_name,role_code,active,raw_profile").in("email",["j.laverde@ei.com.co","d.diaz@ei.com.co"]).then(function(r){if(r.error)throw r.error;var rows=r.data||[];if(rows.length!==2)throw new Error("No están disponibles los dos perfiles operativos. Encontrados: "+rows.length);rows.forEach(function(u){if(u.active!==true)throw new Error("Perfil inactivo: "+u.email);if(normalizeRole(u.role_code)!=="coordinador_logistico")throw new Error("Rol incorrecto para "+u.email+": "+u.role_code);});return rows;});},{detail:function(){return "Javier y Duvan están activos con rol coordinador_logistico.";}});});
+  chain=chain.then(function(){return check("Enrutamiento","Perfiles de Javier y Duvan",function(){return client.from("profiles").select("firebase_uid,auth_user_id,email,display_name,role_code,active,raw_profile").in("email",["j.laverde@ei.com.co","d.diaz@ei.com.co"]).then(function(r){if(r.error)throw r.error;var rows=r.data||[];if(rows.length!==2)throw new Error("No están disponibles los dos perfiles operativos. Encontrados: "+rows.length);rows.forEach(function(u){if(u.active!==true)throw new Error("Perfil inactivo: "+u.email);var expected=u.email==="j.laverde@ei.com.co"?"despacho_nacional":"coordinador_logistico";if(normalizeRole(u.role_code)!==expected)throw new Error("Rol incorrecto para "+u.email+": "+u.role_code+"; esperado "+expected);});return rows;});},{detail:function(){return "Duvan está como coordinador logístico local y Javier como despacho nacional.";}});});
   chain=chain.then(function(){return check("Enrutamiento","Matriz local y nacional",function(){
     var expected={cliente_punto:"d.diaz@ei.com.co",cliente_recoge:"d.diaz@ei.com.co",despacho_local:"d.diaz@ei.com.co",despacho_nacional:"j.laverde@ei.com.co"},actual={};
     Object.keys(expected).forEach(function(route){var users=deliveryRouteAssignableUsers(route);actual[route]=users[0]&&users[0].email||"";if(actual[route]!==expected[route])throw new Error(route+" quedó en "+actual[route]+" y debe quedar en "+expected[route]);});
@@ -11838,7 +11950,7 @@ function runErpDiagnostic(){
   chain=chain.then(function(){return check("Archivos","Preparación de archivo borrador",function(){var file=new File(["Diagnóstico ERP "+now()+"\n"],"borrador_diagnostico_erp.txt",{type:"text/plain"});return prepareFileForDrive(file,{diagnostic:true}).then(function(prep){if(!prep||!(prep.blob||prep.file||prep))throw new Error("No se obtuvo archivo preparado.");return {name:file.name,size:file.size,type:file.type,prepared:true};});},{optional:true,detail:function(v){return "Archivo generado y preparado: "+v.name+" · "+v.size+" bytes.";}});});
   chain=chain.then(function(){return check("Flujo","Guardián de integridad",function(){return client.rpc("erp_scan_flow_health").then(function(r){if(r.error)throw r.error;return r.data||{};});},{optional:true,warnWhen:function(v){return Number(v.attention||0)>0;},detail:function(v){return "Pedidos revisados: "+Number(v.checked||0)+" · con atención: "+Number(v.attention||0);}});});
   chain=chain.then(function(){return check("Servidor","Snapshot integral Supabase",function(){return client.rpc("erp_diagnostic_snapshot").then(function(r){if(r.error)throw r.error;return r.data||{};});},{optional:true,warnWhen:function(v){return Number(v.critical||0)>0;},detail:function(v){return "Snapshot SQL ejecutado"+(v&&v.summary?" · "+JSON.stringify(v.summary):"")+".";}});});
-  chain=chain.then(function(){return check("Cobertura","Combinaciones comerciales",function(){var tipos=["PVC","PVN","PVE","PVP"],gestion=["normal","retenido","prioritario"],entrega=["cliente_punto","cliente_recoge","despacho_local","despacho_nacional","por_definir"],pago=["contado","credito","anticipo","por_definir"],count=tipos.length*gestion.length*entrega.length*pago.length;if(count!==240)throw new Error("La matriz no totaliza 240 combinaciones.");return {count:count};},{detail:function(v){return "Matriz configurada: "+v.count+" combinaciones. La ejecución real se inicia con el botón E2E.";}});});
+  chain=chain.then(function(){return check("Cobertura","Combinaciones comerciales",function(){var tipos=["PVC","PVN","PVE","PVP"],prioridad=["normal","prioritario"],estadoCliente=["AL_DIA","MORA"],entrega=["cliente_punto","cliente_recoge","despacho_local","despacho_nacional"],pago=["CONTADO","MIXTO","CREDITO"],count=tipos.length*prioridad.length*estadoCliente.length*entrega.length*pago.length;if(count!==192)throw new Error("La matriz no totaliza 192 combinaciones válidas.");return {count:count};},{detail:function(v){return "Matriz configurada: "+v.count+" combinaciones. La ejecución real se inicia con el botón E2E.";}});});
   chain.finally(function(){report.finishedAt=now();report.summary=erpDiagnosticSummary(report);state.erpDiagnosticReport=report;state.erpDiagnosticRunning=false;renderErpDiagnostics();});
 }
 function downloadErpDiagnostic(){
@@ -11848,7 +11960,7 @@ function downloadErpDiagnostic(){
 function triggerErpBot(){
   if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede ejecutar el bot E2E.");return;}
   var client=erpDiagnosticClient();if(!client){alert("Supabase no está disponible.");return;}
-  if(!confirm("Se ejecutarán pruebas E2E exhaustivas de hasta 240 combinaciones en GitHub Actions. Los registros QA se limpiarán al finalizar. ¿Continuar?"))return;
+  if(!confirm("Se ejecutarán pruebas E2E exhaustivas de hasta 192 combinaciones en GitHub Actions. Los registros QA se limpiarán al finalizar. ¿Continuar?"))return;
   state.erpDiagnosticRunning=true;renderErpDiagnostics();
   client.functions.invoke("trigger-erp-diagnostic",{body:{mode:"exhaustive",suite:"all",cleanup:true,max_combinations:0,base_url:location.origin+location.pathname.replace(/\/engine\/modules\/administracion\/.*$/,"/")}}).then(function(result){
     if(result.error)throw result.error;
@@ -11862,24 +11974,29 @@ function testDiagnosticDrive(){
   var fake={id:"QA-DIAG-"+stamp,reference:"QA-DIAG-"+stamp,client:"DIAGNÓSTICO ERP",currentProcess:"recepcion_pedidos",createdAt:now(),createdBy:state.user.uid,createdByName:state.user.name};
   state.erpDiagnosticRunning=true;renderErpDiagnostics();
   uploadFileToDrive(file,fake,{processName:"Diagnóstico ERP",processKey:"diagnostico_erp",fileName:file.name,evidenceType:"QA_DIAGNOSTIC_FILE",feedbackMessage:"Subiendo archivo de prueba a Drive…"}).then(function(up){
-    state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"7.1.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};
+    state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"8.0.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};
     state.erpDiagnosticReport.results.push({status:"PASS",area:"Google Drive",name:"Carga física de archivo",detail:"Archivo cargado: "+file.name,data:up,at:now()});
     alert("Archivo de diagnóstico cargado correctamente en Drive.");
-  }).catch(function(error){state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"7.1.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};state.erpDiagnosticReport.results.push({status:"FAIL",area:"Google Drive",name:"Carga física de archivo",detail:(error&&error.message)||String(error),at:now()});alert("Falló la carga de prueba: "+((error&&error.message)||error));}).finally(function(){state.erpDiagnosticRunning=false;renderErpDiagnostics();});
+  }).catch(function(error){state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"8.0.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};state.erpDiagnosticReport.results.push({status:"FAIL",area:"Google Drive",name:"Carga física de archivo",detail:(error&&error.message)||String(error),at:now()});alert("Falló la carga de prueba: "+((error&&error.message)||error));}).finally(function(){state.erpDiagnosticRunning=false;renderErpDiagnostics();});
 }
 function repairLogisticsRoutes(){
   if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede reparar las rutas.");return;}
   var client=erpDiagnosticClient();if(!client){alert("Supabase no está disponible.");return;}
   if(!confirm("Se normalizarán los perfiles de Javier y Duvan y las asignaciones de pedidos abiertos según entrega local o nacional. ¿Continuar?"))return;
   state.erpDiagnosticRunning=true;renderErpDiagnostics();
-  client.rpc("erp_repair_logistics_routes").then(function(r){if(r.error)throw r.error;alert("Rutas reparadas: "+JSON.stringify(r.data||{}));return loadData();}).then(function(){state.erpDiagnosticRunning=false;runErpDiagnostic();}).catch(function(error){state.erpDiagnosticRunning=false;renderErpDiagnostics();alert("No se pudo reparar: "+((error&&error.message)||error)+". Ejecute el SQL 04_DIAGNOSTICO_Y_RUTAS_LOGISTICAS.sql.");});
+  client.rpc("erp_repair_logistics_routes").then(function(r){if(r.error)throw r.error;alert("Rutas reparadas: "+JSON.stringify(r.data||{}));return loadData();}).then(function(){state.erpDiagnosticRunning=false;runErpDiagnostic();}).catch(function(error){state.erpDiagnosticRunning=false;renderErpDiagnostics();alert("No se pudo reparar: "+((error&&error.message)||error)+". Ejecute el SQL 05_REESTRUCTURAR_ROLES_Y_FLUJO_V8.sql.");});
 }
 
 function bindActions(){
   qsa("[data-action]").forEach(function(b){b.onclick=function(){var a=b.getAttribute("data-action"),id=b.getAttribute("data-id");
     if(currentUserIsAuditReadOnly()){
-      var allowedAuditActions=["logout","open","openReport","openReceptionGoods","salesCaseInfo","certificate","printCertificate","openMobileMenu","closeMobileMenu","forceRefreshCases","refreshSalesReports","refreshReceptionGoods","exportSalesReport","exportReceptionStickers","clearPwa"];
+      var allowedAuditActions=["logout","open","openReport","openReceptionGoods","salesCaseInfo","certificate","printCertificate","openMobileMenu","closeMobileMenu","forceRefreshCases","refreshSalesReports","refreshReceptionGoods","exportSalesReport","exportReceptionStickers","refreshInventory","refreshApprovals","clearPwa"];
       if(allowedAuditActions.indexOf(a)<0){alert("Modo auditoría: este usuario solo puede visualizar movimientos. No puede crear, editar, aprobar, cerrar, eliminar ni cambiar estados.");return;}
+    }
+    var oversightRole=normalizeRole(state.user&&state.user.role);
+    if(oversightRole==="gerencia"||oversightRole==="jefe_logistica"){
+      var oversightAllowed=["logout","open","openReport","openReceptionGoods","salesCaseInfo","certificate","printCertificate","openMobileMenu","closeMobileMenu","forceRefreshCases","refreshSalesReports","refreshReceptionGoods","exportSalesReport","exportReceptionStickers","refreshInventory","refreshApprovals","clearPwa","approve","reject","workflowApprove","workflowReject","launchCut","cancelOrder"];
+      if(oversightAllowed.indexOf(a)<0){alert("Modo de supervisión: Gerencia y Jefatura solo consultan y atienden aprobaciones asignadas. La operación corresponde al rol responsable.");return;}
     }
     if(a==="logout"){closeMobileMenu();closeDrawer();stopRealtimeSync();sessionStorage.removeItem(storageKey+"_session");state.user=null;if(auth)auth.signOut().catch(function(){});renderLogin();}
     if(a==="migrateLegacy")migrateLegacyProcessesNow();
@@ -11920,6 +12037,7 @@ function bindActions(){
     if(a==="close")openClose(id);
     if(a==="cancelOrder")openCancelOrder(id);
     if(a==="requestCancelOrder")openRequestCancelOrder(id);
+    if(a==="supportRequest")openWorkflowSupportRequest(id);
     if(a==="approve")approve(id);
     if(a==="reject")reject(id);
     if(a==="userModal")openUserModal();
@@ -11940,6 +12058,10 @@ function bindActions(){
     if(a==="reportReceptionGoods")reportReceptionGoods(id);
     if(a==="reportNonConformity")openNonConformityModal(id);
     if(a==="generalReport")openGeneralReportModal(id);
+    if(a==="addCaseComment")openCaseComment(id);
+    if(a==="workflowApprove")decideWorkflowRequest(id,"APPROVED");
+    if(a==="workflowReject")decideWorkflowRequest(id,"REJECTED");
+    if(a==="refreshApprovals"){state.workflowRequestsLoaded=false;renderApprovals();}
     if(a==="openReport")openReport(id);
     if(a==="manageReport")openManageReport(id);
     if(a==="reopenAdvisorReport")reopenAdvisorReport(id);
@@ -15709,33 +15831,22 @@ function v240ShouldShowAlistamientoPanel(c){
 }
 function v240AlistamientoOperationalRole(){
   var role=normalizeRole(state.user&&state.user.role);
-  return [
-    "aux_logistica",
-    "coordinador_logistico",
-    "lider_logistico",
-    "jefe_logistica",
-    "logistica_despacho",
-    "admin",
-    "super_admin",
-    "super_administrador"
-  ].indexOf(role)>=0;
+  return ["aux_logistica","auxiliar_corte","super_admin"].indexOf(role)>=0;
 }
 function v240CanMarkAlistamiento(c){
   if(!state.user||!c||c.closedAt)return false;
-  if(isAdminRoleValue(state.user.role))return true;
-  if(!v240AlistamientoOperationalRole())return false;
-
-  if(c.currentProcess==="alistamiento"){
-    return canOperateCurrentProcess(c) || canAccessProcess(state.user.role,"alistamiento");
+  var role=normalizeRole(state.user.role);
+  if(role==="super_admin")return true;
+  if(role==="aux_logistica"){
+    return c.currentProcess==="alistamiento" && currentUserIsAssignedToCase(c);
   }
-
-  /* Mientras Corte trabaja, Alistamiento puede validar las demás líneas en paralelo. */
-  if(c.currentProcess==="corte_cable"){
-    return true;
+  /* El auxiliar de Corte puede marcar prealistamiento únicamente en pedidos de corte asignados. */
+  if(role==="auxiliar_corte"){
+    return c.currentProcess==="corte_cable" && canOperateCurrentProcess(c);
   }
-
-  return c.cutUnavailableOpen===true;
+  return false;
 }
+
 function v240SameCutLine(cut,it){
   if(!cut||!it)return false;
   var cutSource=String(cut.sourceLineId||cut.lineId||"").trim();
@@ -17903,7 +18014,38 @@ openEvidence=function(id){var c=caseById(id);if(!c)return;if(!canUploadEvidenceF
 var v246LegacyOpenDeliveryEvidence=openDeliveryEvidence;
 openDeliveryEvidence=function(id,key){var c=caseById(id);if(!c)return;if(!isDeliveryProcess(c.currentProcess)){alert("Solo aplica en entrega/despacho");return;}if(!(canAccessProcess(state.user.role,c.currentProcess)||isAdminRoleValue(state.user.role)||isJefeLogistica())){alert("Sin permiso");return;}var defs=deliveryEvidenceDefinitions(c.currentProcess),def=defs.filter(function(d){return d.key===key;})[0]||defs[0];drawer(modal(def.title,'<form class="form" id="deliveryEvidenceForm"><div class="notice success"><strong>No se perderá el avance:</strong> la foto se guarda localmente antes de cambiar el estado.</div><label class="field"><span>'+esc(def.title)+'</span><input class="input" type="file" name="photo" accept="'+esc(def.accept||"image/*,application/pdf,.pdf")+'" data-mobile-upload="true" multiple required></label><label class="field"><span>Observación</span><textarea class="textarea" name="detail"></textarea></label><div class="notice" id="deliveryEvidenceStatus">Seleccione archivos y pulse Guardar.</div><button class="btn btn-primary" id="deliveryEvidenceSubmit" type="submit">Guardar evidencia</button></form>'));var form=qs("#deliveryEvidenceForm");if(!form)return;form.onsubmit=function(event){event.preventDefault();var data=new FormData(form),files=selectedUploadFiles(form.photo,"archivos");if(!files)return;c.deliveryEvidence=c.deliveryEvidence||{};if(def.key==="guiaTransportadora"&&!v246EvidenceReady(c.deliveryEvidence.mercanciaRotulada)){alert("Primero registre mercancía rotulada");return;}var detail=String(data.get("detail")||def.hint||""),button=qs("#deliveryEvidenceSubmit"),status=qs("#deliveryEvidenceStatus");if(button){button.disabled=true;button.textContent="Protegiendo archivos…";}if(status)status.textContent="Guardando en el dispositivo…";v246QueueEvidence(c,files,{mode:"delivery",processKey:c.currentProcess,processName:processTitle(c.currentProcess),evidenceType:def.type,deliveryKey:def.key,detail:detail}).then(function(job){c.deliveryEvidence[def.key]={pendingUpload:true,localJobId:job.id,fileName:files.length===1?files[0].name:(files.length+" archivos"),uploadedAt:now(),uploadedBy:state.user.uid,uploadedByName:state.user.name,evidenceType:def.type,process:c.currentProcess,detail:detail};c.checklist=c.checklist||{};c.checklist[def.checklist]="ok";var type="DELIVERY_EVIDENCE_QUEUED",message=def.title+" protegida localmente";if(def.key==="mercanciaRotulada"){stopActive(c);if(!c.waitStartedAt)c.waitStartedAt=now();c.status="espera_transportadora";c.deliveryFlow=c.deliveryFlow||{};c.deliveryFlow.logisticsCompletedAt=c.deliveryFlow.logisticsCompletedAt||now();c.deliveryFlow.waitingCarrierSince=c.deliveryFlow.waitingCarrierSince||now();type="LOGISTICS_READY_WITH_LOCAL_EVIDENCE";}if(def.key==="guiaTransportadora"){stopActive(c);stopWait(c);procStats(c,c.currentProcess).completedAt=now();c.status="cerrado_conforme";c.closedAt=now();c.deliveryFlow=c.deliveryFlow||{};c.deliveryFlow.guidePendingDrive=true;addStateHistory(c,"cierre","Cierre con guía protegida localmente",{tipo_estado:"cierre",fecha_hora_fin_estado:c.closedAt});type="CASE_CLOSED_WITH_LOCAL_EVIDENCE";}return persistCase(c,{type:type,process:c.currentProcess,detail:message}).then(function(){closeDrawer();state.detailId=c.id;renderDetail(c.id);if(navigator.onLine!==false)return v246ProcessEvidence(job);});}).catch(function(error){if(button){button.disabled=false;button.textContent="Guardar evidencia";}if(status)status.textContent="Error: "+(error.message||error);showError(error.message||error);});};};
 var v246LegacyOpenCashInvoiceBox=openCashInvoiceBox;
-openCashInvoiceBox=function(id){var c=caseById(id);if(!c)return;if(c.currentProcess!=="caja"){alert("Solo desde Caja");return;}if(!(canOperateCurrentProcess(c)||canSeeAll()||isAdminRoleValue(state.user.role))){alert("Sin permiso");return;}drawer(modal("Factura de pedido contado",'<form class="form" id="cashInvoiceForm"><div class="notice success"><strong>Continuidad:</strong> la factura se protege localmente y el pedido puede continuar.</div><label class="field"><span>Factura / soporte *</span><input class="input" type="file" name="invoice" accept="image/*,application/pdf,.pdf" data-mobile-upload="true" multiple required></label><label class="field"><span>Observación</span><textarea class="textarea" name="detail"></textarea></label><div class="notice" id="cashInvoiceStatus">Seleccione y guarde.</div><button class="btn btn-primary" id="cashInvoiceSubmitBtn" type="submit">Guardar factura y continuar</button></form>'));var form=qs("#cashInvoiceForm");if(!form)return;form.onsubmit=function(event){event.preventDefault();var data=new FormData(form),files=selectedUploadFiles(form.invoice,"facturas o soportes");if(!files)return;var detail=String(data.get("detail")||"Factura de Caja"),button=qs("#cashInvoiceSubmitBtn"),status=qs("#cashInvoiceStatus");if(button){button.disabled=true;button.textContent="Protegiendo factura…";}v246QueueEvidence(c,files,{mode:"cash",processKey:"caja",processName:"Caja - pedido contado",evidenceType:"FACTURA_CAJA_CONTADO",detail:detail}).then(function(job){c.cashBilling=Object.assign({},c.cashBilling||{},{required:true,status:"pendiente_sincronizacion",pendingUpload:true,localJobId:job.id,invoiceFileName:files.length===1?files[0].name:(files.length+" archivos"),capturedAt:now(),capturedByName:state.user.name});c.evidence=c.evidence||[];c.evidence.push(v246PendingEvidence(job,files));var next=normalizedDeliveryRoute(c.pendingDeliveryType||c.deliveryType||c.requestedDelivery)||"despacho_nacional";c.cashBilling.nextProcess=next;c.deliveryType=next;c.pendingDeliveryType="";return assignToProcess(c,next,detail+" · factura protegida localmente").then(function(){closeDrawer();state.detailId=c.id;renderDetail(c.id);if(navigator.onLine!==false)return v246ProcessEvidence(job);});}).catch(function(error){if(button){button.disabled=false;button.textContent="Guardar factura y continuar";}if(status)status.textContent="Error: "+(error.message||error);showError(error.message||error);});};};
+openCashInvoiceBox=function(id){
+  var c=caseById(id);if(!c)return;
+  if(c.currentProcess!=="caja"){alert("Solo desde Caja");return;}
+  if(!(canOperateCurrentProcess(c)||isAdminRoleValue(state.user.role))){alert("Sin permiso");return;}
+  var postBilling=!!(c.cashBilling&&c.cashBilling.source==="facturacion");
+  var title=postBilling?"Cargar factura PVN y liberar entrega":"Validar pago y liberar pedido";
+  var label=postBilling?"Factura PVN / soporte *":"Soporte de pago *";
+  var notice=postBilling?"El pedido ya fue facturado por el dueño de la ruta. Caja carga la factura PVN y lo devuelve a la modalidad de entrega definida.":"Caja valida la condición contado o mixto. Si el pago no está confirmado, el pedido permanece bloqueado.";
+  drawer(modal(title,'<form class="form" id="cashInvoiceForm"><div class="notice success"><strong>Control de Caja:</strong> '+esc(notice)+'</div><label class="field"><span>'+esc(label)+'</span><input class="input" type="file" name="invoice" accept="image/*,application/pdf,.pdf" data-mobile-upload="true" multiple required></label><label class="field"><span>Observación</span><textarea class="textarea" name="detail" required></textarea></label><div class="notice" id="cashInvoiceStatus">Seleccione y guarde.</div><button class="btn btn-primary" id="cashInvoiceSubmitBtn" type="submit">'+(postBilling?'Guardar factura y enviar a entrega':'Confirmar pago y continuar')+'</button></form>'));
+  var form=qs("#cashInvoiceForm");if(!form)return;
+  form.onsubmit=function(event){
+    event.preventDefault();var data=new FormData(form),files=selectedUploadFiles(form.invoice,postBilling?"factura PVN":"soportes de pago");if(!files)return;
+    var detail=String(data.get("detail")||"").trim(),button=qs("#cashInvoiceSubmitBtn"),status=qs("#cashInvoiceStatus");if(!detail){alert("Registre la validación realizada por Caja.");return;}
+    if(button){button.disabled=true;button.textContent="Protegiendo soporte…";}
+    v246QueueEvidence(c,files,{mode:"cash",processKey:"caja",processName:postBilling?"Caja - factura PVN":"Caja - validación de pago",evidenceType:postBilling?"FACTURA_CAJA_PVN":"SOPORTE_PAGO_CAJA",detail:detail}).then(function(job){
+      c.cashBilling=Object.assign({},c.cashBilling||{},{required:true,status:"pendiente_sincronizacion",pendingUpload:true,localJobId:job.id,invoiceFileName:files.length===1?files[0].name:(files.length+" archivos"),capturedAt:now(),capturedByName:state.user.name,phase:postBilling?"POST_FACTURACION":"PRE_LOGISTICA"});
+      c.evidence=c.evidence||[];c.evidence.push(v246PendingEvidence(job,files));
+      var next;
+      if(postBilling){
+        next=normalizedDeliveryRoute(c.pendingDeliveryType||c.deliveryType||c.requestedDelivery);
+        if(!next)throw new Error("El PVN no tiene modalidad de entrega definida.");
+        c.cashPostBillingApproval={approvedAt:now(),approvedBy:state.user.uid,approvedByName:state.user.name,detail:detail};
+        c.cashBilling.returnedToProcess=next;c.deliveryType=next;c.pendingDeliveryType="";
+      }else{
+        c.cashApproval={approvedAt:now(),approvedBy:state.user.uid,approvedByName:state.user.name,detail:detail};
+        next=nextProcessAfterCommercialGate(c);
+      }
+      c.cashBilling.nextProcess=next;
+      return assignToProcess(c,next,detail+" · Caja libera hacia "+processTitle(next)).then(function(){closeDrawer();state.detailId=c.id;renderDetail(c.id);if(navigator.onLine!==false)return v246ProcessEvidence(job);});
+    }).catch(function(error){if(button){button.disabled=false;button.textContent=postBilling?"Guardar factura y enviar a entrega":"Confirmar pago y continuar";}if(status)status.textContent="Error: "+(error.message||error);showError(error.message||error);});
+  };
+};
 function v246Audit(){var errors=[],warnings=[],valid=["PENDIENTE","ENCONTRADO","NO_ENCONTRADO","NOVEDAD"];FLOW.forEach(function(key){if(!processes[key])errors.push("Proceso no definido: "+key);else(processes[key].next||[]).forEach(function(next){if(next!=="cierre_caso"&&!processes[next])errors.push("Transición inexistente: "+key+" -> "+next);});});(state.cases||[]).forEach(function(c){if(c.currentProcess&&!processes[c.currentProcess])errors.push((c.reference||c.id)+": proceso inválido");(c.orderItems||[]).forEach(function(line){var s=String(line.alistamientoStatus||"PENDIENTE").toUpperCase();if(valid.indexOf(s)<0)warnings.push((c.reference||c.id)+": estado de línea "+s);});if(c.isPartialShipment&&c.currentProcess!=="facturacion"&&!c.closedAt)warnings.push((c.reference||c.id)+": parcial activo fuera de Facturación");if(c.status==="asignado"&&c.currentProcess&&!c.assignedRole&&!(c.assignedUserIds&&c.assignedUserIds.length))warnings.push((c.reference||c.id)+": asignado sin responsable");});window.EI_FLOW_AUDIT={version:EI_CANONICAL_APP_VERSION,checkedAt:new Date().toISOString(),processes:FLOW.length,cases:(state.cases||[]).length,errors:errors,warnings:warnings.slice(0,50)};if(errors.length)console.error("[V246 QA] Errores",window.EI_FLOW_AUDIT);else console.info("[V246 QA] Flujos, etiquetas y asignaciones auditados",window.EI_FLOW_AUDIT);return window.EI_FLOW_AUDIT;}
 document.addEventListener("click",function(event){
   var button=event.target&&event.target.closest

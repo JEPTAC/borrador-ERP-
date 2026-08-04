@@ -1,68 +1,68 @@
-# EI ERP Nova V7 · Supabase + Google Drive
+# EI ERP Nova V8 · Operación simplificada por roles
 
-Plataforma empresarial de Electroingeniería con autenticación obligatoria, portal de aplicativos y un centro transaccional de Trazabilidad logística organizado por rol.
+ERP de Trazabilidad logística reconstruido alrededor de una sola matriz de roles, una máquina de estados explícita y autorización definitiva en Supabase.
 
 ```text
-Inicio de sesión Supabase Auth
-        ↓
-Portal empresarial de aplicativos
-        ↓
-Trazabilidad logística
-        ↓
-Procesos y transacciones autorizadas
-        ↓
-PostgreSQL + RLS + Realtime
-        ↓
-Documentos físicos en Google Drive
+Supabase Auth
+      ↓
+Bandeja mínima del rol
+      ↓
+Proceso autorizado y pedido asignado
+      ↓
+RPC transaccional + RLS por rol, ruta y usuario
+      ↓
+Eventos/VSM + archivos en Google Drive
 ```
 
-## Cambios de esta versión
+## Cambios V8
 
-- Firebase deja de ser backend activo del ERP.
-- Inicio de sesión, recuperación de contraseña y sesiones mediante Supabase Auth.
-- Pedidos, eventos, checklist, cortes, novedades, perfiles, roles y VSM sobre PostgreSQL.
-- Autorización de lectura y escritura mediante Row Level Security y funciones transaccionales.
-- Control optimista con `flowRevision` para impedir sobrescrituras concurrentes.
-- Validación servidora de transiciones para evitar pedidos sin proceso o con pasos omitidos.
-- Supabase Realtime para refrescar pedidos, eventos, crédito y VSM.
-- Evidencias y documentos continúan físicamente en Google Drive; Supabase conserva sus metadatos e identificadores.
-- Solicitudes de crédito separadas: Ventas crea y envía; Cartera revisa, devuelve, aprueba o rechaza.
-- PVP reconocido como tipo de pedido en el mismo flujo operativo.
-- Corte disponible en escritorio, iOS, portátil compacto y pantalla cuadrada.
-- VSM autónomo con calendario laboral, movimientos, responsables, alertas y exportación CSV.
-- Integración activa con Siesa eliminada.
+- 13 roles exactos y 13 módulos mínimos.
+- Ventas consulta únicamente sus pedidos.
+- Auxiliar logístico opera únicamente alistamientos asignados.
+- Auxiliar de Corte opera únicamente cortes asignados y prealistamiento controlado.
+- Duvan gestiona punto, recoge y despacho local de Recepción a Cierre.
+- Javier gestiona despacho nacional de Recepción a Cierre.
+- Facturación deja de ser un rol genérico y pertenece al dueño de ruta.
+- Gerencia, Jefe y Auditoría son perfiles de supervisión; no ejecutan operación ordinaria.
+- Comentarios y novedades viven dentro del pedido.
+- Solicitudes formales para cancelación, cambio de ruta, stock, flujo, reapertura, corrección, finanzas y no entrega.
+- Caja valida contado/mixto antes de logística y carga factura después de Facturación solo para PVN contado/mixto.
+- Cartera gestiona mora, retenciones y solicitudes de crédito.
+- PVE pasa obligatoriamente por Compras.
+- Cliente, modalidad de entrega y condición de pago son obligatorios.
+- Sin respaldo automático a despacho nacional.
+- Diagnóstico integral exclusivo para Super Admin.
 
-## Estructura activa
+## Fuentes de verdad
 
 ```text
-index.html                         Acceso obligatorio
-portal/                            Portal de aplicativos
-apps/trazabilidad/                 Centro transaccional por rol
-core/js/supabase.js                Cliente Auth/Postgres/Realtime
-engine/shared/js/drive-client.js   Documentos Google Drive
-engine/shared/js/supabase-*.js     Puente de compatibilidad del motor legado
-engine/modules/vsm/                VSM completo
-supabase/sql/                      Activación, seguridad y validación
-supabase/functions/                Operaciones administrativas servidoras
-tests/                             Auditoría y QA
+apps/trazabilidad/config/operating-model.json   Roles y permisos
+engine/shared/json/flow-contract.json           Transiciones normales
+engine/shared/json/exception-contract.json      Excepciones y devoluciones
+engine/shared/js/role-policy.js                  Control de interfaz
+supabase/sql/05_REESTRUCTURAR_ROLES_Y_FLUJO_V8.sql  Control de servidor
 ```
 
 ## Activación
 
-1. Ejecutar `supabase/sql/00_ACTIVAR_TODO_EI_ERP_V7.sql` en el SQL Editor.
-2. Ejecutar `supabase/sql/99_VALIDAR_EI_ERP_V7.sql`.
-3. Configurar las URL de redirección de Supabase Auth.
-4. Configurar el origen web autorizado del OAuth de Google Drive.
-5. Desplegar `supabase/functions/admin-create-user` si Administración creará usuarios desde el ERP.
-6. Publicar los archivos diferenciales en GitHub y ejecutar el script de eliminación de Firebase.
-7. Hacer recarga forzada y retirar el Service Worker anterior.
+1. Publique el parche V8 en GitHub conservando las carpetas.
+2. Si la base V7 ya está activada, ejecute únicamente `supabase/sql/05_REESTRUCTURAR_ROLES_Y_FLUJO_V8.sql`.
+3. Confirme que Javier sea `despacho_nacional`, Duvan `coordinador_logistico` y Andrés Mendoza `recepcion_mercancia`.
+4. Limpie datos del sitio, caché y Service Worker.
+5. Ingrese como Super Admin y ejecute el diagnóstico integral.
+6. Ejecute GitHub Actions en modo `smoke` y luego `exhaustive`.
 
-Consulte `docs/ACTIVACION_Y_DESPLIEGUE_V7.md` y `docs/MIGRACION_SUPABASE_DRIVE_V7.md`.
-
-## Validación local
+## Validación
 
 ```bash
 npm run qa
 ```
 
-La validación local comprueba estructura, sintaxis, rutas, ausencia de secretos, catálogo transaccional, VSM, SQL y eliminación del SDK de Firebase. La aceptación definitiva debe ejecutarse contra el proyecto Supabase productivo y Google Drive con usuarios reales.
+La QA estática valida 192 combinaciones iniciales, 768 variantes de ciclo de vida y 20 excepciones controladas. La certificación definitiva requiere publicar el código, ejecutar el SQL en producción y correr las pruebas E2E con las cuentas reales de cada rol.
+
+Consulte:
+
+- `docs/ARQUITECTURA_POR_ROLES_V8.md`
+- `docs/MATRIZ_PERMISOS_V8.md`
+- `docs/MATRIZ_EXCEPCIONES_V8.md`
+- `docs/FLUJO_OPERATIVO_V8.html`

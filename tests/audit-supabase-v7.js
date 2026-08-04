@@ -35,7 +35,7 @@ if(runtime.split(/\r?\n/).length>25000)warn("El motor de compatibilidad continú
 else pass("Motor heredado contenido dentro del límite de auditoría.");
 
 const obsolete=["core/js/firebase.js","engine/shared/js/firebase-config.js","firebase.json","firestore.rules","firestore.indexes.json","storage.rules","functions"];
-for(const f of obsolete)if(fs.existsSync(path.join(root,f)))fail(`Firebase todavía está activo en el repositorio V7: ${f}`);
+for(const f of obsolete)if(fs.existsSync(path.join(root,f)))fail(`Firebase todavía está activo en el repositorio V8: ${f}`);
 if(!critical.some(x=>x.includes("Firebase todavía")))pass("Configuración, reglas, Functions y SDK de Firebase retirados del repositorio activo.");
 const loader=read("core/js/supabase.js");
 if(!/supabase-js@2\.112\.0/.test(loader)||!/jsdelivr/.test(loader)||!/unpkg/.test(loader))fail("El cargador Supabase no está fijado o carece de respaldo controlado.");else pass("SDK Supabase fijado y con carga secuencial verificada.");
@@ -45,4 +45,4 @@ if(!sql.includes("create policy erp_cases_role_read")||!sql.includes("grant exec
 const report={generatedAt:new Date().toISOString(),critical,warnings,passed,metrics:{files:files.length,html:html.length,js:files.filter(p=>p.endsWith('.js')).length,sha256:crypto.createHash('sha256').update(allText).digest('hex')}};
 fs.mkdirSync(path.join(root,"docs"),{recursive:true});fs.writeFileSync(path.join(root,"docs","QA_SUPABASE_V7.json"),JSON.stringify(report,null,2)+"\n");
 fs.writeFileSync(path.join(root,"docs","QA_SUPABASE_V7.md"),["# QA EI ERP Nova V7","",`Generado: ${report.generatedAt}`,"",`- Críticos: **${critical.length}**`,`- Advertencias: **${warnings.length}**`,`- Controles superados: **${passed.length}**`,"","## Controles superados",...passed.map(x=>`- ${x}`),"","## Advertencias",...(warnings.length?warnings.map(x=>`- ${x}`):["- Ninguna"]),"","## Críticos",...(critical.length?critical.map(x=>`- ${x}`):["- Ninguno"]),""].join("\n"));
-console.log(`QA Supabase V7: ${critical.length} críticos, ${warnings.length} advertencias, ${passed.length} controles superados.`);if(critical.length){console.error(critical.join("\n"));process.exit(1);}
+console.log(`QA Supabase V8: ${critical.length} críticos, ${warnings.length} advertencias, ${passed.length} controles superados.`);if(critical.length){console.error(critical.join("\n"));process.exit(1);}

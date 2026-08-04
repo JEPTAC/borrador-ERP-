@@ -1,0 +1,307 @@
+[
+  {
+    "ruta": ".github/workflows/erp-diagnostic-bot.yml",
+    "bytes": 3625,
+    "sha256": "dfd022ab478e206d6371cd4213bd58a2977386d04db34c8513d4d561faf1ab23"
+  },
+  {
+    "ruta": "BUILD_INFO.json",
+    "bytes": 477,
+    "sha256": "6ab92df9a82ef8debb54e8c59ccc268715f9eca08d2b287c25cad6c1b5e0ab51"
+  },
+  {
+    "ruta": "LEEME_APLICAR_V8.md",
+    "bytes": 1102,
+    "sha256": "4705e221aa5f2f352fd65ec5db1a887ae0454fc8cf371f404a6ce74d7fbf86bb"
+  },
+  {
+    "ruta": "README.md",
+    "bytes": 2872,
+    "sha256": "e191af2795580ca4cb683632f40e39d1981387d7156a4ec5f2bff9efa04c295f"
+  },
+  {
+    "ruta": "SUBIR_ESTOS_ARCHIVOS.txt",
+    "bytes": 1247,
+    "sha256": "38d9215ba87da2b7f2f534b6271c8627055e867a0c6ffb8eefc6accb5e3b6d84"
+  },
+  {
+    "ruta": "apps/trazabilidad/compact/index.html",
+    "bytes": 7336,
+    "sha256": "bc510dcd99c992678cb2daf5e3d3b121370c653aebe6046fec617973cbf9ec2e"
+  },
+  {
+    "ruta": "apps/trazabilidad/config/operating-model.json",
+    "bytes": 9496,
+    "sha256": "3f8b31f734cd9dcbf0a13d6d2611284db7f967f888064b425d62b09bd5dd2497"
+  },
+  {
+    "ruta": "apps/trazabilidad/config/transactions.json",
+    "bytes": 18418,
+    "sha256": "f8d2f7e3b8f6209232029cedee00872dc34b61a6a64107db5efa36209561f3ef"
+  },
+  {
+    "ruta": "apps/trazabilidad/index.html",
+    "bytes": 7350,
+    "sha256": "72029e42694e6dee391697761e2c79c00b53fee930e90d3250e73d75f43ab13d"
+  },
+  {
+    "ruta": "apps/trazabilidad/ios/index.html",
+    "bytes": 7328,
+    "sha256": "ed3e538b4cf6a16651f29257a2ebe030b2fb729d843add621145dc61fe98415b"
+  },
+  {
+    "ruta": "apps/trazabilidad/js/app.js",
+    "bytes": 30360,
+    "sha256": "7e8c4f08f618b8a82393f15288f66415f26d77fef3a8c8c18adaa91c37d41d84"
+  },
+  {
+    "ruta": "apps/trazabilidad/square/index.html",
+    "bytes": 7334,
+    "sha256": "50aaa828d1b219b01fe1068bde11ba319ca3e6be199412838dadd4f8747d9aa6"
+  },
+  {
+    "ruta": "core/config/applications.json",
+    "bytes": 584,
+    "sha256": "672e217e69c3d4909168532bbf571a1ee8816a48621d128ed8c6116e0a0ca5ee"
+  },
+  {
+    "ruta": "core/config/roles.json",
+    "bytes": 1538,
+    "sha256": "2f8a08c6625115cfd1b7bd411b72aa55dff4823042d92c6a03137422ba9c48fa"
+  },
+  {
+    "ruta": "core/js/config.js",
+    "bytes": 705,
+    "sha256": "111e1f32a7f164376ee685f05c4bde3b9d8ed388a5b3e8e2e11f40886dcda783"
+  },
+  {
+    "ruta": "core/js/supabase.js",
+    "bytes": 8373,
+    "sha256": "e93eec47ca8dbd017f5154240c871c73f5dfb54e657e590dfff293b892f25d45"
+  },
+  {
+    "ruta": "docs/ARQUITECTURA_POR_ROLES_V8.md",
+    "bytes": 4105,
+    "sha256": "080c5450e5712298ead0ef4fbb6541f43bd9c6ed4e6a827cacb3e337a8bbc973"
+  },
+  {
+    "ruta": "docs/FLUJO_OPERATIVO_V8.html",
+    "bytes": 5191,
+    "sha256": "35403db950ff5f84939a164e03288b50d06d08bf82f6807496393b62acd5f7fe"
+  },
+  {
+    "ruta": "docs/MATRIZ_EXCEPCIONES_V8.md",
+    "bytes": 4276,
+    "sha256": "7e46de58ba097de0120f6f9900ae85bb95d3a4aafdf061faafdad3fea0b59b37"
+  },
+  {
+    "ruta": "docs/MATRIZ_PERMISOS_V8.md",
+    "bytes": 5038,
+    "sha256": "833e36f6d1d3a5743de445e76d6afcc64c27d90c59235bac699784a630f16a02"
+  },
+  {
+    "ruta": "engine/modules/administracion/index.html",
+    "bytes": 1445,
+    "sha256": "244750cc05620981ed924f4847cd14a8134d9ff3d9f04f5995761c96aae31715"
+  },
+  {
+    "ruta": "engine/modules/compras/index.html",
+    "bytes": 1397,
+    "sha256": "1c24b84779b6c1a175a93adad37d4386409a44f79279dd6f82bacc74827d9ddc"
+  },
+  {
+    "ruta": "engine/modules/control/index.html",
+    "bytes": 1432,
+    "sha256": "305dabb8f5a0c85fb53398197e5ee1c1c4004f3c96b36887f827f2a932f6388f"
+  },
+  {
+    "ruta": "engine/modules/creditos/assets/js/credit-runtime.js",
+    "bytes": 21661,
+    "sha256": "e2c114abd69a8a839ad0e942b42ba7d25ceb457347686ec572f1e18df243927a"
+  },
+  {
+    "ruta": "engine/modules/creditos/index.html",
+    "bytes": 1391,
+    "sha256": "83a8b432f1ac128955208cd8986bdff6bff09867e50b25978661ea207da0955c"
+  },
+  {
+    "ruta": "engine/modules/despachos/index.html",
+    "bytes": 1447,
+    "sha256": "65005bad366e1725cb64018e1752eb432821b1ddbcbfc289f54879d44986a8e1"
+  },
+  {
+    "ruta": "engine/modules/facturacion/index.html",
+    "bytes": 1417,
+    "sha256": "f733e4f9a713ce1d418fbeff4f34c1d2613197b93fa927c1d5c3a4c58e172d75"
+  },
+  {
+    "ruta": "engine/modules/finanzas/index.html",
+    "bytes": 1476,
+    "sha256": "a2a1ec1a2aa5fb52f704c6a61015cf9a87335e45e4da5c70262eeb22ec270b17"
+  },
+  {
+    "ruta": "engine/modules/inicio/index.html",
+    "bytes": 1424,
+    "sha256": "e44f6185333d5970745ec5f3d72c9d742690f803a696acb9b0d498aa09e98e6d"
+  },
+  {
+    "ruta": "engine/modules/inventarios/index.html",
+    "bytes": 1299,
+    "sha256": "767d5e54e1b06026b7b2bc018de897a54b06860d85140b6eecba328f3b23036b"
+  },
+  {
+    "ruta": "engine/modules/operacion/index.html",
+    "bytes": 1445,
+    "sha256": "d78f828727f5edc362acea1f6ab8bf1b622ad35505913ef059364d0efce533e1"
+  },
+  {
+    "ruta": "engine/modules/recepcion/index.html",
+    "bytes": 1422,
+    "sha256": "5dbb24598c53353cdd9480325d1e66d0bee5bb3fb00254fa12c5e49500396613"
+  },
+  {
+    "ruta": "engine/modules/ventas/index.html",
+    "bytes": 1440,
+    "sha256": "f58edc11f249eec24255aa8f10c2526700793513bfb05226d0e748d3ff54a422"
+  },
+  {
+    "ruta": "engine/shared/js/bootstrap.js",
+    "bytes": 6133,
+    "sha256": "62307a72dbaf5eebf5f49f6f1b976b6bbdc0380c2e7e25aa4c230c085d666457"
+  },
+  {
+    "ruta": "engine/shared/js/enterprise/enterprise-runtime.js",
+    "bytes": 11608,
+    "sha256": "32dbcdd2fd7eafbec03fed0cf8000f332a556874903c3a32a004b8416d31b428"
+  },
+  {
+    "ruta": "engine/shared/js/flow-integrity.js",
+    "bytes": 6238,
+    "sha256": "a4e40bdc5c4894ceb2ca48b2c6aec65a7028af32858588d49f0fc55a26119709"
+  },
+  {
+    "ruta": "engine/shared/js/navigation.js",
+    "bytes": 9381,
+    "sha256": "16872b338a3b2597413862d68be7686f341ff43fc977e2f86259b103e04f69cb"
+  },
+  {
+    "ruta": "engine/shared/js/role-policy.js",
+    "bytes": 12282,
+    "sha256": "b8b7837eb9d9b9e5433b29dce5ea4c8da2d83c3ee564558da1846a0ce42f5bc7"
+  },
+  {
+    "ruta": "engine/shared/js/runtime/app-runtime.js",
+    "bytes": 1226821,
+    "sha256": "3282ecce6d4c65f573bf0e15bfbc5cb7bce4973d798ffbb56dad80357f337061"
+  },
+  {
+    "ruta": "engine/shared/json/exception-contract.json",
+    "bytes": 12079,
+    "sha256": "275d81f49a03e7de10f00743882822d78a0d9a0d12525a54cd215286835d07e7"
+  },
+  {
+    "ruta": "engine/shared/json/flow-contract.json",
+    "bytes": 5165,
+    "sha256": "447490a714b27fd98ec1760717548f7801e79dbbf5209864804e008eaee4bdde"
+  },
+  {
+    "ruta": "engine/shared/json/modules.json",
+    "bytes": 7667,
+    "sha256": "3f22afb07c3ecdf4cf162fb94237ed86b5d50185015da9795d28c987dae8a5da"
+  },
+  {
+    "ruta": "index.html",
+    "bytes": 5884,
+    "sha256": "c409a869aff2a40a03522533128b60ba17787e65e9fbd57ba9a1835f67228ec0"
+  },
+  {
+    "ruta": "package.json",
+    "bytes": 854,
+    "sha256": "285eaaf9b87dea6002ab0fa13909cdbd7bedf4cd23ab49f532a1329424185ff8"
+  },
+  {
+    "ruta": "portal/index.html",
+    "bytes": 3308,
+    "sha256": "ea3b6f9f9b33fe3ac866f768449d34e53adbf151321d2ca7a2c11ca499e62f61"
+  },
+  {
+    "ruta": "qa/README_BOT_DIAGNOSTICO.md",
+    "bytes": 2517,
+    "sha256": "06db43c3cbac4127535a5f8c6ac5e11ddaef5f7edee48a448f8676df6d24fb7b"
+  },
+  {
+    "ruta": "qa/accounts.example.json",
+    "bytes": 1287,
+    "sha256": "d252449809f206c32d39a36cd6f825939691e11861fabe2543a15a1133d55a8a"
+  },
+  {
+    "ruta": "qa/lib/config.cjs",
+    "bytes": 3318,
+    "sha256": "b74b238b753f753f3f56f12923d68eb1610b590c8c2be8be3e75eca714ae2fcd"
+  },
+  {
+    "ruta": "qa/lib/erp.cjs",
+    "bytes": 8323,
+    "sha256": "e382793be17f959ed0ab859dc29885814d9c5f4d493616f10115a5c882a7d44c"
+  },
+  {
+    "ruta": "qa/tests/03-order-matrix.spec.cjs",
+    "bytes": 6339,
+    "sha256": "79b0985df0fdee5b087112e81c9913d372cb598c13d5eee69e7999c447a6567d"
+  },
+  {
+    "ruta": "qa/tests/04-flow-explorer.spec.cjs",
+    "bytes": 5295,
+    "sha256": "d8945b3e707cfd44df15f5c8f9324a5b674ac1451a2852a2325ce7a997224771"
+  },
+  {
+    "ruta": "qa/tests/05-routing-owners.spec.cjs",
+    "bytes": 4483,
+    "sha256": "1ff1a7658235f960a2ff58490adc8baa82d012d89d52ac4e87f2d8a9b95f73cb"
+  },
+  {
+    "ruta": "qa/tests/06-role-access-matrix.spec.cjs",
+    "bytes": 3108,
+    "sha256": "f620531c1a73abfc884e40b56ec6b11314bbe6b3da9e1111530e939157995c21"
+  },
+  {
+    "ruta": "service-worker.js",
+    "bytes": 2108,
+    "sha256": "3e5978a879100481f7f814c36a5c0c9ed8a41a7532ec907d1c54a792d4d73fb4"
+  },
+  {
+    "ruta": "sql/05_REESTRUCTURAR_ROLES_Y_FLUJO_V8.sql",
+    "bytes": 36057,
+    "sha256": "1b8f2efd904812835c514068330b93e07d7185a55bc56f775fb5b92d7f057e95"
+  },
+  {
+    "ruta": "supabase/sql/05_REESTRUCTURAR_ROLES_Y_FLUJO_V8.sql",
+    "bytes": 36057,
+    "sha256": "1b8f2efd904812835c514068330b93e07d7185a55bc56f775fb5b92d7f057e95"
+  },
+  {
+    "ruta": "tests/audit-supabase-v7.js",
+    "bytes": 5611,
+    "sha256": "4fa2a44888c66346d091d3d0dc85cf26cc6d8376b109edc87e03842206186f42"
+  },
+  {
+    "ruta": "tests/run-tests.js",
+    "bytes": 8511,
+    "sha256": "d9ad04bbe1b1ec3e8fb1872817400f64d7919d405a754fb8c1832577569fcea9"
+  },
+  {
+    "ruta": "tests/test-v8-flow-matrix.js",
+    "bytes": 3206,
+    "sha256": "c65674279c0c1547c09475a8378aa1b2c418291e282e9efe8120515804e9ce56"
+  },
+  {
+    "ruta": "tests/test-v8-lifecycle-matrix.js",
+    "bytes": 4208,
+    "sha256": "3f907b01c1a71d81ac1954e8b6c4be0a6cca37329258eb8f1d96970add1b4e68"
+  },
+  {
+    "ruta": "tests/test-v8-role-model.js",
+    "bytes": 1298,
+    "sha256": "4117f3bfd92b7264f5aadb3f6e1339044579ec65096819bc27f6859cbb9e7199"
+  }
+]

@@ -76,10 +76,10 @@ test.describe("Explorador automático del flujo completo", () => {
 
     const prefix = `${config.qaPrefix}-FLOW-${config.runId}`;
     const scenarios = [
-      { orderKind: "PVN", priorityMode: "normal", requestedDelivery: "despacho_local", paymentCondition: "CONTADO" },
-      { orderKind: "PVE", priorityMode: "normal", requestedDelivery: "despacho_nacional", paymentCondition: "ANTICIPO" },
-      { orderKind: "PVC", priorityMode: "retenido_caja", requestedDelivery: "cliente_punto", paymentCondition: "CREDITO" },
-      { orderKind: "PVP", priorityMode: "gerencia", requestedDelivery: "cliente_recoge", paymentCondition: "" }
+      { orderKind: "PVN", priorityMode: "normal", clientFinancialStatus: "AL_DIA", requestedDelivery: "despacho_local", paymentCondition: "CONTADO" },
+      { orderKind: "PVE", priorityMode: "normal", clientFinancialStatus: "AL_DIA", requestedDelivery: "despacho_nacional", paymentCondition: "MIXTO" },
+      { orderKind: "PVC", priorityMode: "normal", clientFinancialStatus: "MORA", requestedDelivery: "cliente_punto", paymentCondition: "CREDITO" },
+      { orderKind: "PVP", priorityMode: "priority", clientFinancialStatus: "MORA", requestedDelivery: "cliente_recoge", paymentCondition: "MIXTO" }
     ];
 
     const outcomes = [];

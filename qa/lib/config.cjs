@@ -37,17 +37,16 @@ const aliases = {
   admin: ["admin", "super_admin", "super_administrador"],
   sales: ["sales", "ventas"],
   management: ["management", "gerencia"],
+  logistics_manager: ["logistics_manager", "jefe_logistica"],
   audit: ["audit", "auditoria"],
   purchases: ["purchases", "compras"],
-  reception: ["reception", "recepcion", "lider_recepcion"],
-  logistics: ["logistics", "jefe_logistica", "coordinador_logistico", "aux_logistica"],
-  logistics_local: ["logistics_local", "local_logistics", "coordinador_logistico_local"],
-  logistics_national: ["logistics_national", "national_logistics", "coordinador_logistico_national"],
-  cut: ["cut", "corte", "auxiliar_corte"],
-  billing: ["billing", "facturacion"],
+  goods_reception: ["goods_reception", "recepcion_mercancia", "lider_recepcion"],
+  picking: ["picking", "aux_logistica", "auxiliar_logistica"],
+  cut: ["cut", "auxiliar_corte"],
+  local_dispatch: ["local_dispatch", "coordinador_logistico"],
+  national_dispatch: ["national_dispatch", "despacho_nacional"],
   cash: ["cash", "caja"],
-  credit: ["credit", "cartera"],
-  dispatch: ["dispatch", "despacho", "despachos"]
+  credit: ["credit", "cartera"]
 };
 
 function findAccount(accounts, group) {

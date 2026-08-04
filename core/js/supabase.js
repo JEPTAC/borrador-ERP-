@@ -106,7 +106,7 @@
         state.client=window.supabase.createClient(settings.url,settings.publishableKey,{
           auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce",storageKey:"sb-hezjxcxxcjlpmyalftam-auth-token"},
           db:{schema:settings.schema||"public"},
-          global:{headers:{"X-Client-Info":"ei-erp-nova/7.1.0"}}
+          global:{headers:{"X-Client-Info":"ei-erp-nova/8.0.0"}}
         });
         window[clientSingletonKey]={url:settings.url,key:settings.publishableKey,client:state.client};
       }

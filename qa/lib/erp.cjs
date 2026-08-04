@@ -60,11 +60,12 @@ async function createOrder(page, combination, index = 0) {
   await page.locator("#orderKind").selectOption(combination.orderKind);
   await page.locator("#client").fill(`CLIENTE AUTOMÁTICO ${index}`);
   await page.locator("#priorityMode").selectOption(combination.priorityMode);
-  await page.locator('[name="priorityReason"]').fill(`Prueba automática ${combination.priorityMode}`);
+  await page.locator('[name="priorityReason"]').fill(`Prueba automática ${combination.priorityMode} ${combination.clientFinancialStatus || "AL_DIA"}`);
+  await page.locator('[name="clientFinancialStatus"]').selectOption(combination.clientFinancialStatus || "AL_DIA");
   await page.locator("#requestedDelivery").selectOption(combination.requestedDelivery);
   await page.locator("#paymentCondition").selectOption(combination.paymentCondition);
   await page.locator("#description").fill(`BOT QA ${config.runId}: ${JSON.stringify(combination)}`);
-  if (combination.priorityMode === "retenido_caja") {
+  if (combination.clientFinancialStatus === "MORA") {
     await page.locator("#retainedSupport").setInputFiles(fixtures.png);
   }
   await page.locator('#caseForm button[type="submit"]').click();

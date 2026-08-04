@@ -1,1 +1,11 @@
-{"product":"EI ERP Nova","version":"7.0.0","build":"2026-08-04.2","architecture":"login -> application portal -> role-based transaction center -> Supabase PostgreSQL/Auth/Realtime + Google Drive documents","backend":"Supabase","documents":"Google Drive","firebaseActive":false,"siesaIntegration":false,"releaseType":"differential GitHub replacement over EI ERP Nova V6.2"}
+{
+  "product": "EI ERP Nova",
+  "version": "8.0.0",
+  "build": "2026-08-04-role-first.1",
+  "architecture": "login -> role-first work queue -> exact process state machine -> Supabase PostgreSQL/Auth/RLS/Realtime + Google Drive documents",
+  "backend": "Supabase",
+  "documents": "Google Drive",
+  "firebaseActive": false,
+  "siesaIntegration": false,
+  "releaseType": "reestructuración por 13 roles exactos, interfaz mínima, 192 combinaciones y 20 excepciones controladas"
+}

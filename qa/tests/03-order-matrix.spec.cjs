@@ -8,31 +8,31 @@ const admin = require("../lib/supabase-admin.cjs");
 
 const dimensions = {
   orderKind: ["PVC", "PVN", "PVE", "PVP"],
-  priorityMode: ["normal", "retenido_caja", "gerencia"],
-  requestedDelivery: ["", "cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"],
-  paymentCondition: ["", "CONTADO", "CREDITO", "ANTICIPO"]
+  priorityMode: ["normal", "gerencia"],
+  clientFinancialStatus: ["AL_DIA", "MORA"],
+  requestedDelivery: ["cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"],
+  paymentCondition: ["CONTADO", "CREDITO", "MIXTO"]
 };
 
 function exhaustive() {
   const rows = [];
   for (const orderKind of dimensions.orderKind)
     for (const priorityMode of dimensions.priorityMode)
-      for (const requestedDelivery of dimensions.requestedDelivery)
-        for (const paymentCondition of dimensions.paymentCondition)
-          rows.push({ orderKind, priorityMode, requestedDelivery, paymentCondition });
+      for (const clientFinancialStatus of dimensions.clientFinancialStatus)
+        for (const requestedDelivery of dimensions.requestedDelivery)
+          for (const paymentCondition of dimensions.paymentCondition)
+            rows.push({ orderKind, priorityMode, clientFinancialStatus, requestedDelivery, paymentCondition });
   return rows;
 }
 
 function smoke() {
   return [
-    { orderKind: "PVC", priorityMode: "normal", requestedDelivery: "cliente_punto", paymentCondition: "CREDITO" },
-    { orderKind: "PVN", priorityMode: "normal", requestedDelivery: "despacho_local", paymentCondition: "CONTADO" },
-    { orderKind: "PVE", priorityMode: "normal", requestedDelivery: "despacho_nacional", paymentCondition: "ANTICIPO" },
-    { orderKind: "PVP", priorityMode: "normal", requestedDelivery: "cliente_recoge", paymentCondition: "" },
-    { orderKind: "PVC", priorityMode: "retenido_caja", requestedDelivery: "despacho_nacional", paymentCondition: "CREDITO" },
-    { orderKind: "PVN", priorityMode: "retenido_caja", requestedDelivery: "cliente_punto", paymentCondition: "CONTADO" },
-    { orderKind: "PVE", priorityMode: "gerencia", requestedDelivery: "despacho_local", paymentCondition: "ANTICIPO" },
-    { orderKind: "PVP", priorityMode: "gerencia", requestedDelivery: "", paymentCondition: "" }
+    { orderKind: "PVC", priorityMode: "normal", clientFinancialStatus:"AL_DIA", requestedDelivery: "cliente_punto", paymentCondition: "CREDITO" },
+    { orderKind: "PVN", priorityMode: "normal", clientFinancialStatus:"AL_DIA", requestedDelivery: "despacho_local", paymentCondition: "CONTADO" },
+    { orderKind: "PVE", priorityMode: "normal", clientFinancialStatus:"AL_DIA", requestedDelivery: "despacho_nacional", paymentCondition: "MIXTO" },
+    { orderKind: "PVP", priorityMode: "normal", clientFinancialStatus:"MORA", requestedDelivery: "cliente_recoge", paymentCondition: "CREDITO" },
+    { orderKind: "PVC", priorityMode: "gerencia", clientFinancialStatus:"MORA", requestedDelivery: "despacho_nacional", paymentCondition: "MIXTO" },
+    { orderKind: "PVE", priorityMode: "gerencia", clientFinancialStatus:"AL_DIA", requestedDelivery: "despacho_local", paymentCondition: "CREDITO" }
   ];
 }
 
@@ -86,9 +86,9 @@ test.describe("Matriz combinatoria de creación de pedidos", () => {
 
     for (let index = 0; index < matrix.length; index += 1) {
       const row = matrix[index];
-      const deliveryCode = row.requestedDelivery ? row.requestedDelivery.replace(/[^a-z]/gi, "").slice(0, 4).toUpperCase() : "NONE";
-      const paymentCode = row.paymentCondition || "NONE";
-      const reference = `${prefix}-${String(index + 1).padStart(3, "0")}-${row.orderKind}-${row.priorityMode.slice(0, 3).toUpperCase()}-${deliveryCode}-${paymentCode}`.slice(0, 95);
+      const deliveryCode = row.requestedDelivery.replace(/[^a-z]/gi, "").slice(0, 4).toUpperCase();
+      const paymentCode = row.paymentCondition;
+      const reference = `${prefix}-${String(index + 1).padStart(3, "0")}-${row.orderKind}-${row.priorityMode.slice(0, 3).toUpperCase()}-${row.clientFinancialStatus.slice(0,3)}-${deliveryCode}-${paymentCode}`.slice(0, 95);
       const combination = { ...row, reference };
 
       await test.step(`${index + 1}/${matrix.length} ${reference}`, async () => {
@@ -104,6 +104,7 @@ test.describe("Matriz combinatoria de creación de pedidos", () => {
             expect(stored.raw_data.orderKind || stored.raw_data.tipoPedido).toBe(row.orderKind);
             expect(stored.raw_data.requestedDelivery || "").toBe(row.requestedDelivery);
             expect(stored.raw_data.paymentCondition || "").toBe(row.paymentCondition);
+            expect(stored.raw_data.clientFinancialStatus || "AL_DIA").toBe(row.clientFinancialStatus);
             journal.write("matrix_case_verified", {
               reference,
               status: stored.status,

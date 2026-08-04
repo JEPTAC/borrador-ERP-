@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flujo operativo ERP Nova V8</title>
+<style>
+:root{font-family:Inter,Arial,sans-serif;color:#10213d;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;padding:24px}.wrap{max-width:1280px;margin:auto}h1{margin:0}.lead{color:#56657a}.section{margin:26px 0}.flow{display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:14px}.card{background:#fff;border:1px solid #dce4ef;border-radius:16px;padding:15px;box-shadow:0 8px 20px #10213d10;min-height:118px}.card b{display:block;margin-bottom:7px}.decision{border:2px solid #c69226}.finance{border-left:6px solid #188a63}.local{border-left:6px solid #2675d8}.national{border-left:6px solid #243b78}.exception{border-left:6px solid #c24d4d}.supervision{border-left:6px solid #7653b4}.arrow{text-align:center;font-size:28px;margin:8px}.branch{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.note{background:#e8f1ff;border:1px solid #c7daf7;border-radius:14px;padding:15px}.tag{display:inline-block;border-radius:999px;background:#edf2f8;padding:4px 8px;font-size:12px;margin-top:8px}.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.rules div{background:#fff;border-radius:12px;padding:12px;border:1px solid #dce4ef}@media(max-width:980px){.flow{grid-template-columns:1fr 1fr}.branch,.rules{grid-template-columns:1fr}}@media(max-width:620px){.flow{grid-template-columns:1fr}}
+</style></head><body><main class="wrap">
+<h1>Flujo operativo ERP Nova V8</h1><p class="lead">Modelo role-first: cada persona ve solo su trabajo; las excepciones se tramitan como solicitudes auditadas.</p>
+<section class="section"><div class="flow">
+<div class="card"><b>1. Ventas</b>Referencia, tipo, cliente, entrega y pago obligatorios.<span class="tag">Propietario comercial</span></div>
+<div class="card decision"><b>2. Prioridad</b>Gerencia o Super Admin aprueba; al aprobar no omite controles posteriores.</div>
+<div class="card finance"><b>3. Cartera</b>Solo mora, retención y solicitudes de crédito.</div>
+<div class="card finance"><b>4. Caja inicial</b>Solo contado o mixto; valida pago antes de logística.</div>
+<div class="card"><b>5. Compras</b>Puerta obligatoria únicamente para PVE.</div>
+</div><div class="arrow">↓</div>
+<div class="flow">
+<div class="card local"><b>6A. Recepción local</b>Duvan: punto, recoge y despacho local.</div>
+<div class="card national"><b>6B. Recepción nacional</b>Javier: despacho nacional.</div>
+<div class="card"><b>7. Alistamiento</b>Solo auxiliares seleccionados; pedido no asignado no aparece.</div>
+<div class="card"><b>8. Corte</b>Solo auxiliar asignado; al terminar vuelve a Alistamiento.</div>
+<div class="card decision"><b>9. Validación</b>Sin faltantes ni cortes pendientes antes de facturar.</div>
+</div><div class="arrow">↓</div>
+<div class="flow">
+<div class="card local"><b>10A. Facturación local</b>Duvan factura la ruta local.</div>
+<div class="card national"><b>10B. Facturación nacional</b>Javier factura la ruta nacional.</div>
+<div class="card finance"><b>11. Caja PVN</b>Solo PVN contado/mixto: carga factura después de Facturación.</div>
+<div class="card"><b>12. Entrega</b>Duvan entrega local; Javier despacha nacional.</div>
+<div class="card"><b>13. Cierre</b>Conforme o con novedad, siempre con evidencia y evento.</div>
+</div></section>
+<section class="section"><h2>Cuando algo no sale bien</h2><div class="branch">
+<div class="card exception"><b>No entrega</b>Comentario + evidencia. Puede reprogramar, volver a Alistamiento, ir a Caja/Cartera, cambiar ruta, cancelar o cerrar con novedad.</div>
+<div class="card exception"><b>Faltante o corte imposible</b>Solicitud de excepción de stock. Jefe, Gerencia o Super Admin decide.</div>
+<div class="card exception"><b>Datos incorrectos</b>Solicitud al vendedor propietario. La corrección retorna al mismo dueño de ruta.</div>
+<div class="card supervision"><b>Cambio de ruta</b>Jefe, Gerencia o Super Admin aprueba. El sistema cambia dueño, proceso y visibilidad en una sola transacción.</div>
+<div class="card supervision"><b>Cancelación</b>Nunca es directa. Solo Jefe, Gerencia o Super Admin puede aprobarla con motivo.</div>
+<div class="card supervision"><b>Reapertura</b>Exige proceso destino, responsable y motivo explícitos.</div>
+</div></section>
+<section class="section"><h2>Reglas antierror</h2><div class="rules">
+<div>No hay entrega “por definir” ni pago “por definir”.</div><div>No existe respaldo automático a despacho nacional.</div>
+<div>Caja posterior a Facturación no devuelve a Compras o Recepción.</div><div>Gerencia/Jefe/Auditoría no operan pedidos.</div>
+<div>Comentarios no cambian estados; solicitudes aprobadas sí.</div><div>Cada transición produce evento, usuario y fecha.</div>
+<div>RLS/RPC vuelve a validar el permiso aunque el botón esté oculto.</div><div>Conflictos concurrentes rechazan la segunda transición y fuerzan actualización.</div>
+</div></section>
+<div class="note"><b>Fuentes:</b> matriz de roles, contrato de flujo y contrato de excepciones incluidos en el repositorio V8.</div>
+</main></body></html>

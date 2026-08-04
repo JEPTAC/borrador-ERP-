@@ -1,16 +1,19 @@
 {
   "name": "ei-erp-nova",
-  "version": "7.1.0",
+  "version": "8.0.0",
   "private": true,
-  "description": "EI ERP Nova V7 sobre Supabase PostgreSQL/Auth/Realtime y Google Drive.",
+  "description": "EI ERP Nova V8 simplificado por roles exactos, Supabase RLS y Google Drive.",
   "scripts": {
     "test": "node tests/run-tests.js",
     "audit": "node tests/audit-project.js",
     "audit:supabase": "node tests/audit-supabase-v7.js",
-    "qa": "npm run audit && npm run audit:supabase && npm test",
+    "qa": "npm run audit && npm run audit:supabase && npm test && npm run test:v8 && npm run test:v8:flow && npm run test:v8:lifecycle",
     "serve": "python -m http.server 8080",
     "qa:bot": "playwright test -c qa/playwright.config.cjs",
-    "qa:bot:report": "node qa/generate-report.cjs"
+    "qa:bot:report": "node qa/generate-report.cjs",
+    "test:v8": "node tests/test-v8-role-model.js",
+    "test:v8:flow": "node tests/test-v8-flow-matrix.js",
+    "test:v8:lifecycle": "node tests/test-v8-lifecycle-matrix.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0"

@@ -1,0 +1,359 @@
+{
+  "version": "8.0.0",
+  "principles": [
+    "Cada usuario operativo ve únicamente su bandeja, sus pedidos y las acciones necesarias para avanzar.",
+    "Gerencia, Jefatura logística y Auditoría son perfiles de consulta; solo ejecutan aprobaciones explícitas.",
+    "Super Admin es el único usuario maestro con administración total.",
+    "Los comentarios y novedades viven dentro del pedido; no existe un módulo independiente de novedades.",
+    "Toda transición se valida tanto en la interfaz como en PostgreSQL/RLS.",
+    "Ningún pedido puede avanzar sin cliente, modalidad de entrega y condición de pago."
+  ],
+  "roles": {
+    "super_admin": {
+      "label": "Super Admin",
+      "group": "admin",
+      "viewMode": "admin",
+      "description": "Control maestro de usuarios, contraseñas, configuración, diagnóstico, VSM y excepciones.",
+      "canApprove": [
+        "priority",
+        "cancellation",
+        "route_change",
+        "stock_exception",
+        "flow_exception",
+        "reopen",
+        "payment_exception"
+      ],
+      "routes": [
+        "*",
+        "approvals"
+      ]
+    },
+    "gerencia": {
+      "label": "Gerencia",
+      "group": "management",
+      "viewMode": "oversight",
+      "description": "Consulta general y aprobación; no opera pedidos ni administra perfiles.",
+      "canApprove": [
+        "priority",
+        "cancellation",
+        "route_change",
+        "stock_exception",
+        "flow_exception",
+        "reopen",
+        "payment_exception"
+      ],
+      "routes": [
+        "dashboard",
+        "cases",
+        "sales_reports",
+        "credit_workspace",
+        "credit_review",
+        "cartera",
+        "caja",
+        "compras",
+        "reception_goods",
+        "recepcion_pedidos",
+        "alistamiento",
+        "corte_cable",
+        "facturacion",
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "cierre_despacho_nacional",
+        "approvals",
+        "inventario",
+        "indicators"
+      ]
+    },
+    "jefe_logistica": {
+      "label": "Jefe de logística",
+      "group": "logistics_manager",
+      "viewMode": "oversight",
+      "description": "Supervisa logística, Corte, rutas local/nacional, VSM e inventario de chipas. Solo interviene mediante aprobaciones.",
+      "canApprove": [
+        "cancellation",
+        "route_change",
+        "stock_exception",
+        "flow_exception",
+        "reopen"
+      ],
+      "routes": [
+        "dashboard",
+        "cases",
+        "approvals",
+        "inventario",
+        "indicators",
+        "recepcion_pedidos",
+        "alistamiento",
+        "corte_cable",
+        "facturacion",
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "cierre_despacho_nacional"
+      ]
+    },
+    "ventas": {
+      "label": "Ventas",
+      "group": "sales",
+      "viewMode": "operational",
+      "description": "Crea pedidos, solicitudes de crédito, comentarios y novedades de no entrega; consulta únicamente sus ventas.",
+      "routes": [
+        "dashboard",
+        "create",
+        "sales_reports",
+        "credit_workspace",
+        "credit_new",
+        "approvals"
+      ]
+    },
+    "compras": {
+      "label": "Compras",
+      "group": "purchases",
+      "viewMode": "operational",
+      "description": "Gestiona y libera exclusivamente pedidos PVE.",
+      "routes": [
+        "dashboard",
+        "compras",
+        "approvals"
+      ]
+    },
+    "aux_logistica": {
+      "label": "Auxiliar logístico",
+      "group": "picking",
+      "viewMode": "operational",
+      "description": "Solo ejecuta alistamientos asignados y retoma pedidos cuando Corte finaliza.",
+      "routes": [
+        "dashboard",
+        "alistamiento",
+        "approvals"
+      ]
+    },
+    "auxiliar_corte": {
+      "label": "Auxiliar de corte",
+      "group": "cut",
+      "viewMode": "operational",
+      "description": "Ejecuta cortes asignados y puede apoyar prealistamientos controlados.",
+      "routes": [
+        "dashboard",
+        "corte_cable",
+        "approvals"
+      ]
+    },
+    "despacho_nacional": {
+      "label": "Despacho nacional",
+      "group": "national_dispatch",
+      "viewMode": "operational",
+      "description": "Recepción, facturación, despacho y cierre de pedidos destinados a despacho nacional.",
+      "routes": [
+        "dashboard",
+        "recepcion_pedidos",
+        "facturacion",
+        "despacho_nacional",
+        "cierre_despacho_nacional",
+        "approvals"
+      ]
+    },
+    "coordinador_logistico": {
+      "label": "Coordinador logístico local",
+      "group": "local_dispatch",
+      "viewMode": "operational",
+      "description": "Recepción, facturación y entrega de cliente en punto, cliente recoge y despacho local.",
+      "routes": [
+        "dashboard",
+        "recepcion_pedidos",
+        "facturacion",
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "approvals"
+      ]
+    },
+    "caja": {
+      "label": "Caja",
+      "group": "cash",
+      "viewMode": "operational",
+      "description": "Valida contado/mixto, pagos, soportes y bloqueos de pago antes de liberar el pedido.",
+      "routes": [
+        "dashboard",
+        "caja",
+        "approvals"
+      ]
+    },
+    "cartera": {
+      "label": "Cartera",
+      "group": "credit",
+      "viewMode": "operational",
+      "description": "Gestiona mora/retenciones y decide solicitudes de crédito.",
+      "routes": [
+        "dashboard",
+        "cartera",
+        "credit_workspace",
+        "credit_review",
+        "approvals"
+      ]
+    },
+    "recepcion_mercancia": {
+      "label": "Recepción de mercancía",
+      "group": "goods_reception",
+      "viewMode": "operational",
+      "description": "Solo registra recepción física, conformidad y stickers.",
+      "routes": [
+        "dashboard",
+        "reception_goods",
+        "approvals"
+      ]
+    },
+    "auditoria": {
+      "label": "Auditoría",
+      "group": "audit",
+      "viewMode": "oversight",
+      "description": "Consulta transversal de solo lectura.",
+      "routes": [
+        "dashboard",
+        "cases",
+        "sales_reports",
+        "credit_workspace",
+        "credit_review",
+        "cartera",
+        "caja",
+        "compras",
+        "reception_goods",
+        "recepcion_pedidos",
+        "alistamiento",
+        "corte_cable",
+        "facturacion",
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "cierre_despacho_nacional",
+        "approvals",
+        "inventario",
+        "indicators"
+      ]
+    }
+  },
+  "aliases": {
+    "admin": "super_admin",
+    "administrador": "super_admin",
+    "super_administrador": "super_admin",
+    "gerente": "gerencia",
+    "asesor_ventas": "ventas",
+    "asesor": "ventas",
+    "comercial": "ventas",
+    "auxiliar_logistica": "aux_logistica",
+    "auxiliar_de_logistica": "aux_logistica",
+    "aux_logistico": "aux_logistica",
+    "corte": "auxiliar_corte",
+    "operador_corte": "auxiliar_corte",
+    "lider_recepcion": "recepcion_mercancia",
+    "recepcion": "recepcion_mercancia",
+    "jefe_logistico": "jefe_logistica",
+    "auditor": "auditoria",
+    "despacho": "despacho_nacional",
+    "auxiliar_despacho": "despacho_nacional"
+  },
+  "deliveryRoutes": {
+    "cliente_punto": {
+      "label": "Cliente en punto",
+      "ownerRole": "coordinador_logistico",
+      "family": "local"
+    },
+    "cliente_recoge": {
+      "label": "Cliente recoge",
+      "ownerRole": "coordinador_logistico",
+      "family": "local"
+    },
+    "despacho_local": {
+      "label": "Despacho local",
+      "ownerRole": "coordinador_logistico",
+      "family": "local"
+    },
+    "despacho_nacional": {
+      "label": "Despacho nacional",
+      "ownerRole": "despacho_nacional",
+      "family": "national"
+    }
+  },
+  "financialRouting": {
+    "clientHoldOrArrears": "cartera",
+    "CONTADO": "caja",
+    "MIXTO": "caja",
+    "CREDITO": null,
+    "afterRelease": "PVE pasa a Compras; PVC/PVN/PVP pasan a Recepción del dueño de la ruta."
+  },
+  "approvalTypes": {
+    "priority": [
+      "gerencia",
+      "super_admin"
+    ],
+    "cancellation": [
+      "jefe_logistica",
+      "gerencia",
+      "super_admin"
+    ],
+    "route_change": [
+      "jefe_logistica",
+      "gerencia",
+      "super_admin"
+    ],
+    "stock_exception": [
+      "jefe_logistica",
+      "gerencia",
+      "super_admin"
+    ],
+    "flow_exception": [
+      "jefe_logistica",
+      "gerencia",
+      "super_admin"
+    ],
+    "reopen": [
+      "jefe_logistica",
+      "gerencia",
+      "super_admin"
+    ],
+    "payment_exception": [
+      "caja",
+      "cartera",
+      "gerencia",
+      "super_admin"
+    ]
+  },
+  "requestTypes": [
+    {
+      "code": "cancellation",
+      "label": "Cancelación de pedido"
+    },
+    {
+      "code": "route_change",
+      "label": "Cambio de modalidad de entrega"
+    },
+    {
+      "code": "stock_exception",
+      "label": "Excepción de inventario o remanente"
+    },
+    {
+      "code": "flow_exception",
+      "label": "Excepción de flujo"
+    },
+    {
+      "code": "reopen",
+      "label": "Reapertura de pedido"
+    },
+    {
+      "code": "data_correction",
+      "label": "Corrección de datos"
+    },
+    {
+      "code": "payment_exception",
+      "label": "Excepción financiera"
+    },
+    {
+      "code": "no_delivery",
+      "label": "Novedad de no entrega"
+    }
+  ]
+}

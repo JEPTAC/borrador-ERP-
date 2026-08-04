@@ -1,34 +1,213 @@
 {
-  "version": "6.2.0",
-  "terminalStatuses": ["cerrado_conforme", "cerrado_con_novedad", "cancelado", "anulado"],
-  "activeStatuses": ["asignado", "en_proceso", "en_preparacion", "en_ruta"],
-  "waitingStatuses": ["en_espera", "espera_ventas", "espera_transportadora", "pendiente_gerencia", "no_entregado", "devolucion_caja"],
+  "version": "8.0.0",
+  "requiredOrderFields": [
+    "reference",
+    "orderKind",
+    "client",
+    "requestedDelivery",
+    "paymentCondition"
+  ],
+  "terminalStatuses": [
+    "cerrado_conforme",
+    "cerrado_con_novedad",
+    "cancelado",
+    "anulado"
+  ],
+  "activeStatuses": [
+    "asignado",
+    "en_proceso",
+    "en_preparacion",
+    "en_ruta"
+  ],
+  "waitingStatuses": [
+    "en_espera",
+    "espera_ventas",
+    "espera_pago",
+    "espera_cartera",
+    "espera_transportadora",
+    "pendiente_gerencia",
+    "no_entregado"
+  ],
   "processes": {
-    "compras": {"next": ["recepcion_pedidos"], "responsibleGroups": ["purchases", "admin"]},
-    "recepcion_pedidos": {"next": ["alistamiento"], "responsibleGroups": ["reception", "logistics", "admin"]},
-    "alistamiento": {"next": ["corte_cable", "facturacion"], "responsibleGroups": ["logistics", "admin"]},
-    "corte_cable": {"next": ["alistamiento"], "mode": "controlled-return", "responsibleGroups": ["cut", "logistics", "admin"]},
-    "facturacion": {"next": ["caja", "cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"], "responsibleGroups": ["billing", "admin"]},
-    "caja": {"next": ["cliente_punto", "cliente_recoge", "despacho_local", "despacho_nacional"], "responsibleGroups": ["cash", "admin"]},
-    "cartera": {"next": ["compras", "recepcion_pedidos"], "responsibleGroups": ["credit", "admin"]},
-    "cliente_punto": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
-    "cliente_recoge": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
-    "despacho_local": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
-    "despacho_nacional": {"next": ["cierre_despacho_nacional"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
-    "cierre_despacho_nacional": {"next": ["cierre_caso"], "responsibleGroups": ["dispatch", "logistics", "admin"]},
-    "cierre_caso": {"next": [], "terminal": true, "responsibleGroups": ["logistics", "dispatch", "admin"]}
+    "cartera": {
+      "next": [
+        "caja",
+        "compras",
+        "recepcion_pedidos"
+      ],
+      "responsibleRoles": [
+        "cartera"
+      ],
+      "condition": "Mora, retención o revisión de crédito."
+    },
+    "caja": {
+      "next": [
+        "cartera",
+        "compras",
+        "recepcion_pedidos",
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional"
+      ],
+      "responsibleRoles": [
+        "caja"
+      ],
+      "condition": "Primera puerta para contado/mixto; segunda intervención después de Facturación únicamente para cargar factura PVN antes de entrega."
+    },
+    "compras": {
+      "next": [
+        "recepcion_pedidos"
+      ],
+      "responsibleRoles": [
+        "compras"
+      ],
+      "condition": "Solo PVE."
+    },
+    "recepcion_pedidos": {
+      "next": [
+        "alistamiento"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "condition": "Responsable definido por modalidad de entrega."
+    },
+    "alistamiento": {
+      "next": [
+        "corte_cable",
+        "facturacion"
+      ],
+      "responsibleRoles": [
+        "aux_logistica"
+      ],
+      "condition": "Solo auxiliares asignados."
+    },
+    "corte_cable": {
+      "next": [
+        "alistamiento"
+      ],
+      "responsibleRoles": [
+        "auxiliar_corte"
+      ],
+      "mode": "controlled-return"
+    },
+    "facturacion": {
+      "next": [
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "condition": "Mismo dueño de ruta que recibió el pedido."
+    },
+    "cliente_punto": {
+      "next": [
+        "cierre_caso",
+        "no_entregado"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico"
+      ]
+    },
+    "cliente_recoge": {
+      "next": [
+        "cierre_caso",
+        "no_entregado"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico"
+      ]
+    },
+    "despacho_local": {
+      "next": [
+        "cierre_caso",
+        "no_entregado"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico"
+      ]
+    },
+    "despacho_nacional": {
+      "next": [
+        "cierre_despacho_nacional",
+        "no_entregado"
+      ],
+      "responsibleRoles": [
+        "despacho_nacional"
+      ]
+    },
+    "cierre_despacho_nacional": {
+      "next": [
+        "cierre_caso",
+        "no_entregado"
+      ],
+      "responsibleRoles": [
+        "despacho_nacional"
+      ]
+    },
+    "no_entregado": {
+      "next": [
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "alistamiento",
+        "caja",
+        "cartera",
+        "cierre_caso"
+      ],
+      "responsibleRoles": [
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "requiresComment": true
+    },
+    "cierre_caso": {
+      "next": [],
+      "terminal": true,
+      "responsibleRoles": [
+        "coordinador_logistico",
+        "despacho_nacional"
+      ]
+    }
   },
-  "orderRouting": {
-    "default": "recepcion_pedidos",
-    "PVE": "compras",
-    "retained": {"PVC": "cartera", "PVE": "cartera", "PVN": "caja", "PVP": "caja"}
+  "routing": {
+    "priorityApprovalFirst": true,
+    "financial": {
+      "mora": "cartera",
+      "CONTADO": "caja",
+      "MIXTO": "caja",
+      "CREDITO": null
+    },
+    "purchase": {
+      "PVE": "compras"
+    },
+    "delivery": {
+      "cliente_punto": "coordinador_logistico",
+      "cliente_recoge": "coordinador_logistico",
+      "despacho_local": "coordinador_logistico",
+      "despacho_nacional": "despacho_nacional"
+    }
   },
   "invariants": [
-    "PVE no liberado debe pasar por Compras",
-    "Un pedido con cortes pendientes no puede pasar a Facturación",
-    "Corte terminado debe retornar a Alistamiento",
-    "Un pedido cerrado debe tener fecha de cierre",
-    "Una espera debe indicar motivo y responsable",
-    "Cada cambio de proceso o estado debe generar evento trazable"
+    "Cliente, modalidad de entrega y condición de pago son obligatorios.",
+    "PVE no liberado debe pasar por Compras.",
+    "Contado o mixto debe ser liberado por Caja.",
+    "Mora o retención debe ser liberada por Cartera.",
+    "Alistamiento solo puede ser operado por auxiliares asignados.",
+    "Un pedido con cortes pendientes no puede pasar a Facturación.",
+    "Corte terminado debe retornar a Alistamiento.",
+    "El dueño de la ruta debe mantenerse en Recepción, Facturación, Entrega y Cierre.",
+    "Gerencia, Jefe de logística y Auditoría no operan pedidos.",
+    "Cancelación requiere aprobación de Jefe, Gerencia o Super Admin.",
+    "Cada novedad se registra como comentario/evento dentro del pedido.",
+    "Cada cambio de proceso o estado debe generar evento trazable.",
+    "PVN contado o mixto regresa a Caja después de Facturación para carga de factura; Caja no puede devolverlo a Compras o Recepción en esa segunda intervención."
   ]
 }

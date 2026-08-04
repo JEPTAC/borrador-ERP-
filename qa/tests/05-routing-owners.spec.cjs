@@ -48,14 +48,16 @@ test.describe("Propietarios logísticos por tipo de entrega", () => {
       orderKind: "PVN",
       priorityMode: "normal",
       requestedDelivery: "despacho_local",
-      paymentCondition: "CONTADO"
+      paymentCondition: "CREDITO",
+      clientFinancialStatus: "AL_DIA"
     }, 1);
     await erp.createOrder(page, {
       reference: nationalRef,
       orderKind: "PVN",
       priorityMode: "normal",
       requestedDelivery: "despacho_nacional",
-      paymentCondition: "CONTADO"
+      paymentCondition: "CREDITO",
+      clientFinancialStatus: "AL_DIA"
     }, 2);
 
     const localStored = await waitStored(localRef);

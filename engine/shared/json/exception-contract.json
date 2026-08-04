@@ -1,0 +1,473 @@
+{
+  "version": "8.0.0",
+  "principles": [
+    "Una novedad informativa se registra como comentario; no cambia el proceso por sí sola.",
+    "Una solicitud formal no altera el pedido hasta que un responsable autorizado la decide.",
+    "Toda decisión conserva solicitante, aprobador, motivo, fecha y estado anterior/posterior.",
+    "Las devoluciones siempre regresan a un proceso explícito; nunca a un valor por defecto.",
+    "Los usuarios de supervisión aprueban excepciones, pero no ejecutan la operación ordinaria."
+  ],
+  "exceptions": [
+    {
+      "code": "missing_required_data",
+      "label": "Datos obligatorios incompletos",
+      "handling": "block",
+      "detectedAt": [
+        "ventas_create",
+        "server_transition"
+      ],
+      "requesters": [
+        "ventas"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "corregir_en_formulario"
+      ],
+      "invariant": "No se crea ni avanza un pedido sin referencia, tipo, cliente, entrega y pago."
+    },
+    {
+      "code": "duplicate_reference",
+      "label": "Pedido duplicado",
+      "handling": "block",
+      "detectedAt": [
+        "ventas_create",
+        "server_insert"
+      ],
+      "requesters": [
+        "ventas"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "usar_referencia_unica",
+        "consultar_pedido_existente"
+      ],
+      "invariant": "Una referencia activa no puede duplicarse."
+    },
+    {
+      "code": "priority",
+      "label": "Pedido prioritario",
+      "handling": "approval",
+      "requestType": "priority",
+      "detectedAt": [
+        "ventas_create"
+      ],
+      "requesters": [
+        "ventas"
+      ],
+      "approvers": [
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "aprobar_y_continuar_puertas",
+        "rechazar_y_devolver_ventas"
+      ],
+      "invariant": "Aprobar prioridad no omite Cartera, Caja ni Compras."
+    },
+    {
+      "code": "client_arrears",
+      "label": "Cliente en mora o retenido",
+      "handling": "process",
+      "detectedAt": [
+        "ventas_create",
+        "financial_review"
+      ],
+      "requesters": [
+        "ventas",
+        "caja",
+        "cartera"
+      ],
+      "approvers": [
+        "cartera",
+        "super_admin"
+      ],
+      "outcomes": [
+        "liberar_y_continuar_puertas",
+        "mantener_en_espera",
+        "devolver_ventas",
+        "solicitar_soporte"
+      ],
+      "invariant": "No llega a logística hasta liberación de Cartera."
+    },
+    {
+      "code": "payment_pending",
+      "label": "Pago contado o mixto pendiente",
+      "handling": "process",
+      "detectedAt": [
+        "ventas_create",
+        "caja"
+      ],
+      "requesters": [
+        "ventas",
+        "caja"
+      ],
+      "approvers": [
+        "caja",
+        "super_admin"
+      ],
+      "outcomes": [
+        "validar_y_continuar_puertas",
+        "mantener_espera_pago",
+        "devolver_ventas",
+        "escalar_payment_exception"
+      ],
+      "invariant": "Contado/mixto no llega a logística sin validación inicial de Caja."
+    },
+    {
+      "code": "credit_application",
+      "label": "Solicitud de crédito",
+      "handling": "process",
+      "detectedAt": [
+        "ventas_credit_request"
+      ],
+      "requesters": [
+        "ventas"
+      ],
+      "approvers": [
+        "cartera",
+        "super_admin"
+      ],
+      "outcomes": [
+        "aprobar",
+        "rechazar",
+        "solicitar_documentos"
+      ],
+      "invariant": "El expediente y la decisión quedan ligados al cliente y al solicitante."
+    },
+    {
+      "code": "purchase_exception",
+      "label": "PVE pendiente o con novedad de Compras",
+      "handling": "comment_or_request",
+      "detectedAt": [
+        "compras"
+      ],
+      "requesters": [
+        "compras"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "mantener_compras",
+        "solicitar_correccion_datos",
+        "flow_exception",
+        "liberar_recepcion"
+      ],
+      "invariant": "PVE no puede omitir Compras."
+    },
+    {
+      "code": "invalid_sales_document",
+      "label": "Documento de venta ilegible o incorrecto",
+      "handling": "request",
+      "requestType": "data_correction",
+      "detectedAt": [
+        "recepcion_pedidos"
+      ],
+      "requesters": [
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "approvers": [
+        "ventas_propietario",
+        "super_admin"
+      ],
+      "outcomes": [
+        "corregir_y_retornar_recepcion",
+        "cancelation_request"
+      ],
+      "invariant": "La corrección vuelve al mismo dueño de ruta."
+    },
+    {
+      "code": "stock_exception",
+      "label": "Faltante, referencia no encontrada o remanente",
+      "handling": "approval",
+      "requestType": "stock_exception",
+      "detectedAt": [
+        "compras",
+        "recepcion_pedidos",
+        "alistamiento",
+        "corte_cable"
+      ],
+      "requesters": [
+        "compras",
+        "coordinador_logistico",
+        "despacho_nacional",
+        "aux_logistica",
+        "auxiliar_corte",
+        "recepcion_mercancia"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "continuar_con_excepcion",
+        "reponer_y_retornar",
+        "devolver_ventas",
+        "cancelation_request"
+      ],
+      "invariant": "El pedido no avanza silenciosamente con faltantes."
+    },
+    {
+      "code": "cut_required",
+      "label": "Material requiere corte",
+      "handling": "subflow",
+      "detectedAt": [
+        "alistamiento"
+      ],
+      "requesters": [
+        "aux_logistica"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "asignar_auxiliar_corte",
+        "retornar_alistamiento"
+      ],
+      "invariant": "Corte siempre retorna a Alistamiento antes de Facturación."
+    },
+    {
+      "code": "cut_exception",
+      "label": "Corte imposible, medida incorrecta o remanente crítico",
+      "handling": "request",
+      "requestType": "stock_exception",
+      "detectedAt": [
+        "corte_cable"
+      ],
+      "requesters": [
+        "auxiliar_corte"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "replanificar_corte",
+        "corregir_datos",
+        "reponer_material",
+        "cancelation_request"
+      ],
+      "invariant": "No se marca corte terminado sin medida y evidencia."
+    },
+    {
+      "code": "route_change",
+      "label": "Cambio de modalidad de entrega",
+      "handling": "approval",
+      "requestType": "route_change",
+      "detectedAt": [
+        "recepcion_pedidos",
+        "facturacion",
+        "no_entregado"
+      ],
+      "requesters": [
+        "coordinador_logistico",
+        "despacho_nacional",
+        "ventas"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "reasignar_duvan",
+        "reasignar_javier",
+        "rechazar_y_mantener_ruta"
+      ],
+      "invariant": "La reasignación actualiza dueño, proceso, visibilidad y evento en una sola transacción."
+    },
+    {
+      "code": "payment_exception",
+      "label": "Excepción financiera",
+      "handling": "approval",
+      "requestType": "payment_exception",
+      "detectedAt": [
+        "caja",
+        "cartera",
+        "facturacion",
+        "no_entregado"
+      ],
+      "requesters": [
+        "caja",
+        "cartera",
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "approvers": [
+        "caja",
+        "cartera",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "liberar",
+        "mantener_bloqueo",
+        "devolver_ventas",
+        "cancelation_request"
+      ],
+      "invariant": "La excepción financiera no puede ser aprobada por el mismo usuario que la solicitó cuando implique anular un control."
+    },
+    {
+      "code": "pvn_invoice_upload",
+      "label": "Carga de factura PVN por Caja",
+      "handling": "checkpoint",
+      "detectedAt": [
+        "after_facturacion"
+      ],
+      "requesters": [
+        "despacho_nacional"
+      ],
+      "approvers": [
+        "caja",
+        "super_admin"
+      ],
+      "outcomes": [
+        "cargar_y_despachar",
+        "devolver_facturacion"
+      ],
+      "invariant": "Solo PVN contado/mixto vuelve a Caja después de Facturación; nunca vuelve a Compras o Recepción."
+    },
+    {
+      "code": "no_delivery",
+      "label": "No entrega",
+      "handling": "request",
+      "requestType": "no_delivery",
+      "detectedAt": [
+        "cliente_punto",
+        "cliente_recoge",
+        "despacho_local",
+        "despacho_nacional",
+        "cierre_despacho_nacional"
+      ],
+      "requesters": [
+        "ventas",
+        "coordinador_logistico",
+        "despacho_nacional"
+      ],
+      "approvers": [
+        "dueno_ruta",
+        "super_admin"
+      ],
+      "outcomes": [
+        "reprogramar_misma_ruta",
+        "volver_alistamiento",
+        "enviar_caja",
+        "enviar_cartera",
+        "route_change",
+        "cancelation_request",
+        "cerrar_con_novedad"
+      ],
+      "invariant": "Siempre exige comentario y conserva intentos de entrega."
+    },
+    {
+      "code": "cancellation",
+      "label": "Cancelación de pedido",
+      "handling": "approval",
+      "requestType": "cancellation",
+      "detectedAt": [
+        "any_non_terminal"
+      ],
+      "requesters": [
+        "ventas",
+        "compras",
+        "caja",
+        "cartera",
+        "coordinador_logistico",
+        "despacho_nacional",
+        "jefe_logistica"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "cancelar_con_motivo",
+        "rechazar_y_retornar_estado_anterior"
+      ],
+      "invariant": "Nadie cancela directamente; la decisión y el motivo son obligatorios."
+    },
+    {
+      "code": "reopen",
+      "label": "Reapertura de pedido cerrado",
+      "handling": "approval",
+      "requestType": "reopen",
+      "detectedAt": [
+        "closed_case"
+      ],
+      "requesters": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "approvers": [
+        "jefe_logistica",
+        "gerencia",
+        "super_admin"
+      ],
+      "outcomes": [
+        "reabrir_a_proceso_explicito",
+        "rechazar"
+      ],
+      "invariant": "Nunca se reabre sin indicar proceso destino, motivo y responsable."
+    },
+    {
+      "code": "drive_offline",
+      "label": "Archivo pendiente de Google Drive",
+      "handling": "technical_queue",
+      "detectedAt": [
+        "any_attachment_upload"
+      ],
+      "requesters": [
+        "system"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "guardar_metadato_pendiente",
+        "reintentar_sin_duplicar",
+        "marcar_error_visible"
+      ],
+      "invariant": "La falla de Drive no puede borrar ni duplicar el estado del pedido."
+    },
+    {
+      "code": "concurrent_transition",
+      "label": "Dos usuarios intentan avanzar el mismo pedido",
+      "handling": "server_conflict",
+      "detectedAt": [
+        "rpc_transition"
+      ],
+      "requesters": [
+        "system"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "aceptar_primera_transicion",
+        "rechazar_segunda_y_refrescar"
+      ],
+      "invariant": "La transición valida versión/estado anterior dentro de la misma transacción SQL."
+    },
+    {
+      "code": "inactive_or_unauthorized_user",
+      "label": "Usuario inactivo o sin permiso",
+      "handling": "deny",
+      "detectedAt": [
+        "login",
+        "route_access",
+        "rpc_transition"
+      ],
+      "requesters": [
+        "system"
+      ],
+      "approvers": [],
+      "outcomes": [
+        "bloquear",
+        "cerrar_sesion",
+        "registrar_diagnostico"
+      ],
+      "invariant": "Ocultar un botón no sustituye el control RLS/RPC."
+    }
+  ]
+}

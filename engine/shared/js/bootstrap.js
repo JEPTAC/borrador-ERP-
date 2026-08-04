@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var BUILD="v7.0.0-20260804";
+var BUILD="v8.0.0-role-first-20260804";
 var scriptEl=document.currentScript||Array.prototype.slice.call(document.scripts).filter(function(s){return /shared\/js\/bootstrap\.js/.test(s.src||"");}).slice(-1)[0];
 var appRoot=new URL("../../",scriptEl&&scriptEl.src||location.href);
 var declared=window.EI_MODULE_CONFIG||{id:"inicio",defaultRoute:"dashboard",routes:["dashboard"],engine:"legacy"};
@@ -18,6 +18,7 @@ Promise.all([loadCss(absolute("shared/css/navigation.css?v="+encodeURIComponent(
 .then(function(){return loadScript(absolute("../core/js/supabase.js?v="+encodeURIComponent(BUILD)));})
 .then(function(){return loadScript(absolute("shared/js/supabase-compat.js?v="+encodeURIComponent(BUILD)));})
 .then(function(){return loadScript(absolute("shared/js/supabase-legacy-adapter.js?v="+encodeURIComponent(BUILD)));})
+.then(function(){return loadScript(absolute("shared/js/role-policy.js?v="+encodeURIComponent(BUILD)),{"data-ei-role-policy":"true"});})
 .then(function(){return loadScript(absolute("shared/js/navigation.js?v="+encodeURIComponent(BUILD)),{"data-ei-navigation":"true"});})
 .then(function(){return loadScript(absolute("shared/js/ux-erp.js?v="+encodeURIComponent(BUILD)),{"data-ei-ux":"true"});})
 .then(function(){

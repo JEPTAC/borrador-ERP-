@@ -1,10 +1,10 @@
 (function(){
   "use strict";
-  var U=window.EI_UTIL,F=window.EI_SUPABASE,C=window.EI_SUPABASE_COMPAT,cfg=window.EI_NOVA_CONFIG;
+  var U=window.EI_UTIL,F=window.EI_SUPABASE,C=window.EI_SUPABASE_COMPAT,P=window.EI_ROLE_POLICY,cfg=window.EI_NOVA_CONFIG;
   var rootBase=document.documentElement.dataset.rootBase||"../../";
   var appBase=document.documentElement.dataset.appBase||"./";
   var state={session:null,roles:null,catalog:null,group:"user",modules:[],currentModule:"home",cases:[],credits:[],searchTab:"all",searchIndex:0,commandReturnFocus:null,currentActionUrl:"",workspaceTimer:null};
-  function groupFor(role){var normalized=U.normalize(role);return state.roles.aliases[normalized]||"user";}
+  function groupFor(role){var normalized=P?P.role(role):U.normalize(role);return state.roles.aliases[normalized]||"user";}
   function allowed(groups){groups=groups||["all"];return state.group==="admin"||groups.indexOf("all")>=0||groups.indexOf(state.group)>=0;}
   function initials(name){return String(name||"U").split(/\s+/).slice(0,2).map(function(x){return x.charAt(0);}).join("").toUpperCase();}
   function toast(title,message,type){var region=U.qs("#toastRegion"),item=document.createElement("div");item.className="ei-toast "+(type||"");item.innerHTML=U.icon(type==="error"?"alert":"check")+'<div><strong>'+U.escape(title)+'</strong><span>'+U.escape(message||"")+'</span></div>';region.appendChild(item);setTimeout(function(){item.remove();},5200);}
@@ -36,24 +36,11 @@
   function roleOfCase(c){return U.normalize(c.assignedRole||c.responsibleRole||c.ownerRole||"").replace(/\s+/g,"_");}
   function caseVisible(c){
     if(!c)return false;
-    if(["admin","management","audit"].indexOf(state.group)>=0)return true;
-    if(caseIdentityMatch(c))return true;
-    var process=processOf(c),role=roleOfCase(c),text=" "+process+" "+role+" ";
-    var maps={
-      sales:/venta|comercial|asesor|crear|sales/,
-      credit:/cartera|credito|credit/,
-      purchases:/compra|purchase/,
-      reception:/recepcion|reception/,
-      logistics:/recepcion|alistamiento|logistica|despacho|cliente_punto|cliente_recoge|facturacion|delivery/,
-      cut:/corte|cut/,
-      billing:/facturacion|billing/,
-      cash:/caja|cash/,
-      dispatch:/despacho|cliente_punto|cliente_recoge|delivery/,
-      projects:/proyecto|project/,
-      quality:/calidad|quality|no_conform/,
-      maintenance:/mantenimiento|maintenance/
-    };
-    return maps[state.group]?maps[state.group].test(text):false;
+    if(P&&state.session&&state.session.user){
+      var user=Object.assign({},state.session.user,{role:state.session.profile.role,name:state.session.profile.name,email:state.session.profile.email||state.session.user.email});
+      return P.canViewCase(user,c);
+    }
+    return caseIdentityMatch(c);
   }
   function visibleCases(){return state.cases.filter(caseVisible);}
   function dateValue(value){
@@ -88,13 +75,24 @@
     state.modules.forEach(function(m){visibleActions(m).forEach(function(a){if(a.primary&&m.id!=="home")primary.push({m:m,a:a});});});
     primary=primary.slice(0,6);
     var modules=state.modules.filter(function(m){return m.id!=="home";});
-    U.qs("#novaContent").innerHTML='<section class="nova-hero"><div><h2>Hola, '+U.escape(firstName)+'. ¿Qué necesita hacer?</h2><p>Use los accesos directos o abra un proceso. La plataforma solo muestra transacciones y pedidos autorizados para su rol.</p></div><div class="nova-hero-actions"><button class="ei-btn" type="button" data-open-command>'+U.icon("search")+'Buscar pedido o función</button></div></section>'+kpisHtml()+'<section class="nova-section"><header class="nova-section-head"><div><h2>Mis pendientes</h2><p>Pedidos activos asignados o relacionados con su perfil.</p></div><button class="ei-btn secondary" type="button" data-open-cases>Ver bandeja completa</button></header>'+tasksHtml()+'</section><section class="nova-section"><header class="nova-section-head"><div><h2>Acciones frecuentes</h2><p>Las tareas principales de su perfil.</p></div></header><div class="nova-action-grid">'+primary.map(function(x){return actionCard(x.m,x.a);}).join("")+'</div></section><section class="nova-section"><header class="nova-section-head"><div><h2>Procesos disponibles</h2><p>Entre por proceso y elija una transacción.</p></div></header><div class="nova-module-grid">'+modules.map(function(m){return '<button class="nova-module-card" type="button" data-module-card="'+U.escape(m.id)+'">'+U.icon(m.icon)+'<strong>'+U.escape(m.name)+'</strong><span>'+U.escape(m.description)+'</span></button>';}).join("")+'</div></section>';
+    var operational=!(P&&P.isOversight(state.session.profile.role));
+    var body='<section class="nova-hero"><div><h2>Hola, '+U.escape(firstName)+'.</h2><p>'+(operational?'Aquí solo aparecen sus tareas y acciones operativas.':'Consulte el flujo, indicadores y aprobaciones autorizadas para su rol.')+'</p></div></section>';
+    if(!operational)body+=kpisHtml();
+    body+='<section class="nova-section"><header class="nova-section-head"><div><h2>Mis pendientes</h2><p>Pedidos activos asignados o relacionados con su perfil.</p></div>'+(operational?'':'<button class="ei-btn secondary" type="button" data-open-cases>Ver bandeja completa</button>')+'</header>'+tasksHtml()+'</section>';
+    body+='<section class="nova-section"><header class="nova-section-head"><div><h2>Acciones disponibles</h2><p>Solo las funciones necesarias para su responsabilidad.</p></div></header><div class="nova-action-grid">'+primary.map(function(x){return actionCard(x.m,x.a);}).join("")+'</div></section>';
+    if(!operational)body+='<section class="nova-section"><header class="nova-section-head"><div><h2>Procesos disponibles</h2><p>Vista de supervisión y control.</p></div></header><div class="nova-module-grid">'+modules.map(function(m){return '<button class="nova-module-card" type="button" data-module-card="'+U.escape(m.id)+'">'+U.icon(m.icon)+'<strong>'+U.escape(m.name)+'</strong><span>'+U.escape(m.description)+'</span></button>';}).join("")+'</div></section>';
+    U.qs("#novaContent").innerHTML=body;
     var content=U.qs("#novaContent");bindActionCards(content);bindTaskRows(content);
     U.qsa("[data-module-card]",content).forEach(function(btn){btn.addEventListener("click",function(){openModule(btn.dataset.moduleCard);});});
-    U.qsa("[data-open-command]",content).forEach(function(btn){btn.addEventListener("click",openCommand);});
     U.qsa("[data-open-cases]",content).forEach(function(btn){btn.addEventListener("click",function(){var module=moduleById("home"),action=actionById("home","cases");if(module&&action)openAction(module,action);});});
   }
-  function renderModule(module){state.currentModule=module.id;renderSidebar();U.qs("#pageTitle").textContent=module.name;U.qs("#pageContext").textContent="Trazabilidad logística / "+module.name;var actions=visibleActions(module);var primary=actions.filter(function(a){return a.primary;})[0]||actions[0];U.qs("#novaContent").innerHTML='<header class="nova-page-head"><div><span class="eyebrow">Proceso</span><h1>'+U.escape(module.name)+'</h1><p>'+U.escape(module.description)+'</p></div>'+(primary?'<div class="nova-page-actions"><button class="ei-btn" data-action-open="'+U.escape(module.id)+':'+U.escape(primary.id)+'">'+U.icon(primary.icon||module.icon)+'<span>'+U.escape(primary.name)+'</span></button></div>':'')+'</header><section class="nova-action-grid">'+actions.map(function(a){return actionCard(module,a);}).join("")+'</section><section class="nova-section"><div class="ei-card nova-process-help"><div class="nova-section-head"><div><h2>Cómo funciona este proceso</h2><p>Cada transacción conserva usuario, fecha, estado y trazabilidad en el motor operativo.</p></div></div><div class="nova-action-requirements"><span>Validación por rol</span><span>Campos obligatorios</span><span>Guardado transaccional en Supabase</span><span>Historial de movimientos</span></div></div></section>';bindActionCards(U.qs("#novaContent"));}
+  function renderModule(module){
+    state.currentModule=module.id;renderSidebar();U.qs("#pageTitle").textContent=module.name;U.qs("#pageContext").textContent="Trazabilidad logística / "+module.name;
+    var actions=visibleActions(module),primary=actions.filter(function(a){return a.primary;})[0]||actions[0],operational=!(P&&P.isOversight(state.session.profile.role));
+    var html='<header class="nova-page-head"><div><span class="eyebrow">'+(operational?'Tarea':'Proceso')+'</span><h1>'+U.escape(module.name)+'</h1><p>'+U.escape(module.description)+'</p></div>'+(primary?'<div class="nova-page-actions"><button class="ei-btn" data-action-open="'+U.escape(module.id)+':'+U.escape(primary.id)+'">'+U.icon(primary.icon||module.icon)+'<span>'+U.escape(primary.name)+'</span></button></div>':'')+'</header><section class="nova-action-grid">'+actions.map(function(a){return actionCard(module,a);}).join("")+'</section>';
+    if(!operational)html+='<section class="nova-section"><div class="ei-card nova-process-help"><h2>Control del proceso</h2><div class="nova-action-requirements"><span>Permiso por rol exacto</span><span>RLS en Supabase</span><span>Historial y comentarios</span><span>Aprobaciones formales</span></div></div></section>';
+    U.qs("#novaContent").innerHTML=html;bindActionCards(U.qs("#novaContent"));
+  }
   function openModule(id){closeWorkspace();var module=moduleById(id);if(!module)return;history.replaceState(null,"","#module="+encodeURIComponent(id));renderModule(module);closeMobileNav();}
   function engineUrl(action){
     var isVsm=action.engine==="vsm"||action.module==="vsm",path=isVsm?"engine/modules/vsm/dashboard.html":"engine/modules/"+action.module+"/";
@@ -145,7 +143,13 @@
   function safeCaseQuery(query,label){return query.limit(180).get().then(snapshotRows).catch(function(error){console.warn("Consulta de casos no disponible",label,error);return [];});}
   function mergeCaseGroups(groups){var map={};groups.forEach(function(rows){(rows||[]).forEach(function(row){if(row&&row.id)map[row.id]=row;});});return Object.keys(map).map(function(id){return map[id];}).filter(caseVisible).sort(function(a,b){return dateValue(b.updatedAt||b.createdAt)-dateValue(a.updatedAt||a.createdAt);}).slice(0,300);}
   function reverseRoleAliases(){var raw=state.session.profile.role,aliases=[raw];Object.keys(state.roles.aliases||{}).forEach(function(key){if(state.roles.aliases[key]===state.group)aliases.push(key);});return Array.from(new Set(aliases.map(function(value){return String(value||"").trim();}).filter(Boolean)));}
-  function processKeysForGroup(){var map={purchases:["compras"],reception:["recepcion_pedidos"],logistics:["recepcion_pedidos","alistamiento","facturacion","cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"],cut:["corte_cable"],billing:["facturacion"],cash:["caja"],credit:["cartera","caja"],dispatch:["cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"],projects:["proyectos"]};return map[state.group]||[];}
+  function processKeysForGroup(){var map={
+    purchases:["compras"],picking:["alistamiento"],cut:["corte_cable"],
+    local_dispatch:["recepcion_pedidos","facturacion","cliente_punto","cliente_recoge","despacho_local"],
+    national_dispatch:["recepcion_pedidos","facturacion","despacho_nacional","cierre_despacho_nacional"],
+    cash:["caja"],credit:["cartera"],goods_reception:[],
+    logistics_manager:["recepcion_pedidos","alistamiento","corte_cable","facturacion","cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"]
+  };return map[state.group]||[];}
   function loadCasesForShell(){
     var db=state.session.db,cases=db.collection("cases"),user=state.session.user,profile=state.session.profile,queries=[];
     if(["admin","management","audit"].indexOf(state.group)>=0)return safeCaseQuery(cases.orderBy("updatedAt","desc"),"cases.all").then(function(rows){return mergeCaseGroups([rows]);});
@@ -173,6 +177,6 @@
   function closeMobileNav(){U.qs("#novaShell").classList.remove("nav-open");}
   function handleHash(){var hash=location.hash.replace(/^#/,""),params=new URLSearchParams(hash),action=params.get("action"),moduleId=params.get("module");if(action){var p=action.split(":"),m=moduleById(p[0]),a=actionById(p[0],p[1]);if(m&&a){openAction(m,a);return;}}if(moduleId&&moduleById(moduleId)){renderModule(moduleById(moduleId));return;}renderHome();}
   function bindGlobal(){U.qs("#mobileMenu").addEventListener("click",function(){U.qs("#novaShell").classList.toggle("nav-open");});U.qs("#navOverlay").addEventListener("click",closeMobileNav);U.qs("#searchTrigger").addEventListener("click",openCommand);U.qs("#closeCommand").addEventListener("click",closeCommand);U.qs("#novaCommand").addEventListener("click",function(e){if(e.target.id==="novaCommand")closeCommand();});U.qs("#commandInput").addEventListener("input",U.debounce(function(e){state.searchIndex=0;renderCommandResults(e.target.value);},120));U.qs("#commandInput").addEventListener("keydown",function(e){if(e.key==="ArrowDown"){e.preventDefault();state.searchIndex=Math.min((state.commandItems||[]).length-1,state.searchIndex+1);renderCommandResults(e.target.value);}if(e.key==="ArrowUp"){e.preventDefault();state.searchIndex=Math.max(0,state.searchIndex-1);renderCommandResults(e.target.value);}if(e.key==="Enter"){e.preventDefault();activateResult(state.searchIndex);}if(e.key==="Escape")closeCommand();});U.qsa("[data-command-tab]").forEach(function(btn){btn.addEventListener("click",function(){state.searchTab=btn.dataset.commandTab;U.qsa("[data-command-tab]").forEach(function(x){x.classList.toggle("active",x===btn);});renderCommandResults(U.qs("#commandInput").value);});});U.qs("#workspaceBack").addEventListener("click",closeWorkspaceAndReturn);U.qs("#workspaceExternal").addEventListener("click",function(){if(state.currentActionUrl)window.open(state.currentActionUrl,"_blank","noopener");});U.qs("#shellLogout").addEventListener("click",function(){F.init().then(function(){return F.state.auth.signOut();}).finally(function(){F.clearProfile();location.href=rootBase+"index.html";});});U.qs("#mobileHome").addEventListener("click",function(){closeWorkspace();renderHome();});U.qs("#mobileTasks").addEventListener("click",function(){var first=state.modules.filter(function(m){return m.id!=="home";})[0];if(first)openModule(first.id);});U.qs("#mobileSearch").addEventListener("click",openCommand);U.qs("#mobileMore").addEventListener("click",function(){U.qs("#novaShell").classList.add("nav-open");});document.addEventListener("keydown",function(e){var command=U.qs("#novaCommand"),open=!command.hasAttribute("hidden");if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openCommand();return;}if(e.key==="Escape"&&open){e.preventDefault();closeCommand();return;}if(e.key==="Tab"&&open){var focusable=U.qsa('button:not([disabled]),input:not([disabled]),[href],[tabindex]:not([tabindex="-1"])',command).filter(function(x){return x.offsetParent!==null;}),first=focusable[0],last=focusable[focusable.length-1];if(!first)return;if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});window.addEventListener("hashchange",handleHash);window.addEventListener("message",function(event){if(event.origin!==location.origin)return;var data=event.data||{};if(data.type==="EI_ENGINE_TITLE"&&data.title)U.qs("#workspaceTitle").textContent=data.title;if(data.type==="EI_ENGINE_READY"){clearTimeout(state.workspaceTimer);U.qs("#workspaceLoading").setAttribute("hidden","");}if(data.type==="EI_ENGINE_SIGNOUT")location.href=rootBase+"index.html";});}
-  function boot(){Promise.all([F.requireSession({loginUrl:rootBase+"index.html"}),C.create(),U.json(rootBase+"core/config/roles.json"),U.json(appBase+"config/transactions.json")]).then(function(values){state.session=values[0];state.session.db=values[1].db;state.session.auth=values[1].auth;state.roles=values[2];state.catalog=values[3];state.group=groupFor(state.session.profile.role);buildAccessibleCatalog();setUser();renderSidebar();bindGlobal();handleHash();loadRecords();}).catch(function(error){U.qs("#novaContent").innerHTML='<div class="ei-card ei-empty">'+U.icon("alert")+'<strong>No fue posible abrir Trazabilidad logística</strong><span>'+U.escape(error.message||error)+'</span><a class="ei-btn" href="'+rootBase+'index.html">Volver al inicio</a></div>';});}
+  function boot(){Promise.all([F.requireSession({loginUrl:rootBase+"index.html"}),C.create(),U.json(rootBase+"core/config/roles.json"),U.json(appBase+"config/transactions.json"),U.json(appBase+"config/operating-model.json")]).then(function(values){state.session=values[0];state.session.db=values[1].db;state.session.auth=values[1].auth;state.roles=values[2];state.catalog=values[3];state.operatingModel=values[4];state.group=groupFor(state.session.profile.role);buildAccessibleCatalog();setUser();renderSidebar();bindGlobal();handleHash();loadRecords();}).catch(function(error){U.qs("#novaContent").innerHTML='<div class="ei-card ei-empty">'+U.icon("alert")+'<strong>No fue posible abrir Trazabilidad logística</strong><span>'+U.escape(error.message||error)+'</span><a class="ei-btn" href="'+rootBase+'index.html">Volver al inicio</a></div>';});}
   window.EI_A11Y.bind(document);boot();
 })();

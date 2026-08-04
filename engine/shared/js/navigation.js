@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var currentRole="", currentModule="", currentRoute="";
+var currentRole="", currentModule="", currentRoute="", POLICY=window.EI_ROLE_POLICY;
 var ADMIN=["super_admin","super_administrador","admin","administrador"];
 var SALES=["ventas","asesor_ventas","asesor","comercial","ejecutivo_comercial"];
 var CREDIT=["cartera","jefe_cartera","analista_cartera","credito","creditos","analista_credito","coordinador_cartera"];
@@ -59,6 +59,12 @@ function intrinsicRouteAllowed(module,route,role){
   }
 }
 function routeAllowed(module,route,role,allowedRoutes){
+  role=norm(role);
+  if(POLICY){
+    var canonical=POLICY.role(role);
+    if(canonical==="super_admin")return true;
+    return POLICY.hasRoute(canonical,route);
+  }
   var g=actorGroups(role);if(g.admin)return true;
   if(module.engine==="legacy"&&allowedRoutes&&Object.keys(allowedRoutes).length)return !!allowedRoutes[route];
   return intrinsicRouteAllowed(module,route,role);
