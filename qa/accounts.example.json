@@ -1,0 +1,12 @@
+{
+  "admin": { "email": "superadmin@empresa.com", "password": "CAMBIAR", "role": "super_admin" },
+  "sales": { "email": "ventas@empresa.com", "password": "CAMBIAR", "role": "ventas" },
+  "purchases": { "email": "compras@empresa.com", "password": "CAMBIAR", "role": "compras" },
+  "reception": { "email": "recepcion@empresa.com", "password": "CAMBIAR", "role": "lider_recepcion" },
+  "logistics_local": { "email": "duvan@empresa.com", "password": "CAMBIAR", "role": "coordinador_logistico" },
+  "logistics_national": { "email": "javier@empresa.com", "password": "CAMBIAR", "role": "coordinador_logistico" },
+  "cut": { "email": "corte@empresa.com", "password": "CAMBIAR", "role": "auxiliar_corte" },
+  "cash": { "email": "caja@empresa.com", "password": "CAMBIAR", "role": "caja" },
+  "credit": { "email": "cartera@empresa.com", "password": "CAMBIAR", "role": "cartera" },
+  "audit": { "email": "auditoria@empresa.com", "password": "CAMBIAR", "role": "auditoria" }
+}

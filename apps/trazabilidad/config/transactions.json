@@ -1,5 +1,5 @@
 {
-  "version": "7.0.0",
+  "version": "7.1.0",
   "application": {
     "id": "trazabilidad",
     "name": "Trazabilidad logística",
@@ -933,6 +933,24 @@
           "requirements": [
             "Validar alcance antes de ejecutar"
           ]
+        },
+        {
+          "id": "erp-diagnostics",
+          "name": "Diagnóstico integral",
+          "description": "Pruebe conexión, usuarios, datos, enrutamiento, persistencia, archivos y el flujo automatizado completo.",
+          "icon": "audit",
+          "engine": "legacy",
+          "module": "administracion",
+          "route": "diagnostico_erp",
+          "groups": [
+            "admin"
+          ],
+          "requirements": [
+            "Rol super_admin",
+            "Sesión activa"
+          ],
+          "primary": true,
+          "superAdminOnly": true
         }
       ]
     }

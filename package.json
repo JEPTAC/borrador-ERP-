@@ -1,6 +1,6 @@
 {
   "name": "ei-erp-nova",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "private": true,
   "description": "EI ERP Nova V7 sobre Supabase PostgreSQL/Auth/Realtime y Google Drive.",
   "scripts": {
@@ -8,6 +8,11 @@
     "audit": "node tests/audit-project.js",
     "audit:supabase": "node tests/audit-supabase-v7.js",
     "qa": "npm run audit && npm run audit:supabase && npm test",
-    "serve": "python -m http.server 8080"
+    "serve": "python -m http.server 8080",
+    "qa:bot": "playwright test -c qa/playwright.config.cjs",
+    "qa:bot:report": "node qa/generate-report.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
   }
 }

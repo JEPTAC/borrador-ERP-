@@ -1,0 +1,24 @@
+PARCHE MÍNIMO ERP NOVA V7.1
+================================
+
+Este paquete contiene únicamente los archivos nuevos o modificados que deben
+reemplazarse/subirse en GitHub. No contiene el ERP completo.
+
+CÓMO APLICARLO
+1. Descomprima este ZIP.
+2. Abra su repositorio en GitHub.
+3. Use Add file > Upload files.
+4. Arrastre TODO el contenido descomprimido, incluyendo las carpetas:
+   .github, qa, supabase, core, engine, apps y portal.
+5. Confirme que GitHub muestre archivos reemplazados y nuevos.
+6. Haga Commit changes.
+7. Espere el despliegue de GitHub Pages.
+8. Borre los datos/caché del sitio y vuelva a iniciar sesión.
+
+IMPORTANTE
+- No suba ERP_TEST_ACCOUNTS_JSON_V7_1_PRIVADO.txt.
+- No suba la service_role.
+- El archivo SQL no necesita subirse a GitHub. Ejecute aparte:
+  04_DIAGNOSTICO_Y_RUTAS_LOGISTICAS.sql en Supabase > SQL Editor.
+- La Edge Function incluida en supabase/functions también debe desplegarse
+  desde Supabase para activar el botón que inicia el bot E2E.

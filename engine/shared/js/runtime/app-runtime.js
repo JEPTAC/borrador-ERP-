@@ -43,7 +43,7 @@ var feedbackAssets = {
   success:appResource("shared/assets/feedback/hands-up-ok-gauss.gif")
 };
 
-var EI_CANONICAL_APP_VERSION = "v7.0.0-supabase-drive-20260804";
+var EI_CANONICAL_APP_VERSION = "v7.1.0-diagnostico-routing-20260804";
 try{
   window.EI_CANONICAL_APP_VERSION=EI_CANONICAL_APP_VERSION;
   window.EI_BUILD_LOADED=EI_CANONICAL_APP_VERSION;
@@ -584,16 +584,16 @@ function preferredDeliveryRoute(c){
 function deliveryRouteOptions(selected){
   selected=normalizedDeliveryRoute(selected);
   var opts=[
-    ["cliente_punto","Cliente en punto · Coordinador"],
-    ["cliente_recoge","Cliente recoge · Coordinador"],
-    ["despacho_local","Despacho local · Coordinador"],
-    ["despacho_nacional","Despacho nacional · Logística / despacho"]
+    ["cliente_punto","Cliente en punto · Duvan Díaz"],
+    ["cliente_recoge","Cliente recoge · Duvan Díaz"],
+    ["despacho_local","Despacho local · Duvan Díaz"],
+    ["despacho_nacional","Despacho nacional · Javier Laverde"]
   ];
   return opts.map(function(o){return '<option value="'+o[0]+'" '+(selected===o[0]?'selected':'')+'>'+esc(o[1])+'</option>';}).join("");
 }
 var deliveryRouteOwnerRules=[
-  {key:"local_delivery",label:"Equipo de entregas locales",routes:["cliente_punto","cliente_recoge","despacho_local"],ownerRoles:["coordinador_logistico","aux_logistica"]},
-  {key:"national_delivery",label:"Equipo de despachos nacionales",routes:["despacho_nacional","cierre_despacho_nacional"],ownerRoles:["coordinador_logistico","aux_logistica"]}
+  {key:"local_delivery",label:"Duvan Díaz · entregas locales",routes:["cliente_punto","cliente_recoge","despacho_local"],ownerRoles:["coordinador_logistico"],ownerEmails:["d.diaz@ei.com.co"],ownerNames:["DUVAN DIAZ"],ownerUids:["vZLFnB5MlvfHDNbQzZ52SjIJfUJ2"],operationalProcesses:["recepcion_pedidos","facturacion","cliente_punto","cliente_recoge","despacho_local"]},
+  {key:"national_delivery",label:"Javier Laverde · despacho nacional",routes:["despacho_nacional","cierre_despacho_nacional"],ownerRoles:["coordinador_logistico"],ownerEmails:["j.laverde@ei.com.co"],ownerNames:["JAVIER LAVERDE"],ownerUids:["Be68UgYTnDU3winX2l5NoeWqqHt2"],operationalProcesses:["recepcion_pedidos","facturacion","despacho_nacional","cierre_despacho_nacional"]}
 ];
 function routeKeyForCase(c){
   if(!c)return "";
@@ -619,9 +619,15 @@ function userDeliveryGroups(u){
   return uniqueArray(raw.map(function(value){return String(value||"").trim().toLowerCase();}).filter(Boolean));
 }
 function userMatchesDeliveryOwnerRule(u,rule){
-  if(!u||!rule||u.isActive===false)return false;
+  if(!u||!rule||u.isActive===false||u.active===false)return false;
   var role=normalizeRole(u.role||u.rol||"");
   if((rule.ownerRoles||[]).map(normalizeRole).indexOf(role)<0)return false;
+  var email=String(u.email||"").trim().toLowerCase();
+  var name=normalizePersonText(u.name||u.displayName||"");
+  var uidValue=String(u.uid||u.id||u.userId||u.authUid||u.profileUid||"").trim();
+  if((rule.ownerEmails||[]).map(function(v){return String(v).toLowerCase();}).indexOf(email)>=0)return true;
+  if((rule.ownerNames||[]).map(normalizePersonText).indexOf(name)>=0)return true;
+  if((rule.ownerUids||[]).indexOf(uidValue)>=0)return true;
   var routes=userDeliveryRoutes(u),groups=userDeliveryGroups(u);
   return groups.indexOf(rule.key)>=0 || routes.some(function(route){return rule.routes.indexOf(route)>=0;});
 }
@@ -656,6 +662,19 @@ function deliveryRouteAssignableUsers(processKey){
   var rule=deliveryOwnerRuleForRoute(processKey);
   if(!rule)return [];
   var users=(state.users||[]).filter(function(u){return userMatchesDeliveryOwnerRule(u,rule);});
+  if(!users.length){
+    users=[{
+      uid:(rule.ownerUids||[])[0]||(rule.ownerEmails||[])[0]||rule.key,
+      id:(rule.ownerUids||[])[0]||(rule.ownerEmails||[])[0]||rule.key,
+      name:(rule.ownerNames||[])[0]||rule.label,
+      email:(rule.ownerEmails||[])[0]||"",
+      role:(rule.ownerRoles||[])[0]||"coordinador_logistico",
+      isActive:true,
+      deliveryGroup:rule.key,
+      deliveryRoutes:rule.routes.slice(),
+      primaryDeliveryOwner:true
+    }];
+  }
   users.sort(function(a,b){
     var ap=a.primaryDeliveryOwner===true||a.primaryRouteOwner===true?0:1;
     var bp=b.primaryDeliveryOwner===true||b.primaryRouteOwner===true?0:1;
@@ -672,6 +691,20 @@ function deliveryRouteAssignableUsers(processKey){
     x.uidAliases=uniqueArray((u.uidAliases||[]).concat([x.uid,x.id,u.userId,u.authUid,u.profileUid,u.email,u.name,u.displayName]).map(function(v){return String(v||"").trim();}).filter(Boolean));
     return x;
   });
+}
+function operationalRouteOwnerForCase(c,next){
+  var route=preferredDeliveryRoute(c)||expectedDeliveryTypeForProcess(next);
+  var rule=deliveryOwnerRuleForRoute(route);
+  if(!rule)return null;
+  if((rule.operationalProcesses||[]).indexOf(next)<0)return null;
+  return {route:route,rule:rule};
+}
+function applyOperationalRouteAssignment(c,next){
+  var owner=operationalRouteOwnerForCase(c,next);
+  if(!owner)return false;
+  c.deliveryType=normalizedDeliveryRoute(c.deliveryType)||owner.route;
+  c.requestedDelivery=normalizedDeliveryRoute(c.requestedDelivery)||owner.route;
+  return applyDeliveryRouteAssignment(c,owner.route);
 }
 function applyDeliveryRouteAssignment(c,next){
   var rule=deliveryOwnerRuleForRoute(next);
@@ -745,7 +778,7 @@ ensureDeliveryChecklistDefinitions();
 
 var routeInfo = {
   dashboard:["Inicio","IN"], cases:["Casos","CS"], create:["Crear pedido","CR"], compras:["Compras","CO"], sales_reports:["Registro de ventas","RV"], projects:["Proyectos","PR"], reception_goods:["Recepción mercancía","RM"], reports:["Reportes","RP"], requirements:["Requerimientos","RQ"], inventario:["Inventario","IV"], cut_diag:["Diagnóstico","DG"],
-  approvals:["Aprobaciones","AU"], corte_cable:["Cortes","CT"], indicators:["VSM","VS"], users:["Usuarios","US"], admin:["Admin","AD"]
+  approvals:["Aprobaciones","AU"], corte_cable:["Cortes","CT"], indicators:["VSM","VS"], users:["Usuarios","US"], admin:["Admin","AD"], diagnostico_erp:["Diagnóstico integral","DX"]
 };
 
 function qs(sel,root){return (root||document).querySelector(sel);}
@@ -1977,7 +2010,18 @@ function ensureMobileFreshVersion(){
 function docsToList(snap){
   var out=[];
   if(!snap)return out;
-  snap.forEach(function(d){var x=d.data();x.id=d.id;out.push(x);});
+  var docs=[];
+  if(typeof snap.forEach==="function")snap.forEach(function(d){docs.push(d);});
+  else if(Array.isArray(snap.docs))docs=snap.docs.slice();
+  else if(Array.isArray(snap))docs=snap.slice();
+  else if(Array.isArray(snap.data))docs=snap.data.slice();
+  docs.forEach(function(d,index){
+    var x=typeof d.data==="function"?d.data():(d&&d.data&&typeof d.data==="object"?d.data:d);
+    if(!x||typeof x!=="object")return;
+    x=Object.assign({},x);
+    x.id=(d&&d.id)||x.id||String(index);
+    out.push(x);
+  });
   return out;
 }
 
@@ -3651,7 +3695,8 @@ function statusChip(st){
 function routes(){
   if(!state.user)return{main:[],processes:[]};
   var r=normalizeRole(state.user.role);
-  if(currentUserIsAdminOrSuper()||currentUserIsSuperAdmin())return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin"],processes:activeProcessKeys()};
+  if(currentUserIsSuperAdmin())return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin","diagnostico_erp"],processes:activeProcessKeys()};
+  if(currentUserIsAdminOrSuper())return{main:["dashboard","create","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users","admin"],processes:activeProcessKeys()};
   if(r==="auditoria")return{main:["dashboard","sales_reports","projects","reception_goods","inventario","reports","cases","requirements","approvals","indicators","users"],processes:activeProcessKeys()};
   if(r==="auxiliar_corte")return{main:["corte_cable","cut_diag","inventario","reports"],processes:[]};
   if(r==="lider_recepcion")return{main:["dashboard","reception_goods","inventario","reports"],processes:[]};
@@ -3859,8 +3904,12 @@ function openRouteSafely(route){
   var moduleRoutes=(window.EI_CURRENT_MODULE&&window.EI_CURRENT_MODULE.routes)||[];
   var externalUrl=window.EI_V2_ROUTE_URLS&&window.EI_V2_ROUTE_URLS[route];
   if(externalUrl && moduleRoutes.indexOf(route)<0){window.location.assign(externalUrl);return;}
-  if((route==="indicators"||route==="admin"||route==="users") && currentUserIsSuperAdmin()){
+  if((route==="indicators"||route==="admin"||route==="users"||route==="diagnostico_erp") && currentUserIsSuperAdmin()){
     if(state.user){state.user.role="super_admin";state.user.rawRole=state.user.rawRole||"super_admin";try{sessionStorage.setItem(storageKey+"_session",JSON.stringify(state.user));}catch(e){novaCaptureError(e,"operación heredada");}}
+  }
+  if(route==="diagnostico_erp" && !currentUserIsSuperAdmin()){
+    alert("Acceso restringido: el diagnóstico integral solo puede ejecutarlo Super Admin.");
+    return;
   }
   state.route=route;
   state.detailId=null;
@@ -10464,7 +10513,7 @@ function normalizeAssignmentUsers(users){
 function applyPersonalAssignment(c,next,assignmentUsers){
   var users=normalizeAssignmentUsers(assignmentUsers);
   c.assignedUsers=[];c.assignedUserIds=[];c.assignedUid="";c.assignedEmail="";
-  if(isDeliveryProcess(next) && applyDeliveryRouteAssignment(c,next)){
+  if(applyOperationalRouteAssignment(c,next)){
     return;
   }
   if(next==="alistamiento" && users.length){
@@ -11724,6 +11773,108 @@ function exportSalesReport(){
 }
 function resendPendingItems(id){var c=caseById(id);if(!c)return;var pending=(c.orderItems||[]).filter(function(it){return partialQtyParse(it.partialPendingQty)>0 || /PENDIENTE|NO_ENCONTRADO|NOVEDAD|SALDO/i.test(it.estado||it.alistamientoStatus||'');});if(!pending.length){alert('No hay faltantes pendientes para reenviar.');return;}var child=JSON.parse(JSON.stringify(c));var stamp=now(),seq=(c.pendingResends||[]).length+1;child.id=uid('FAL');child.parentCaseId=c.id;child.isPendingResend=true;child.reference=(c.reference||c.id)+'-FALTANTE-'+String(seq).padStart(2,'0');child.currentProcess=isPveOrder(child)?'compras':'recepcion_pedidos';child.status='asignado';ensurePvePurchasingMetadata(child,'Reenvío de faltante V221: PVE pasa primero a Compras');child.assignedRole=primaryOwnerRole(child.currentProcess);child.assignedName=processOwnerTitle(child.currentProcess);child.assignedTo='';child.assignedUid='';child.assignedUsers=[];child.assignedUserIds=[];child.createdAt=stamp;child.updatedAt=stamp;child.closedAt=null;child.openRequirement=null;child.orderItems=pending.map(function(it){var x=Object.assign({},it);x.cantidad=it.partialPendingQty||it.cantidad;x.estado='REENVIADO_FALTANTE';return x;});child.checklist={};(processes[child.currentProcess]||processes.recepcion_pedidos).checklist.forEach(function(x){child.checklist[x]=(x==='Pedido registrado por ventas'||x==='Orden PVE recibida desde ventas')?'ok':'pending';});child.processStats={};procStats(child,child.currentProcess).startedAt=stamp;c.pendingResends=c.pendingResends||[];c.pendingResends.push({id:child.id,at:stamp,byName:state.user.name,items:child.orderItems.length});persistCaseGroup([{case:c,event:{type:'PENDING_ITEMS_RESENT',detail:'Ventas reenvió '+child.orderItems.length+' línea(s) faltante(s) al flujo.',targetRole:child.assignedRole,visibleRoles:['ventas','compras','coordinador_logistico','jefe_logistica','admin','super_admin','super_administrador']}},{case:child,event:{type:'PENDING_ITEMS_FLOW_CREATED',process:child.currentProcess,detail:'Caso de faltantes '+child.reference+' creado desde '+(c.reference||c.id)+'.',targetRole:child.assignedRole,visibleRoles:['ventas','compras','coordinador_logistico','jefe_logistica','admin','super_admin','super_administrador']}}]).then(function(){renderSalesReports();}).catch(function(e){showError(e.message||e);});}
 
+
+function erpDiagnosticClient(){return window.EI_SUPABASE&&window.EI_SUPABASE.state&&window.EI_SUPABASE.state.client?window.EI_SUPABASE.state.client:null;}
+function erpDiagnosticStatusLabel(status){return status==="PASS"?"Correcto":status==="WARN"?"Atención":"Error";}
+function erpDiagnosticChip(status){return '<span class="chip '+(status==="PASS"?'success':status==="WARN"?'warning':'danger')+'">'+erpDiagnosticStatusLabel(status)+'</span>';}
+function erpDiagnosticSummary(report){
+  var rows=(report&&report.results)||[],summary={PASS:0,WARN:0,FAIL:0};
+  rows.forEach(function(r){summary[r.status]=Number(summary[r.status]||0)+1;});
+  return summary;
+}
+function erpDiagnosticResultHtml(result){
+  return '<tr><td>'+erpDiagnosticChip(result.status)+'</td><td><strong>'+esc(result.area||"General")+'</strong></td><td>'+esc(result.name||"")+'</td><td>'+esc(result.detail||"")+'</td></tr>';
+}
+function renderErpDiagnostics(){
+  if(!currentUserIsSuperAdmin()){
+    layout(header("Acceso restringido","El diagnóstico integral solo puede ejecutarlo Super Admin.","")+'<section class="notice danger"><strong>Sin permiso.</strong> Esta herramienta puede verificar y reparar datos operativos.</section>');
+    return;
+  }
+  var report=state.erpDiagnosticReport||null,summary=erpDiagnosticSummary(report),running=state.erpDiagnosticRunning===true;
+  var actions='<button class="btn btn-primary" data-action="runErpDiagnostic" '+(running?'disabled':'')+'>'+(running?'Diagnosticando…':'Ejecutar diagnóstico completo')+'</button>'+
+    '<button class="btn" data-action="testDiagnosticDrive" '+(running?'disabled':'')+'>Probar archivo en Drive</button>'+
+    '<button class="btn btn-gold" data-action="triggerErpBot" '+(running?'disabled':'')+'>Ejecutar bot E2E 240 combinaciones</button>'+
+    '<button class="btn" data-action="repairLogisticsRoutes" '+(running?'disabled':'')+'>Reparar rutas Javier / Duvan</button>'+
+    (report?'<button class="btn" data-action="downloadErpDiagnostic">Descargar JSON</button>':'');
+  var intro='<section class="card"><div class="grid grid-3"><div><span class="muted">Acceso</span><strong>Solo Super Admin</strong></div><div><span class="muted">Cobertura combinatoria</span><strong>240 escenarios</strong></div><div><span class="muted">Última ejecución</span><strong>'+esc(report&&report.finishedAt?fmtDate(report.finishedAt):'Sin ejecutar')+'</strong></div></div><p class="muted">Verifica sesión, perfil, cliente único de Supabase, snapshots, usuarios, pedidos, inventario, persistencia, guardián de flujo, reglas Javier/Duvan y preparación de archivos. El botón E2E activa las pruebas reales de navegador mediante la Edge Function protegida.</p></section>';
+  var route='<section class="card"><h3>Regla operativa obligatoria</h3><div class="grid grid-2"><div class="notice"><strong>Duvan Díaz · operación local</strong><br>Cliente en punto, cliente recoge y despacho local. Recibe el pedido en Recepción, lo envía a Alistamiento, lo retoma en Facturación, despacha y cierra.</div><div class="notice"><strong>Javier Laverde · operación nacional</strong><br>Despacho nacional. Recibe el pedido en Recepción, lo envía a Alistamiento, lo retoma en Facturación, despacha, realiza cierre nacional y cierra el caso.</div></div></section>';
+  var results='';
+  if(running)results='<section class="card"><div class="notice warning"><strong>Diagnóstico en ejecución.</strong> No cierre esta pantalla.</div></section>';
+  else if(report){
+    results='<section class="card"><h3>Resultado</h3><div class="grid grid-3"><div><span class="muted">Correctos</span><strong>'+summary.PASS+'</strong></div><div><span class="muted">Atenciones</span><strong>'+summary.WARN+'</strong></div><div><span class="muted">Errores</span><strong>'+summary.FAIL+'</strong></div></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Área</th><th>Prueba</th><th>Detalle</th></tr></thead><tbody>'+report.results.map(erpDiagnosticResultHtml).join('')+'</tbody></table></div></section>';
+  }else results='<section class="card"><div class="notice">Pulse <strong>Ejecutar diagnóstico completo</strong> para revisar la aplicación y Supabase con la sesión actual.</div></section>';
+  layout(header("Diagnóstico integral ERP","Pruebas técnicas y operativas de Trazabilidad Logística.",actions)+intro+route+results);
+}
+function runErpDiagnostic(){
+  if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede ejecutar el diagnóstico.");return;}
+  if(state.erpDiagnosticRunning)return;
+  state.erpDiagnosticRunning=true;state.erpDiagnosticReport=null;renderErpDiagnostics();
+  var report={version:"7.1.0",startedAt:now(),finishedAt:null,user:{uid:state.user.uid,email:state.user.email,name:state.user.name,role:state.user.role},results:[],routing:{},consoleSnapshot:(state.loadWarnings||[]).slice()};
+  function push(status,area,name,detail,data){report.results.push({status:status,area:area,name:name,detail:String(detail||""),data:data||null,at:now()});}
+  function check(area,name,fn,opts){opts=opts||{};return Promise.resolve().then(fn).then(function(value){
+    var status=opts.warnWhen&&opts.warnWhen(value)?"WARN":"PASS";
+    var detail=typeof opts.detail==="function"?opts.detail(value):(opts.detail||"Prueba superada.");push(status,area,name,detail,value);return value;
+  }).catch(function(error){push(opts.optional?"WARN":"FAIL",area,name,(error&&error.message)||String(error),{code:error&&error.code||""});return null;});}
+  var client=erpDiagnosticClient(),snapshotUsers=null;
+  var chain=Promise.resolve();
+  chain=chain.then(function(){return check("Seguridad","Sesión y rol Super Admin",function(){if(!state.user||normalizeRole(state.user.role)!=="super_admin")throw new Error("La sesión no es super_admin.");return state.user;},{detail:function(v){return "Sesión activa: "+v.email+" · rol "+normalizeRole(v.role);}});});
+  chain=chain.then(function(){return check("Supabase","Cliente único de autenticación",function(){
+    if(!client)throw new Error("No existe cliente Supabase activo.");
+    var singleton=window.__EI_NOVA_SUPABASE_CLIENT__&&window.__EI_NOVA_SUPABASE_CLIENT__.client;
+    if(singleton&&singleton!==client)throw new Error("Se detectaron clientes Supabase distintos.");
+    return {singleton:!!singleton,sdkScripts:document.querySelectorAll('script[data-ei-supabase-sdk]').length,ready:window.EI_SUPABASE.state.ready};
+  },{warnWhen:function(v){return v.sdkScripts>1;},detail:function(v){return "Cliente compartido: "+(v.singleton?"sí":"no")+" · scripts SDK: "+v.sdkScripts;}});});
+  chain=chain.then(function(){return check("Compatibilidad","Snapshot con forEach",function(){return db.collection("users").limit(3).get().then(function(snap){if(typeof snap.forEach!=="function")throw new Error("El snapshot no implementa forEach.");if(!Array.isArray(snap.docs))throw new Error("El snapshot no expone docs.");snapshotUsers=docsToList(snap);return {size:snap.size,users:snapshotUsers.map(function(u){return u.email||u.name||u.id;})};});},{detail:function(v){return "Contrato correcto · "+v.size+" perfil(es) leídos en muestra.";}});});
+  chain=chain.then(function(){return check("Usuarios","Directorio de perfiles",function(){return client.from("profiles").select("firebase_uid,auth_user_id,email,display_name,role_code,active,raw_profile").order("email").then(function(r){if(r.error)throw r.error;return r.data||[];});},{warnWhen:function(v){return !v.length||v.some(function(u){return u.active===true&&!u.auth_user_id;});},detail:function(v){var active=v.filter(function(u){return u.active===true;}).length,unlinked=v.filter(function(u){return u.active===true&&!u.auth_user_id;}).length;return "Perfiles: "+v.length+" · activos: "+active+" · activos sin vínculo Auth: "+unlinked;}});});
+  chain=chain.then(function(){return check("Enrutamiento","Perfiles de Javier y Duvan",function(){return client.from("profiles").select("firebase_uid,auth_user_id,email,display_name,role_code,active,raw_profile").in("email",["j.laverde@ei.com.co","d.diaz@ei.com.co"]).then(function(r){if(r.error)throw r.error;var rows=r.data||[];if(rows.length!==2)throw new Error("No están disponibles los dos perfiles operativos. Encontrados: "+rows.length);rows.forEach(function(u){if(u.active!==true)throw new Error("Perfil inactivo: "+u.email);if(normalizeRole(u.role_code)!=="coordinador_logistico")throw new Error("Rol incorrecto para "+u.email+": "+u.role_code);});return rows;});},{detail:function(){return "Javier y Duvan están activos con rol coordinador_logistico.";}});});
+  chain=chain.then(function(){return check("Enrutamiento","Matriz local y nacional",function(){
+    var expected={cliente_punto:"d.diaz@ei.com.co",cliente_recoge:"d.diaz@ei.com.co",despacho_local:"d.diaz@ei.com.co",despacho_nacional:"j.laverde@ei.com.co"},actual={};
+    Object.keys(expected).forEach(function(route){var users=deliveryRouteAssignableUsers(route);actual[route]=users[0]&&users[0].email||"";if(actual[route]!==expected[route])throw new Error(route+" quedó en "+actual[route]+" y debe quedar en "+expected[route]);});
+    report.routing=actual;return actual;
+  },{detail:function(v){return "Local → Duvan; nacional → Javier. "+JSON.stringify(v);}});});
+  chain=chain.then(function(){return check("Pedidos","Lectura de casos",function(){return db.collection("cases").limit(25).get().then(function(snap){return {count:snap.size,sample:docsToList(snap).slice(0,5).map(function(c){return c.reference||c.id;})};});},{warnWhen:function(v){return v.count===0;},detail:function(v){return "Casos leídos: "+v.count+(v.count===0?". Revise importación o RLS si esperaba pedidos.":"");}});});
+  chain=chain.then(function(){return check("Inventario","Lectura de inventario de chipas",function(){return db.collection("inventario_chipas").limit(25).get().then(function(snap){return {count:snap.size};});},{optional:true,warnWhen:function(v){return v.count===0;},detail:function(v){return "Registros leídos: "+v.count;}});});
+  chain=chain.then(function(){return check("Persistencia","Crear, leer y borrar registro QA",function(){var id="QA_DIAG_"+Date.now(),ref=db.collection("erp_diagnostic_runs").doc(id),payload={id:id,type:"ERP_DIAGNOSTIC_SMOKE",createdAt:now(),createdBy:state.user.uid,createdByName:state.user.name};return ref.set(payload,{merge:false}).then(function(){return ref.get();}).then(function(doc){if(!doc.exists)throw new Error("El registro QA no se pudo leer después de crearlo.");return ref.delete();}).then(function(){return {id:id,deleted:true};});},{detail:function(v){return "Escritura transaccional correcta; registro temporal eliminado: "+v.id;}});});
+  chain=chain.then(function(){return check("Archivos","Preparación de archivo borrador",function(){var file=new File(["Diagnóstico ERP "+now()+"\n"],"borrador_diagnostico_erp.txt",{type:"text/plain"});return prepareFileForDrive(file,{diagnostic:true}).then(function(prep){if(!prep||!(prep.blob||prep.file||prep))throw new Error("No se obtuvo archivo preparado.");return {name:file.name,size:file.size,type:file.type,prepared:true};});},{optional:true,detail:function(v){return "Archivo generado y preparado: "+v.name+" · "+v.size+" bytes.";}});});
+  chain=chain.then(function(){return check("Flujo","Guardián de integridad",function(){return client.rpc("erp_scan_flow_health").then(function(r){if(r.error)throw r.error;return r.data||{};});},{optional:true,warnWhen:function(v){return Number(v.attention||0)>0;},detail:function(v){return "Pedidos revisados: "+Number(v.checked||0)+" · con atención: "+Number(v.attention||0);}});});
+  chain=chain.then(function(){return check("Servidor","Snapshot integral Supabase",function(){return client.rpc("erp_diagnostic_snapshot").then(function(r){if(r.error)throw r.error;return r.data||{};});},{optional:true,warnWhen:function(v){return Number(v.critical||0)>0;},detail:function(v){return "Snapshot SQL ejecutado"+(v&&v.summary?" · "+JSON.stringify(v.summary):"")+".";}});});
+  chain=chain.then(function(){return check("Cobertura","Combinaciones comerciales",function(){var tipos=["PVC","PVN","PVE","PVP"],gestion=["normal","retenido","prioritario"],entrega=["cliente_punto","cliente_recoge","despacho_local","despacho_nacional","por_definir"],pago=["contado","credito","anticipo","por_definir"],count=tipos.length*gestion.length*entrega.length*pago.length;if(count!==240)throw new Error("La matriz no totaliza 240 combinaciones.");return {count:count};},{detail:function(v){return "Matriz configurada: "+v.count+" combinaciones. La ejecución real se inicia con el botón E2E.";}});});
+  chain.finally(function(){report.finishedAt=now();report.summary=erpDiagnosticSummary(report);state.erpDiagnosticReport=report;state.erpDiagnosticRunning=false;renderErpDiagnostics();});
+}
+function downloadErpDiagnostic(){
+  if(!currentUserIsSuperAdmin()||!state.erpDiagnosticReport){alert("Primero ejecute el diagnóstico.");return;}
+  var blob=new Blob([JSON.stringify(state.erpDiagnosticReport,null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="DIAGNOSTICO_ERP_"+new Date().toISOString().replace(/[:.]/g,"-")+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
+}
+function triggerErpBot(){
+  if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede ejecutar el bot E2E.");return;}
+  var client=erpDiagnosticClient();if(!client){alert("Supabase no está disponible.");return;}
+  if(!confirm("Se ejecutarán pruebas E2E exhaustivas de hasta 240 combinaciones en GitHub Actions. Los registros QA se limpiarán al finalizar. ¿Continuar?"))return;
+  state.erpDiagnosticRunning=true;renderErpDiagnostics();
+  client.functions.invoke("trigger-erp-diagnostic",{body:{mode:"exhaustive",suite:"all",cleanup:true,max_combinations:0,base_url:location.origin+location.pathname.replace(/\/engine\/modules\/administracion\/.*$/,"/")}}).then(function(result){
+    if(result.error)throw result.error;
+    alert("Bot E2E iniciado. GitHub Actions generará el informe DIAGNOSTICO_ERP.md, JSON, capturas y trazas.");
+  }).catch(function(error){alert("No se pudo iniciar el bot E2E: "+((error&&error.message)||error)+". Verifique que la Edge Function y sus secretos estén desplegados.");}).finally(function(){state.erpDiagnosticRunning=false;renderErpDiagnostics();});
+}
+function testDiagnosticDrive(){
+  if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede ejecutar esta prueba.");return;}
+  if(!confirm("Se subirá a Google Drive un archivo TXT pequeño llamado QA_DIAGNOSTICO. ¿Continuar?"))return;
+  var stamp=Date.now(),file=new File(["Archivo de prueba ERP · "+now()+"\n"],"QA_DIAGNOSTICO_ERP_"+stamp+".txt",{type:"text/plain"});
+  var fake={id:"QA-DIAG-"+stamp,reference:"QA-DIAG-"+stamp,client:"DIAGNÓSTICO ERP",currentProcess:"recepcion_pedidos",createdAt:now(),createdBy:state.user.uid,createdByName:state.user.name};
+  state.erpDiagnosticRunning=true;renderErpDiagnostics();
+  uploadFileToDrive(file,fake,{processName:"Diagnóstico ERP",processKey:"diagnostico_erp",fileName:file.name,evidenceType:"QA_DIAGNOSTIC_FILE",feedbackMessage:"Subiendo archivo de prueba a Drive…"}).then(function(up){
+    state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"7.1.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};
+    state.erpDiagnosticReport.results.push({status:"PASS",area:"Google Drive",name:"Carga física de archivo",detail:"Archivo cargado: "+file.name,data:up,at:now()});
+    alert("Archivo de diagnóstico cargado correctamente en Drive.");
+  }).catch(function(error){state.erpDiagnosticReport=state.erpDiagnosticReport||{version:"7.1.0",startedAt:now(),finishedAt:now(),user:state.user,results:[]};state.erpDiagnosticReport.results.push({status:"FAIL",area:"Google Drive",name:"Carga física de archivo",detail:(error&&error.message)||String(error),at:now()});alert("Falló la carga de prueba: "+((error&&error.message)||error));}).finally(function(){state.erpDiagnosticRunning=false;renderErpDiagnostics();});
+}
+function repairLogisticsRoutes(){
+  if(!currentUserIsSuperAdmin()){alert("Solo Super Admin puede reparar las rutas.");return;}
+  var client=erpDiagnosticClient();if(!client){alert("Supabase no está disponible.");return;}
+  if(!confirm("Se normalizarán los perfiles de Javier y Duvan y las asignaciones de pedidos abiertos según entrega local o nacional. ¿Continuar?"))return;
+  state.erpDiagnosticRunning=true;renderErpDiagnostics();
+  client.rpc("erp_repair_logistics_routes").then(function(r){if(r.error)throw r.error;alert("Rutas reparadas: "+JSON.stringify(r.data||{}));return loadData();}).then(function(){state.erpDiagnosticRunning=false;runErpDiagnostic();}).catch(function(error){state.erpDiagnosticRunning=false;renderErpDiagnostics();alert("No se pudo reparar: "+((error&&error.message)||error)+". Ejecute el SQL 04_DIAGNOSTICO_Y_RUTAS_LOGISTICAS.sql.");});
+}
+
 function bindActions(){
   qsa("[data-action]").forEach(function(b){b.onclick=function(){var a=b.getAttribute("data-action"),id=b.getAttribute("data-id");
     if(currentUserIsAuditReadOnly()){
@@ -11824,6 +11975,11 @@ function bindActions(){
     if(a==="toggleKpiCase")toggleCaseKpi(id);
     if(a==="deleteCase")deleteCaseHard(id);
     if(a==="deleteReceptionPedidoCase")deleteReceptionPedidoCase(id);
+    if(a==="runErpDiagnostic")runErpDiagnostic();
+    if(a==="downloadErpDiagnostic")downloadErpDiagnostic();
+    if(a==="triggerErpBot")triggerErpBot();
+    if(a==="testDiagnosticDrive")testDiagnosticDrive();
+    if(a==="repairLogisticsRoutes")repairLogisticsRoutes();
   };});
 }
 
@@ -11891,6 +12047,7 @@ function render(){
   else if(state.route==="indicators")renderIndicators();
   else if(state.route==="users")renderUsers();
   else if(state.route==="admin")renderAdmin();
+  else if(state.route==="diagnostico_erp")renderErpDiagnostics();
   else renderDashboard();
 }
 

@@ -1,5 +1,6 @@
 (function(){
 "use strict";
+if(window.EI_BACKEND_ADAPTER&&window.firebase&&window.firebase.__eiSupabaseAdapter){return;}
 var CORE=window.EI_SUPABASE,COMPAT=window.EI_SUPABASE_COMPAT;
 if(!CORE||!COMPAT)throw new Error("La capa Supabase del ERP no está disponible.");
 var ready=null,db=null,auth=null;

@@ -1,5 +1,5 @@
 {
-  "version": "6.0.0-engine",
+  "version": "7.1.0-engine",
   "modules": [
     {
       "id": "inicio",
@@ -181,9 +181,10 @@
       "defaultRoute": "admin",
       "routes": [
         "users",
-        "admin"
+        "admin",
+        "diagnostico_erp"
       ],
-      "description": "Usuarios, permisos, migraciones y herramientas administrativas.",
+      "description": "Usuarios, permisos, migraciones, diagnóstico integral y herramientas administrativas.",
       "engine": "legacy"
     },
     {

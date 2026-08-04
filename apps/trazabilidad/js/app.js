@@ -10,7 +10,7 @@
   function toast(title,message,type){var region=U.qs("#toastRegion"),item=document.createElement("div");item.className="ei-toast "+(type||"");item.innerHTML=U.icon(type==="error"?"alert":"check")+'<div><strong>'+U.escape(title)+'</strong><span>'+U.escape(message||"")+'</span></div>';region.appendChild(item);setTimeout(function(){item.remove();},5200);}
   function moduleById(id){return state.modules.filter(function(m){return m.id===id;})[0]||state.modules[0];}
   function actionById(moduleId,actionId){var module=moduleById(moduleId);return module&&(module.actions||[]).filter(function(a){return a.id===actionId;})[0];}
-  function visibleActions(module){return (module.actions||[]).filter(function(a){return allowed(a.groups);});}
+  function visibleActions(module){return (module.actions||[]).filter(function(a){if(a.superAdminOnly===true&&U.normalize(state.session&&state.session.profile&&state.session.profile.role)!=="super_admin")return false;return allowed(a.groups);});}
   function valueList(value){
     if(Array.isArray(value))return value.map(function(v){return String(v||"").trim();}).filter(Boolean);
     if(value===null||value===undefined)return [];
@@ -112,6 +112,7 @@
     return url.href;
   }
   function openAction(module,action){
+    if(action.superAdminOnly===true&&U.normalize(state.session&&state.session.profile&&state.session.profile.role)!=="super_admin"){toast("Acceso restringido","Solo Super Admin puede abrir esta transacción.","error");return;}
     if(!allowed(action.groups)){toast("Acceso no autorizado","Su rol no tiene permiso para abrir esta transacción.","error");return;}
     var url=engineUrl(action);
     if(action.openMode==="page"){

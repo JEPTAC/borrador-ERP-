@@ -1,0 +1,2 @@
+Archivo de prueba automática del bot de diagnóstico EI ERP.
+No contiene información operativa real.

@@ -1,5 +1,6 @@
 (function(){
 "use strict";
+if(window.EI_SUPABASE_COMPAT){return;}
 var CORE=window.EI_SUPABASE;
 if(!CORE)throw new Error("EI_SUPABASE no está disponible.");
 
@@ -64,6 +65,8 @@ function compare(a,b,field,direction){var av=valueAt(a,field),bv=valueAt(b,field
 function DocumentSnapshot(ref,data,exists){this.ref=ref;this.id=ref.id;this.exists=!!exists;this._data=data;}
 DocumentSnapshot.prototype.data=function(){return clone(this._data);};
 function QuerySnapshot(docs){this.docs=docs;this.size=docs.length;this.empty=!docs.length;}
+QuerySnapshot.prototype.forEach=function(callback,thisArg){this.docs.forEach(function(doc,index){callback.call(thisArg,doc,index,this);},this);};
+QuerySnapshot.prototype.docChanges=function(){return this.docs.map(function(doc){return {type:"added",doc:doc,oldIndex:-1,newIndex:0};});};
 function mapError(error){var e=error instanceof Error?error:new Error(error&&error.message||String(error));if(error&&error.code)e.code=error.code;return e;}
 
 function serverColumn(collection,field){

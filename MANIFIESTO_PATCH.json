@@ -1,0 +1,182 @@
+[
+  {
+    "ruta": ".github/workflows/erp-diagnostic-bot.yml",
+    "sha256": "4f867ea12da3f963338a03cd935355f2ce4bf84abc8f4560822cda718186ec2b",
+    "bytes": 3537
+  },
+  {
+    "ruta": "SUBIR_ESTOS_ARCHIVOS.txt",
+    "sha256": "aad5e70e671c5fb0d08283c6cb848c7d2e4a4daabe0fd315d8ebe2b298fd467e",
+    "bytes": 985
+  },
+  {
+    "ruta": "apps/trazabilidad/config/transactions.json",
+    "sha256": "b451a6e6485cae487d7d6f492638a1cfa59d1b9e141c6eb344ee7c512a0f35ab",
+    "bytes": 25191
+  },
+  {
+    "ruta": "apps/trazabilidad/index.html",
+    "sha256": "26338a309c91b6615ee0a1ad477bd08a39f00de07edd000ca006e67555150f9d",
+    "bytes": 7278
+  },
+  {
+    "ruta": "apps/trazabilidad/js/app.js",
+    "sha256": "1da8573ade20e2f3850567a779c5717a056aa2e1bb88ad395282be2af5397ec2",
+    "bytes": 30735
+  },
+  {
+    "ruta": "core/js/supabase.js",
+    "sha256": "84e43210b51b535dec26b81a0b07570af8cc3f0642ff95011d4665180f65df45",
+    "bytes": 8373
+  },
+  {
+    "ruta": "engine/modules/administracion/assets/js/module.js",
+    "sha256": "8eb4bd3918231011c7ff2def84c73d8dd65fcaf4ba48f73e40400f2b013cf32b",
+    "bytes": 374
+  },
+  {
+    "ruta": "engine/modules/administracion/assets/json/module.json",
+    "sha256": "d66e4fc9e218810312481585cf839a38fc0c2063a09304f7278e703ea2437bfd",
+    "bytes": 347
+  },
+  {
+    "ruta": "engine/modules/administracion/index.html",
+    "sha256": "ca595b4086b020650299a59e3fd2d7465fcbfc301ae7aee2075be0b325c05e87",
+    "bytes": 1445
+  },
+  {
+    "ruta": "engine/shared/js/runtime/app-runtime.js",
+    "sha256": "8429c1ae2d7f75ee950b63a3769d598143292b6141aadaa9ed6f58bfc101a532",
+    "bytes": 1215213
+  },
+  {
+    "ruta": "engine/shared/js/supabase-compat.js",
+    "sha256": "4ea5e13640e431cc661dd5b11c978665d710f9b96119b446c4e608a64494987f",
+    "bytes": 18793
+  },
+  {
+    "ruta": "engine/shared/js/supabase-legacy-adapter.js",
+    "sha256": "28274bddac5626abf3e73721cc43342c8ba785f48b286ab5eebdcbffad2e9405",
+    "bytes": 5181
+  },
+  {
+    "ruta": "engine/shared/json/modules.json",
+    "sha256": "38d3c8d7e7d08da61377cc928e89ea320609d70a9339f6cce9b37b1e9b4cf559",
+    "bytes": 7667
+  },
+  {
+    "ruta": "engine/shared/json/route-labels.json",
+    "sha256": "6e384030b1bedda2446587ba4707f8cf98c5ec4db576ff60b3cb482e22ed8f4f",
+    "bytes": 2013
+  },
+  {
+    "ruta": "index.html",
+    "sha256": "4ed6bb9cfe4d7d1b7625d09a6fa1f546c38353e5b46c31cba97d22bdd5f9fe05",
+    "bytes": 5884
+  },
+  {
+    "ruta": "package.json",
+    "sha256": "e94bac54f3cb2afe6d0106360394a7591439322d0e0545232023aaabbc743b8a",
+    "bytes": 602
+  },
+  {
+    "ruta": "portal/index.html",
+    "sha256": "a61a8d88ccf642e1b98eacd44e6cf456a64f44e62492185f1bfab2492d166f06",
+    "bytes": 3308
+  },
+  {
+    "ruta": "qa/.gitignore",
+    "sha256": "0b9fcccae0844810af4fd2015bc555cc0e2d8eac65513fe31db7fc6dfd65dd05",
+    "bytes": 22
+  },
+  {
+    "ruta": "qa/README_BOT_DIAGNOSTICO.md",
+    "sha256": "c2a3e485965958006b39875cdf59e5d7fede6a2a649685ea98d89254dfebea50",
+    "bytes": 2344
+  },
+  {
+    "ruta": "qa/accounts.example.json",
+    "sha256": "9c4d9cbed462f19a5a3d29456828f2d84e6dd82939632ea63dc8851dab5661ba",
+    "bytes": 965
+  },
+  {
+    "ruta": "qa/fixtures/qa-evidence.png",
+    "sha256": "8b542c460a7f4a2d30a69d004f32e3bbf498eb60713052fb48b63ea084c567d7",
+    "bytes": 68
+  },
+  {
+    "ruta": "qa/fixtures/qa-note.txt",
+    "sha256": "cf63d561f494c98ff9305ad75c1ea272aa8589a40547d9c56a3f705837bf9773",
+    "bytes": 103
+  },
+  {
+    "ruta": "qa/fixtures/qa-order-lines.csv",
+    "sha256": "d3a6572f8b45bed1c0e4943aeb918564b384efd5b013e311575da715cf654f04",
+    "bytes": 150
+  },
+  {
+    "ruta": "qa/generate-report.cjs",
+    "sha256": "b954f0f3d12ecee7f396f00d4ab652cf2d46fbf010fe6021d9e5ff4f84e579c2",
+    "bytes": 4712
+  },
+  {
+    "ruta": "qa/lib/config.cjs",
+    "sha256": "bdebd180549da1ad5c1a3a19aeadce407ef8f6bed95da848be297d31b727d282",
+    "bytes": 3422
+  },
+  {
+    "ruta": "qa/lib/erp.cjs",
+    "sha256": "fe055fd4b6b89fd7971d5120944dbcb1bbfca75a5491238cb451b7948ce2f052",
+    "bytes": 8158
+  },
+  {
+    "ruta": "qa/lib/journal.cjs",
+    "sha256": "90d62949cc1071f898507375b79ca145fd7584d4e8e5d497a23bb6b1e2c79fe9",
+    "bytes": 2450
+  },
+  {
+    "ruta": "qa/lib/supabase-admin.cjs",
+    "sha256": "79cbfc5990acfccde665125100197f9c5c897ee82b765cf844a680f70fad11c5",
+    "bytes": 2077
+  },
+  {
+    "ruta": "qa/playwright.config.cjs",
+    "sha256": "0e3239179f94f30c82070a57d7baa2c3245cec2fc93b28e1d39a2df5d48b75e5",
+    "bytes": 959
+  },
+  {
+    "ruta": "qa/tests/01-auth-rbac.spec.cjs",
+    "sha256": "227e77dfb5d94142a098664c8e1807105c148741f532e77305c44e439fd8f498",
+    "bytes": 1308
+  },
+  {
+    "ruta": "qa/tests/02-navigation.spec.cjs",
+    "sha256": "69d74c256c4d351480eb4d9f03980a13649235116cfbc248c9aac0d020158aed",
+    "bytes": 2537
+  },
+  {
+    "ruta": "qa/tests/03-order-matrix.spec.cjs",
+    "sha256": "a4688287700c6b1f29d2197f14529b23bbc1da36bdcf681b1f2dd2e59ac8bfe4",
+    "bytes": 6152
+  },
+  {
+    "ruta": "qa/tests/04-flow-explorer.spec.cjs",
+    "sha256": "270cb95b0ff03e8f46bd0e7373533d395f85f43d1166ca557c6edbb72b8e7b01",
+    "bytes": 5172
+  },
+  {
+    "ruta": "qa/tests/05-routing-owners.spec.cjs",
+    "sha256": "6e0c14ef0a8537ad437424143ce2f6ee1dc4c825040ca421e1b41a7453db33bf",
+    "bytes": 4405
+  },
+  {
+    "ruta": "service-worker.js",
+    "sha256": "100109a4bd3c323f1bf890a2bf74b043308453b304495ee15ff52875b11b7063",
+    "bytes": 2108
+  },
+  {
+    "ruta": "supabase/functions/trigger-erp-diagnostic/index.ts",
+    "sha256": "7c8d46c74bb7872f6834135d2ce2faa235b2345b8863d63c1a99cd227999652e",
+    "bytes": 4866
+  }
+]

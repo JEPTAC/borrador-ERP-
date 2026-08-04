@@ -1,7 +1,10 @@
 (function(){
   "use strict";
+  if(window.EI_SUPABASE&&window.EI_SUPABASE.state){return;}
   var config=window.EI_NOVA_CONFIG||{};
   var state={ready:false,client:null,auth:null,db:null,error:null,currentUser:null};
+  var initPromise=null;
+  var clientSingletonKey="__EI_NOVA_SUPABASE_CLIENT__";
 
   function normalizeUser(user){
     if(!user)return null;
@@ -75,21 +78,45 @@
       }
     };
   }
+  function inheritedClient(){
+    try{
+      if(window.parent&&window.parent!==window&&window.parent.EI_SUPABASE&&window.parent.EI_SUPABASE.state&&window.parent.EI_SUPABASE.state.client){
+        return window.parent.EI_SUPABASE.state.client;
+      }
+      if(window.top&&window.top!==window&&window.top.EI_SUPABASE&&window.top.EI_SUPABASE.state&&window.top.EI_SUPABASE.state.client){
+        return window.top.EI_SUPABASE.state.client;
+      }
+    }catch(e){}
+    return null;
+  }
   function init(){
     if(state.ready)return Promise.resolve(state);
-    return ensureSdk().then(function(){
+    if(initPromise)return initPromise;
+    initPromise=ensureSdk().then(function(){
       var settings=config.supabase||{};
       if(!settings.url||!settings.publishableKey)throw new Error("La configuración pública de Supabase está incompleta.");
-      state.client=window.supabase.createClient(settings.url,settings.publishableKey,{
-        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce"},
-        db:{schema:settings.schema||"public"},
-        global:{headers:{"X-Client-Info":"ei-erp-nova/7.0.0"}}
-      });
+      var inherited=inheritedClient();
+      var existing=window[clientSingletonKey];
+      if(inherited){
+        state.client=inherited;
+        window[clientSingletonKey]={url:settings.url,key:settings.publishableKey,client:state.client,inherited:true};
+      }else if(existing&&existing.url===settings.url&&existing.key===settings.publishableKey&&existing.client){
+        state.client=existing.client;
+      }else{
+        state.client=window.supabase.createClient(settings.url,settings.publishableKey,{
+          auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce",storageKey:"sb-hezjxcxxcjlpmyalftam-auth-token"},
+          db:{schema:settings.schema||"public"},
+          global:{headers:{"X-Client-Info":"ei-erp-nova/7.1.0"}}
+        });
+        window[clientSingletonKey]={url:settings.url,key:settings.publishableKey,client:state.client};
+      }
       state.auth=authAdapter(state.client);
       state.db=state.client;
       state.ready=true;
+      state.error=null;
       return state;
-    }).catch(function(error){state.error=error;throw error;});
+    }).catch(function(error){state.error=error;initPromise=null;throw error;});
+    return initPromise;
   }
   function profileFor(user){
     user=normalizeUser(user);
