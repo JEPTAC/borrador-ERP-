@@ -1,0 +1,96 @@
+{
+  "metrics": [
+    {
+      "label": "Documentos activos",
+      "value": "284",
+      "hint": "Expedientes laborales",
+      "icon": "file"
+    },
+    {
+      "label": "Firmas pendientes",
+      "value": "11",
+      "hint": "4 vencen hoy",
+      "icon": "edit",
+      "tone": "warning"
+    },
+    {
+      "label": "Próximos a vencer",
+      "value": "8",
+      "hint": "En 30 días",
+      "icon": "alert",
+      "tone": "danger"
+    },
+    {
+      "label": "Expedientes completos",
+      "value": "91%",
+      "hint": "Meta institucional 95%",
+      "icon": "folder-check",
+      "tone": "success"
+    }
+  ],
+  "documents": [
+    {
+      "id": "DOC-501",
+      "name": "Acta de posesión",
+      "person": "Ana María Torres",
+      "category": "Vinculación",
+      "date": "2021-02-15",
+      "expiry": "",
+      "status": "Firmado"
+    },
+    {
+      "id": "DOC-502",
+      "name": "Contrato OPS 2026",
+      "person": "Luis Fernando Ruiz",
+      "category": "Contratación",
+      "date": "2026-01-15",
+      "expiry": "2026-09-30",
+      "status": "Firmado"
+    },
+    {
+      "id": "DOC-503",
+      "name": "Declaración de bienes y rentas",
+      "person": "Sofía Martínez",
+      "category": "Cumplimiento",
+      "date": "2025-06-30",
+      "expiry": "2026-08-15",
+      "status": "Pendiente firma"
+    },
+    {
+      "id": "DOC-504",
+      "name": "Certificado de aptitud médica",
+      "person": "Mateo Hernández",
+      "category": "SG-SST",
+      "date": "2026-02-01",
+      "expiry": "2027-02-01",
+      "status": "Vigente"
+    },
+    {
+      "id": "DOC-505",
+      "name": "Evaluación de desempeño 2025",
+      "person": "Camila Valencia",
+      "category": "Desempeño",
+      "date": "2026-02-20",
+      "expiry": "",
+      "status": "Firmado"
+    }
+  ],
+  "templates": [
+    {
+      "name": "Certificado laboral",
+      "uses": 28
+    },
+    {
+      "name": "Acta de entrega de cargo",
+      "uses": 8
+    },
+    {
+      "name": "Formato de vacaciones",
+      "uses": 17
+    },
+    {
+      "name": "Compromiso de confidencialidad",
+      "uses": 12
+    }
+  ]
+}

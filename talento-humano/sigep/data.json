@@ -1,0 +1,98 @@
+{
+  "metrics": [
+    {
+      "label": "Hojas de vida",
+      "value": "74",
+      "hint": "68 actualizadas",
+      "icon": "users",
+      "tone": "success"
+    },
+    {
+      "label": "Pendientes",
+      "value": "6",
+      "hint": "Datos o soportes",
+      "icon": "alert",
+      "tone": "warning"
+    },
+    {
+      "label": "Bienes y rentas",
+      "value": "91%",
+      "hint": "Cumplimiento anual",
+      "icon": "file-check"
+    },
+    {
+      "label": "Vinculaciones por validar",
+      "value": "3",
+      "hint": "Contratistas nuevos",
+      "icon": "briefcase",
+      "tone": "danger"
+    }
+  ],
+  "records": [
+    {
+      "person": "Ana María Torres",
+      "type": "Servidor público",
+      "resume": "Actualizada",
+      "assets": "Presentada",
+      "conflict": "Presentada",
+      "link": "Vinculación validada",
+      "updated": "2026-07-25"
+    },
+    {
+      "person": "Luis Fernando Ruiz",
+      "type": "Contratista",
+      "resume": "Pendiente soporte",
+      "assets": "No aplica",
+      "conflict": "Presentada",
+      "link": "Pendiente",
+      "updated": "2026-08-01"
+    },
+    {
+      "person": "Camila Valencia",
+      "type": "Servidor público",
+      "resume": "Actualizada",
+      "assets": "Presentada",
+      "conflict": "Presentada",
+      "link": "Vinculación validada",
+      "updated": "2026-06-30"
+    },
+    {
+      "person": "Sofía Martínez",
+      "type": "Servidor público",
+      "resume": "Por validar",
+      "assets": "Pendiente",
+      "conflict": "Presentada",
+      "link": "Vinculación validada",
+      "updated": "2026-07-10"
+    },
+    {
+      "person": "Mateo Hernández",
+      "type": "Contratista",
+      "resume": "Pendiente soporte",
+      "assets": "No aplica",
+      "conflict": "Pendiente",
+      "link": "Pendiente",
+      "updated": "2026-08-02"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Actualizar formación académica",
+      "person": "Luis Fernando Ruiz",
+      "due": "2026-08-08",
+      "status": "Pendiente"
+    },
+    {
+      "title": "Validar declaración de bienes",
+      "person": "Sofía Martínez",
+      "due": "2026-08-06",
+      "status": "Vencida"
+    },
+    {
+      "title": "Registrar vinculación contractual",
+      "person": "Mateo Hernández",
+      "due": "2026-08-09",
+      "status": "Pendiente"
+    }
+  ]
+}

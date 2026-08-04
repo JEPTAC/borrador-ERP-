@@ -1,0 +1,104 @@
+{
+  "metrics": [
+    {
+      "label": "Periodo",
+      "value": "Agosto 2026",
+      "hint": "Preliquidación abierta",
+      "icon": "calendar"
+    },
+    {
+      "label": "Personas incluidas",
+      "value": "48",
+      "hint": "Servidores de planta",
+      "icon": "users",
+      "tone": "success"
+    },
+    {
+      "label": "Novedades",
+      "value": "17",
+      "hint": "12 validadas · 5 pendientes",
+      "icon": "clipboard-list",
+      "tone": "warning"
+    },
+    {
+      "label": "Alertas",
+      "value": "3",
+      "hint": "Requieren corrección",
+      "icon": "alert",
+      "tone": "danger"
+    }
+  ],
+  "summary": {
+    "gross": 218450000,
+    "deductions": 38420000,
+    "employer": 66500000,
+    "net": 180030000
+  },
+  "concepts": [
+    {
+      "code": "DEV-001",
+      "name": "Asignación básica",
+      "type": "Devengo",
+      "people": 48,
+      "amount": 201000000,
+      "status": "Validado"
+    },
+    {
+      "code": "DEV-014",
+      "name": "Horas extra",
+      "type": "Devengo",
+      "people": 7,
+      "amount": 4450000,
+      "status": "Pendiente"
+    },
+    {
+      "code": "DEV-021",
+      "name": "Bonificación servicios",
+      "type": "Devengo",
+      "people": 4,
+      "amount": 13000000,
+      "status": "Validado"
+    },
+    {
+      "code": "DED-001",
+      "name": "Salud",
+      "type": "Deducción",
+      "people": 48,
+      "amount": 8740000,
+      "status": "Calculado"
+    },
+    {
+      "code": "DED-002",
+      "name": "Pensión",
+      "type": "Deducción",
+      "people": 48,
+      "amount": 8740000,
+      "status": "Calculado"
+    },
+    {
+      "code": "DED-010",
+      "name": "Libranzas",
+      "type": "Deducción",
+      "people": 9,
+      "amount": 6210000,
+      "status": "Pendiente"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Planta mensual",
+      "people": 44,
+      "status": "Calculado"
+    },
+    {
+      "name": "Directivos",
+      "people": 4,
+      "status": "Calculado"
+    },
+    {
+      "name": "Retroactivos",
+      "people": 3,
+      "status": "Pendiente"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "metrics": [
+    {
+      "label": "Ejecución bienestar",
+      "value": "63%",
+      "hint": "Plan anual 2026",
+      "icon": "heart",
+      "tone": "success"
+    },
+    {
+      "label": "Actividades próximas",
+      "value": "4",
+      "hint": "Agosto y septiembre",
+      "icon": "calendar"
+    },
+    {
+      "label": "Incidentes abiertos",
+      "value": "2",
+      "hint": "En investigación",
+      "icon": "alert",
+      "tone": "danger"
+    },
+    {
+      "label": "Cumplimiento SG-SST",
+      "value": "89%",
+      "hint": "Estándares mínimos",
+      "icon": "shield",
+      "tone": "warning"
+    }
+  ],
+  "activities": [
+    {
+      "title": "Jornada de salud cardiovascular",
+      "date": "2026-08-14",
+      "type": "Medicina preventiva",
+      "audience": "Todo el personal",
+      "status": "Programada"
+    },
+    {
+      "title": "Torneo de integración",
+      "date": "2026-08-22",
+      "type": "Bienestar",
+      "audience": "Funcionarios y familias",
+      "status": "Inscripciones"
+    },
+    {
+      "title": "Capacitación riesgo psicosocial",
+      "date": "2026-09-03",
+      "type": "SG-SST",
+      "audience": "Líderes de equipo",
+      "status": "Programada"
+    },
+    {
+      "title": "Reconocimiento al servicio público",
+      "date": "2026-09-18",
+      "type": "Incentivos",
+      "audience": "Servidores de planta",
+      "status": "Planeación"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "SST-021",
+      "date": "2026-07-28",
+      "person": "Funcionario de infraestructura",
+      "type": "Incidente sin lesión",
+      "risk": "Locativo",
+      "status": "En investigación"
+    },
+    {
+      "id": "SST-022",
+      "date": "2026-08-02",
+      "person": "Contratista de apoyo",
+      "type": "Condición insegura",
+      "risk": "Eléctrico",
+      "status": "Acción abierta"
+    }
+  ],
+  "risk": [
+    [
+      "Bajo",
+      "Bajo",
+      "Medio",
+      "Medio"
+    ],
+    [
+      "Bajo",
+      "Medio",
+      "Medio",
+      "Alto"
+    ],
+    [
+      "Medio",
+      "Medio",
+      "Alto",
+      "Alto"
+    ],
+    [
+      "Medio",
+      "Alto",
+      "Alto",
+      "Crítico"
+    ]
+  ]
+}

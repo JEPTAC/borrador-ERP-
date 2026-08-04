@@ -1,0 +1,195 @@
+{
+  "metrics": [
+    {
+      "label": "Costo mensual de planta",
+      "value": "$285 M",
+      "hint": "Incluye aportes estimados",
+      "icon": "wallet"
+    },
+    {
+      "label": "Rotación anual",
+      "value": "6.8%",
+      "hint": "5 salidas / 74 personas",
+      "icon": "refresh",
+      "tone": "success"
+    },
+    {
+      "label": "Ausentismo",
+      "value": "2.4%",
+      "hint": "Últimos 30 días",
+      "icon": "calendar",
+      "tone": "warning"
+    },
+    {
+      "label": "Cobertura de formación",
+      "value": "76%",
+      "hint": "Meta anual 85%",
+      "icon": "graduation-cap"
+    }
+  ],
+  "headcount": [
+    {
+      "label": "Ene",
+      "value": 69
+    },
+    {
+      "label": "Feb",
+      "value": 70
+    },
+    {
+      "label": "Mar",
+      "value": 72
+    },
+    {
+      "label": "Abr",
+      "value": 71
+    },
+    {
+      "label": "May",
+      "value": 73
+    },
+    {
+      "label": "Jun",
+      "value": 74
+    },
+    {
+      "label": "Jul",
+      "value": 74
+    },
+    {
+      "label": "Ago",
+      "value": 74
+    }
+  ],
+  "contract": [
+    {
+      "label": "Carrera",
+      "value": 34,
+      "color": "#0f4c81"
+    },
+    {
+      "label": "Libre nombramiento",
+      "value": 6,
+      "color": "#168b83"
+    },
+    {
+      "label": "Provisional",
+      "value": 8,
+      "color": "#52a8c9"
+    },
+    {
+      "label": "Contratista",
+      "value": 26,
+      "color": "#d8e2eb"
+    }
+  ],
+  "absence": [
+    {
+      "office": "General",
+      "values": [
+        1,
+        1,
+        2,
+        1,
+        2,
+        1,
+        1,
+        2,
+        1,
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "office": "Gobierno",
+      "values": [
+        1,
+        2,
+        2,
+        1,
+        3,
+        2,
+        1,
+        2,
+        2,
+        1,
+        2,
+        2
+      ]
+    },
+    {
+      "office": "Hacienda",
+      "values": [
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        2,
+        1,
+        1,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "office": "Planeación",
+      "values": [
+        2,
+        1,
+        2,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "office": "Salud",
+      "values": [
+        2,
+        3,
+        2,
+        3,
+        2,
+        2,
+        3,
+        2,
+        3,
+        2,
+        2,
+        3
+      ]
+    }
+  ],
+  "indicators": [
+    {
+      "name": "Expedientes laborales completos",
+      "value": 91,
+      "target": 95
+    },
+    {
+      "name": "Evaluaciones cerradas",
+      "value": 81,
+      "target": 100
+    },
+    {
+      "name": "Ejecución PIC",
+      "value": 68,
+      "target": 80
+    },
+    {
+      "name": "Cumplimiento SG-SST",
+      "value": 89,
+      "target": 90
+    }
+  ]
+}

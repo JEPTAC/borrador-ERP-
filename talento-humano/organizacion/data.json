@@ -1,0 +1,108 @@
+{
+  "metrics": [
+    {
+      "label": "Cargos de planta",
+      "value": "52",
+      "hint": "48 ocupados",
+      "icon": "briefcase"
+    },
+    {
+      "label": "Vacantes definitivas",
+      "value": "2",
+      "hint": "Requieren provisión",
+      "icon": "alert",
+      "tone": "warning"
+    },
+    {
+      "label": "Vacantes temporales",
+      "value": "2",
+      "hint": "Encargos o provisionales",
+      "icon": "calendar"
+    },
+    {
+      "label": "Dependencias",
+      "value": "9",
+      "hint": "Estructura vigente",
+      "icon": "building",
+      "tone": "success"
+    }
+  ],
+  "branches": [
+    {
+      "name": "Secretaría General",
+      "leader": "Secretario General",
+      "people": 11,
+      "teams": [
+        "Talento Humano · 3",
+        "TIC · 3",
+        "SIG y Archivo · 5"
+      ]
+    },
+    {
+      "name": "Secretaría de Gobierno",
+      "leader": "Secretario de Gobierno",
+      "people": 12,
+      "teams": [
+        "Víctimas · 3",
+        "Inspección · 4",
+        "Participación · 5"
+      ]
+    },
+    {
+      "name": "Hacienda",
+      "leader": "Secretaria de Hacienda",
+      "people": 11,
+      "teams": [
+        "Presupuesto · 3",
+        "Tesorería · 3",
+        "Rentas · 5"
+      ]
+    },
+    {
+      "name": "Planeación y Salud",
+      "leader": "Jefaturas sectoriales",
+      "people": 26,
+      "teams": [
+        "Planeación · 10",
+        "Salud y Bienestar · 16"
+      ]
+    }
+  ],
+  "positions": [
+    {
+      "code": "006-03",
+      "name": "Jefe de Oficina",
+      "level": "Directivo",
+      "office": "Planeación",
+      "status": "Ocupado"
+    },
+    {
+      "code": "219-02",
+      "name": "Profesional Universitario",
+      "level": "Profesional",
+      "office": "Secretaría General",
+      "status": "Ocupado"
+    },
+    {
+      "code": "367-04",
+      "name": "Técnico Administrativo",
+      "level": "Técnico",
+      "office": "Hacienda",
+      "status": "Vacante definitiva"
+    },
+    {
+      "code": "407-05",
+      "name": "Auxiliar Administrativo",
+      "level": "Asistencial",
+      "office": "Gobierno",
+      "status": "Ocupado"
+    },
+    {
+      "code": "314-01",
+      "name": "Técnico Operativo",
+      "level": "Técnico",
+      "office": "Infraestructura",
+      "status": "Vacante temporal"
+    }
+  ]
+}

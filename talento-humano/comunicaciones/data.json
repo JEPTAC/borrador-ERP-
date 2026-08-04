@@ -1,0 +1,87 @@
+{
+  "metrics": [
+    {
+      "label": "Publicaciones del mes",
+      "value": "9",
+      "hint": "Noticias y comunicados",
+      "icon": "message"
+    },
+    {
+      "label": "Alcance promedio",
+      "value": "87%",
+      "hint": "Lectura institucional",
+      "icon": "chart",
+      "tone": "success"
+    },
+    {
+      "label": "Reconocimientos",
+      "value": "14",
+      "hint": "En el trimestre",
+      "icon": "heart"
+    },
+    {
+      "label": "Encuestas activas",
+      "value": "2",
+      "hint": "Clima y capacitación",
+      "icon": "clipboard-list",
+      "tone": "warning"
+    }
+  ],
+  "announcements": [
+    {
+      "title": "Actualización de datos institucionales",
+      "body": "Todos los funcionarios deben revisar su información de contacto y emergencia antes del 12 de agosto.",
+      "author": "Talento Humano",
+      "date": "2026-08-04",
+      "audience": "Todo el personal",
+      "views": 62
+    },
+    {
+      "title": "Nueva ruta para solicitudes TIC",
+      "body": "La mesa de ayuda institucional será el único canal para reportar incidentes y requerimientos tecnológicos.",
+      "author": "Equipo TIC",
+      "date": "2026-08-02",
+      "audience": "Todo el personal",
+      "views": 70
+    },
+    {
+      "title": "Convocatoria jornada de bienestar",
+      "body": "Inscripciones abiertas para el torneo de integración municipal.",
+      "author": "Bienestar",
+      "date": "2026-07-31",
+      "audience": "Funcionarios y familias",
+      "views": 55
+    }
+  ],
+  "recognitions": [
+    {
+      "person": "Camila Valencia",
+      "reason": "Servicio al ciudadano",
+      "office": "Hacienda"
+    },
+    {
+      "person": "Laura Méndez",
+      "reason": "Innovación y apoyo TIC",
+      "office": "Secretaría General"
+    },
+    {
+      "person": "Sofía Martínez",
+      "reason": "Trabajo colaborativo",
+      "office": "Gobierno"
+    }
+  ],
+  "surveys": [
+    {
+      "title": "Encuesta de clima institucional",
+      "responses": 58,
+      "target": 74,
+      "status": "Activa"
+    },
+    {
+      "title": "Evaluación jornada de capacitación",
+      "responses": 21,
+      "target": 25,
+      "status": "Activa"
+    }
+  ]
+}

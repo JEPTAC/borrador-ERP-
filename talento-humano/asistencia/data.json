@@ -1,0 +1,95 @@
+{
+  "metrics": [
+    {
+      "label": "Presentes hoy",
+      "value": "68",
+      "hint": "92% del equipo",
+      "icon": "badge-check",
+      "tone": "success"
+    },
+    {
+      "label": "Trabajo remoto",
+      "value": "3",
+      "hint": "Autorizados",
+      "icon": "monitor"
+    },
+    {
+      "label": "Tardanzas",
+      "value": "4",
+      "hint": "Acumulado de hoy",
+      "icon": "alert",
+      "tone": "warning"
+    },
+    {
+      "label": "Horas extra del mes",
+      "value": "38 h",
+      "hint": "Pendientes de aprobación",
+      "icon": "calendar",
+      "tone": "danger"
+    }
+  ],
+  "attendance": [
+    {
+      "person": "Ana María Torres",
+      "office": "Secretaría General",
+      "entry": "07:01",
+      "exit": "17:32",
+      "worked": "8h 51m",
+      "status": "Presente"
+    },
+    {
+      "person": "Luis Fernando Ruiz",
+      "office": "Secretaría General",
+      "entry": "07:19",
+      "exit": "17:30",
+      "worked": "8h 31m",
+      "status": "Tarde"
+    },
+    {
+      "person": "Camila Valencia",
+      "office": "Hacienda",
+      "entry": "06:58",
+      "exit": "17:27",
+      "worked": "8h 49m",
+      "status": "Presente"
+    },
+    {
+      "person": "Sofía Martínez",
+      "office": "Gobierno",
+      "entry": "07:05",
+      "exit": "—",
+      "worked": "En curso",
+      "status": "Presente"
+    },
+    {
+      "person": "Juan Pablo Rojas",
+      "office": "Despacho",
+      "entry": "—",
+      "exit": "—",
+      "worked": "0h",
+      "status": "Ausente"
+    }
+  ],
+  "weekly": [
+    {
+      "day": "Lun",
+      "present": 70
+    },
+    {
+      "day": "Mar",
+      "present": 69
+    },
+    {
+      "day": "Mié",
+      "present": 71
+    },
+    {
+      "day": "Jue",
+      "present": 68
+    },
+    {
+      "day": "Vie",
+      "present": 66
+    }
+  ]
+}

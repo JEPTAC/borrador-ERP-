@@ -1,0 +1,109 @@
+{
+  "metrics": [
+    {
+      "label": "Solicitudes abiertas",
+      "value": "12",
+      "hint": "8 pendientes de jefe",
+      "icon": "clipboard-list",
+      "tone": "warning"
+    },
+    {
+      "label": "Personas en vacaciones",
+      "value": "4",
+      "hint": "Hoy",
+      "icon": "plane"
+    },
+    {
+      "label": "Incapacidades activas",
+      "value": "2",
+      "hint": "Soportes validados",
+      "icon": "heart",
+      "tone": "danger"
+    },
+    {
+      "label": "Saldo promedio",
+      "value": "10.8 días",
+      "hint": "Servidores de planta",
+      "icon": "calendar",
+      "tone": "success"
+    }
+  ],
+  "requests": [
+    {
+      "id": "AUS-081",
+      "person": "Ana María Torres",
+      "type": "Vacaciones",
+      "from": "2026-08-10",
+      "to": "2026-08-14",
+      "days": 5,
+      "status": "Pendiente"
+    },
+    {
+      "id": "AUS-082",
+      "person": "Luis Fernando Ruiz",
+      "type": "Permiso remunerado",
+      "from": "2026-08-06",
+      "to": "2026-08-06",
+      "days": 0.5,
+      "status": "Pendiente"
+    },
+    {
+      "id": "AUS-083",
+      "person": "Juan Pablo Rojas",
+      "type": "Incapacidad",
+      "from": "2026-08-04",
+      "to": "2026-08-06",
+      "days": 3,
+      "status": "Aprobada"
+    },
+    {
+      "id": "AUS-084",
+      "person": "Andrés Cárdenas",
+      "type": "Vacaciones",
+      "from": "2026-08-03",
+      "to": "2026-08-07",
+      "days": 5,
+      "status": "Aprobada"
+    }
+  ],
+  "calendar": [
+    {
+      "day": 3,
+      "event": "Andrés · Vacaciones"
+    },
+    {
+      "day": 4,
+      "event": "Juan · Incapacidad",
+      "tone": "warning"
+    },
+    {
+      "day": 5,
+      "event": "Juan · Incapacidad",
+      "tone": "warning"
+    },
+    {
+      "day": 6,
+      "event": "Luis · Permiso"
+    },
+    {
+      "day": 10,
+      "event": "Ana · Vacaciones"
+    },
+    {
+      "day": 11,
+      "event": "Ana · Vacaciones"
+    },
+    {
+      "day": 12,
+      "event": "Ana · Vacaciones"
+    },
+    {
+      "day": 13,
+      "event": "Ana · Vacaciones"
+    },
+    {
+      "day": 14,
+      "event": "Ana · Vacaciones"
+    }
+  ]
+}

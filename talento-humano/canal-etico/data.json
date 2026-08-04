@@ -1,0 +1,77 @@
+{
+  "metrics": [
+    {
+      "label": "Reportes abiertos",
+      "value": "1",
+      "hint": "Acceso restringido",
+      "icon": "shield",
+      "tone": "warning"
+    },
+    {
+      "label": "En análisis",
+      "value": "1",
+      "hint": "Comité de integridad",
+      "icon": "search"
+    },
+    {
+      "label": "Cerrados este año",
+      "value": "3",
+      "hint": "Con trazabilidad",
+      "icon": "badge-check",
+      "tone": "success"
+    },
+    {
+      "label": "Tiempo promedio",
+      "value": "18 días",
+      "hint": "Recepción a cierre",
+      "icon": "chart"
+    }
+  ],
+  "cases": [
+    {
+      "id": "ETI-2026-004",
+      "category": "Posible conflicto de interés",
+      "channel": "Anónimo",
+      "date": "2026-07-29",
+      "owner": "Comité de integridad",
+      "status": "En análisis",
+      "risk": "Medio"
+    },
+    {
+      "id": "ETI-2026-003",
+      "category": "Trato inadecuado",
+      "channel": "Identificado",
+      "date": "2026-06-10",
+      "owner": "Control Disciplinario",
+      "status": "Cerrado",
+      "risk": "Bajo"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Recepción segura",
+      "detail": "Código y constancia",
+      "state": "complete"
+    },
+    {
+      "name": "Clasificación",
+      "detail": "Competencia y riesgo",
+      "state": "complete"
+    },
+    {
+      "name": "Análisis",
+      "detail": "Comité autorizado",
+      "state": "active"
+    },
+    {
+      "name": "Actuación",
+      "detail": "Medidas o traslado",
+      "state": ""
+    },
+    {
+      "name": "Cierre",
+      "detail": "Respuesta y archivo",
+      "state": ""
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "metrics": [
+    {
+      "label": "Vacaciones disponibles",
+      "value": "12 días",
+      "hint": "Periodo vigente",
+      "icon": "plane",
+      "tone": "success"
+    },
+    {
+      "label": "Solicitudes abiertas",
+      "value": "2",
+      "hint": "1 pendiente de aprobación",
+      "icon": "clipboard-list",
+      "tone": "warning"
+    },
+    {
+      "label": "Objetivos",
+      "value": "92%",
+      "hint": "Avance del ciclo",
+      "icon": "chart"
+    },
+    {
+      "label": "Formación",
+      "value": "18 h",
+      "hint": "Acumulado 2026",
+      "icon": "graduation-cap"
+    }
+  ],
+  "profile": {
+    "name": "Ana María Torres",
+    "role": "Profesional Universitario",
+    "office": "Secretaría General",
+    "email": "ana.torres@sanpedro-valle.gov.co",
+    "manager": "Secretario General",
+    "start": "2021-02-15",
+    "document": "31.458.921"
+  },
+  "requests": [
+    {
+      "id": "SOL-810",
+      "type": "Certificado laboral",
+      "date": "2026-08-02",
+      "status": "Radicado"
+    },
+    {
+      "id": "SOL-802",
+      "type": "Permiso remunerado",
+      "date": "2026-07-25",
+      "status": "Aprobada"
+    }
+  ],
+  "documents": [
+    {
+      "name": "Desprendible julio 2026",
+      "type": "Nómina",
+      "date": "2026-07-30"
+    },
+    {
+      "name": "Certificado de ingresos 2025",
+      "type": "Tributario",
+      "date": "2026-03-15"
+    },
+    {
+      "name": "Evaluación desempeño 2025",
+      "type": "Desempeño",
+      "date": "2026-02-20"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Actualizar contacto de emergencia",
+      "due": "2026-08-12",
+      "status": "Pendiente"
+    },
+    {
+      "title": "Completar curso de seguridad digital",
+      "due": "2026-08-20",
+      "status": "En proceso"
+    }
+  ]
+}

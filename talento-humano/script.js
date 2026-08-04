@@ -1,0 +1,9 @@
+document.addEventListener('DOMContentLoaded',()=>HR.init({init(data){
+ const grid=document.getElementById('moduleGrid');
+ const render=(q='')=>{const x=q.toLowerCase();const rows=data.modules.filter(m=>(m.name+' '+m.description+' '+m.group).toLowerCase().includes(x));grid.innerHTML=rows.map(m=>`<a class="card hr-module-card" href="${m.href}"><div class="module-icon"><i data-lucide="${m.icon}"></i></div><h3>${m.name}</h3><p>${m.description}</p><footer><span>${m.group}</span><span class="count">${m.count}</span></footer></a>`).join('');ERP.refreshIcons()};
+ render();document.getElementById('moduleSearch').addEventListener('input',e=>render(e.target.value));
+ document.getElementById('workforceChart').innerHTML=data.workforce.map(x=>`<div class="hr-bar-wrap"><div class="hr-bar" data-value="${x.value}" style="--h:${Math.max(15,x.value/16*100)}%"></div><div class="hr-bar-label">${x.label}</div></div>`).join('');
+ document.getElementById('approvalList').innerHTML=data.approvals.map(a=>`<div class="hr-list-row"><div class="list-icon"><i data-lucide="clipboard-list"></i></div><div class="grow"><strong>${a.person}</strong><small>${a.type} · ${a.detail}</small></div><span class="status ${HR.status(a.status)}">${a.status}</span></div>`).join('');
+ document.getElementById('alertList').innerHTML=data.alerts.map(a=>`<div class="hr-list-row"><div class="list-icon"><i data-lucide="alert"></i></div><div class="grow"><strong>${a.title}</strong><small>${a.detail}</small></div></div>`).join('');
+ document.getElementById('birthdayList').innerHTML=data.birthdays.map(b=>`<div class="hr-list-row"><div class="avatar">${ERP.initials(b.name)}</div><div class="grow"><strong>${b.name}</strong><small>${b.office}</small></div><span class="tag">${b.date}</span></div>`).join('');ERP.refreshIcons();
+}}));

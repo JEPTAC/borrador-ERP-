@@ -1,0 +1,296 @@
+{
+  "metrics": [
+    {
+      "label": "Personas activas",
+      "value": "74",
+      "hint": "48 planta · 26 contratistas",
+      "icon": "users",
+      "tone": "success",
+      "delta": "+3 este trimestre"
+    },
+    {
+      "label": "Solicitudes pendientes",
+      "value": "12",
+      "hint": "Vacaciones, permisos y certificados",
+      "icon": "clipboard-list",
+      "tone": "warning",
+      "delta": "4 vencen hoy",
+      "deltaTone": "down"
+    },
+    {
+      "label": "Expedientes completos",
+      "value": "91%",
+      "hint": "7 personas requieren soportes",
+      "icon": "folder-check",
+      "tone": "",
+      "delta": "+6 puntos desde junio"
+    },
+    {
+      "label": "Clima institucional",
+      "value": "82%",
+      "hint": "Última encuesta de bienestar",
+      "icon": "heart",
+      "tone": "success",
+      "delta": "+4 puntos"
+    }
+  ],
+  "modules": [
+    {
+      "id": "mi-portal",
+      "name": "Mi portal",
+      "icon": "user",
+      "href": "mi-portal/index.html",
+      "group": "Autogestión",
+      "description": "Autogestión del funcionario: solicitudes, certificados, documentos y objetivos.",
+      "count": "Autogestión"
+    },
+    {
+      "id": "personas",
+      "name": "Personas",
+      "icon": "users",
+      "href": "personas/index.html",
+      "group": "Administración",
+      "description": "Expediente único, datos laborales, trayectoria, contratos y contactos.",
+      "count": "74 registros"
+    },
+    {
+      "id": "organizacion",
+      "name": "Organización",
+      "icon": "workflow",
+      "href": "organizacion/index.html",
+      "group": "Administración",
+      "description": "Organigrama, planta de empleos, cargos, vacantes y centros de costo.",
+      "count": "52 cargos"
+    },
+    {
+      "id": "sigep",
+      "name": "SIGEP y cumplimiento",
+      "icon": "badge-check",
+      "href": "sigep/index.html",
+      "group": "Administración",
+      "description": "Control de hojas de vida, bienes y rentas, vinculaciones y actualizaciones SIGEP.",
+      "count": "6 pendientes"
+    },
+    {
+      "id": "seleccion",
+      "name": "Selección",
+      "icon": "search",
+      "href": "seleccion/index.html",
+      "group": "Ciclo de vida",
+      "description": "Vacantes, candidatos, etapas, entrevistas, evaluaciones y banco de elegibles.",
+      "count": "3 procesos"
+    },
+    {
+      "id": "onboarding",
+      "name": "Incorporación",
+      "icon": "route",
+      "href": "onboarding/index.html",
+      "group": "Ciclo de vida",
+      "description": "Rutas de ingreso, documentación, inducción, activos y seguimiento inicial.",
+      "count": "4 ingresos"
+    },
+    {
+      "id": "asistencia",
+      "name": "Asistencia",
+      "icon": "calendar",
+      "href": "asistencia/index.html",
+      "group": "Tiempo y pagos",
+      "description": "Jornadas, marcaciones, tardanzas, horas extra y consolidado mensual.",
+      "count": "68 presentes"
+    },
+    {
+      "id": "ausencias",
+      "name": "Ausencias y vacaciones",
+      "icon": "plane",
+      "href": "ausencias/index.html",
+      "group": "Tiempo y pagos",
+      "description": "Vacaciones, permisos, licencias, incapacidades y flujos de aprobación.",
+      "count": "12 solicitudes"
+    },
+    {
+      "id": "nomina",
+      "name": "Pre-nómina",
+      "icon": "wallet",
+      "href": "nomina/index.html",
+      "group": "Tiempo y pagos",
+      "description": "Preliquidación, novedades, conceptos, grupos y archivos para el sistema de nómina.",
+      "count": "Agosto abierto"
+    },
+    {
+      "id": "documentos",
+      "name": "Documentos y firma",
+      "icon": "file",
+      "href": "documentos/index.html",
+      "group": "Administración",
+      "description": "Expedientes digitales, plantillas, vencimientos y firma electrónica.",
+      "count": "284 archivos"
+    },
+    {
+      "id": "activos",
+      "name": "Activos asignados",
+      "icon": "laptop",
+      "href": "activos/index.html",
+      "group": "Administración",
+      "description": "Entrega, custodia, traslados y devolución de equipos y elementos.",
+      "count": "93 asignados"
+    },
+    {
+      "id": "desempeno",
+      "name": "Desempeño",
+      "icon": "chart",
+      "href": "desempeno/index.html",
+      "group": "Desarrollo",
+      "description": "Objetivos, competencias, evaluaciones, retroalimentación y planes de desarrollo.",
+      "count": "81% avance"
+    },
+    {
+      "id": "capacitacion",
+      "name": "Capacitación",
+      "icon": "graduation-cap",
+      "href": "capacitacion/index.html",
+      "group": "Desarrollo",
+      "description": "PIC, cursos, convocatorias, asistencia, certificados y evaluación de impacto.",
+      "count": "7 cursos"
+    },
+    {
+      "id": "bienestar-sst",
+      "name": "Bienestar y SG-SST",
+      "icon": "heart",
+      "href": "bienestar-sst/index.html",
+      "group": "Cultura y seguridad",
+      "description": "Bienestar, incentivos, medicina preventiva, incidentes y plan anual SG-SST.",
+      "count": "4 actividades"
+    },
+    {
+      "id": "comunicaciones",
+      "name": "Comunicaciones",
+      "icon": "message",
+      "href": "comunicaciones/index.html",
+      "group": "Cultura y seguridad",
+      "description": "Noticias internas, reconocimientos, encuestas y cultura institucional.",
+      "count": "2 encuestas"
+    },
+    {
+      "id": "canal-etico",
+      "name": "Canal ético",
+      "icon": "shield",
+      "href": "canal-etico/index.html",
+      "group": "Cultura y seguridad",
+      "description": "Recepción reservada de reportes con trazabilidad y protección del denunciante.",
+      "count": "1 reservado"
+    },
+    {
+      "id": "flujos",
+      "name": "Flujos y aprobaciones",
+      "icon": "workflow",
+      "href": "flujos/index.html",
+      "group": "Configuración",
+      "description": "Solicitudes, aprobadores, suplencias, tiempos y reglas por dependencia.",
+      "count": "9 activos"
+    },
+    {
+      "id": "analitica",
+      "name": "People Analytics",
+      "icon": "chart",
+      "href": "analitica/index.html",
+      "group": "Analítica",
+      "description": "Indicadores de planta, rotación, ausentismo, formación, desempeño y costos.",
+      "count": "18 indicadores"
+    }
+  ],
+  "approvals": [
+    {
+      "type": "Vacaciones",
+      "person": "Ana María Torres",
+      "detail": "5 días · inicia 10 ago",
+      "status": "Pendiente"
+    },
+    {
+      "type": "Permiso remunerado",
+      "person": "Luis Fernando Ruiz",
+      "detail": "6 ago · 4 horas",
+      "status": "Pendiente"
+    },
+    {
+      "type": "Certificado laboral",
+      "person": "Sofía Martínez",
+      "detail": "Con funciones y salario",
+      "status": "Radicado"
+    },
+    {
+      "type": "Horas extra",
+      "person": "Equipo de Gobierno",
+      "detail": "12 horas consolidadas",
+      "status": "Revisión"
+    }
+  ],
+  "alerts": [
+    {
+      "title": "Contratos próximos a finalizar",
+      "detail": "5 contratistas vencen en los próximos 45 días",
+      "tone": "warning"
+    },
+    {
+      "title": "Actualización SIGEP",
+      "detail": "6 hojas de vida tienen información pendiente",
+      "tone": "danger"
+    },
+    {
+      "title": "Evaluación semestral",
+      "detail": "9 servidores no han cerrado su concertación",
+      "tone": "warning"
+    },
+    {
+      "title": "Inducción institucional",
+      "detail": "2 nuevos ingresos tienen actividades vencidas",
+      "tone": "info"
+    }
+  ],
+  "birthdays": [
+    {
+      "name": "Camila Valencia",
+      "date": "06 ago",
+      "office": "Secretaría de Salud"
+    },
+    {
+      "name": "Andrés Cárdenas",
+      "date": "12 ago",
+      "office": "Planeación"
+    },
+    {
+      "name": "Luisa Fernanda Mora",
+      "date": "19 ago",
+      "office": "Hacienda"
+    }
+  ],
+  "workforce": [
+    {
+      "label": "General",
+      "value": 14
+    },
+    {
+      "label": "Gobierno",
+      "value": 12
+    },
+    {
+      "label": "Hacienda",
+      "value": 11
+    },
+    {
+      "label": "Planeación",
+      "value": 10
+    },
+    {
+      "label": "Salud",
+      "value": 16
+    },
+    {
+      "label": "Despacho",
+      "value": 5
+    },
+    {
+      "label": "Control",
+      "value": 6
+    }
+  ]
+}

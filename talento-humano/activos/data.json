@@ -1,0 +1,92 @@
+{
+  "metrics": [
+    {
+      "label": "Activos asignados",
+      "value": "93",
+      "hint": "Equipos y elementos",
+      "icon": "laptop"
+    },
+    {
+      "label": "Valor en custodia",
+      "value": "$286 M",
+      "hint": "Valor histórico",
+      "icon": "wallet"
+    },
+    {
+      "label": "Pendientes de devolución",
+      "value": "4",
+      "hint": "Retiros y traslados",
+      "icon": "alert",
+      "tone": "danger"
+    },
+    {
+      "label": "Inventarios completos",
+      "value": "96%",
+      "hint": "Última verificación",
+      "icon": "badge-check",
+      "tone": "success"
+    }
+  ],
+  "assets": [
+    {
+      "tag": "TI-00418",
+      "name": "Portátil Dell Latitude",
+      "category": "Equipo de cómputo",
+      "holder": "Ana María Torres",
+      "office": "Secretaría General",
+      "assigned": "2025-01-20",
+      "condition": "Bueno",
+      "status": "Asignado"
+    },
+    {
+      "tag": "TI-00433",
+      "name": "Monitor LG 24 pulgadas",
+      "category": "Periférico",
+      "holder": "Luis Fernando Ruiz",
+      "office": "Secretaría General",
+      "assigned": "2026-01-18",
+      "condition": "Bueno",
+      "status": "Asignado"
+    },
+    {
+      "tag": "MOB-00125",
+      "name": "Silla ergonómica",
+      "category": "Mobiliario",
+      "holder": "Camila Valencia",
+      "office": "Hacienda",
+      "assigned": "2023-06-10",
+      "condition": "Regular",
+      "status": "Asignado"
+    },
+    {
+      "tag": "TI-00311",
+      "name": "Teléfono móvil institucional",
+      "category": "Comunicaciones",
+      "holder": "Andrés Cárdenas",
+      "office": "Planeación",
+      "assigned": "2024-02-01",
+      "condition": "Bueno",
+      "status": "Pendiente devolución"
+    }
+  ],
+  "movements": [
+    {
+      "date": "2026-08-03",
+      "type": "Entrega",
+      "asset": "TI-00455",
+      "person": "Mariana Arias"
+    },
+    {
+      "date": "2026-08-01",
+      "type": "Devolución",
+      "asset": "TI-00382",
+      "person": "Contratista retirado"
+    },
+    {
+      "date": "2026-07-30",
+      "type": "Traslado",
+      "asset": "MOB-00118",
+      "person": "Secretaría de Salud"
+    }
+  ]
+}

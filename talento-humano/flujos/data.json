@@ -1,0 +1,107 @@
+{
+  "metrics": [
+    {
+      "label": "Flujos activos",
+      "value": "9",
+      "hint": "Solicitudes configuradas",
+      "icon": "workflow"
+    },
+    {
+      "label": "Aprobaciones hoy",
+      "value": "16",
+      "hint": "12 completadas",
+      "icon": "check",
+      "tone": "success"
+    },
+    {
+      "label": "Fuera de tiempo",
+      "value": "3",
+      "hint": "Escalamiento requerido",
+      "icon": "alert",
+      "tone": "danger"
+    },
+    {
+      "label": "Tiempo promedio",
+      "value": "1.8 días",
+      "hint": "Solicitud a decisión",
+      "icon": "chart"
+    }
+  ],
+  "flows": [
+    {
+      "name": "Solicitud de vacaciones",
+      "owner": "Talento Humano",
+      "requests": 38,
+      "sla": "3 días",
+      "status": "Activo",
+      "steps": [
+        "Funcionario",
+        "Jefe inmediato",
+        "Talento Humano",
+        "Secretaría General"
+      ]
+    },
+    {
+      "name": "Permiso remunerado",
+      "owner": "Talento Humano",
+      "requests": 24,
+      "sla": "2 días",
+      "status": "Activo",
+      "steps": [
+        "Funcionario",
+        "Jefe inmediato",
+        "Talento Humano"
+      ]
+    },
+    {
+      "name": "Horas extra",
+      "owner": "Talento Humano",
+      "requests": 12,
+      "sla": "4 días",
+      "status": "Activo",
+      "steps": [
+        "Líder",
+        "Secretario",
+        "Talento Humano",
+        "Hacienda"
+      ]
+    },
+    {
+      "name": "Certificado laboral",
+      "owner": "Talento Humano",
+      "requests": 31,
+      "sla": "1 día",
+      "status": "Activo",
+      "steps": [
+        "Funcionario",
+        "Talento Humano"
+      ]
+    }
+  ],
+  "inbox": [
+    {
+      "id": "SOL-881",
+      "type": "Vacaciones",
+      "person": "Ana María Torres",
+      "step": "Jefe inmediato",
+      "age": "6 horas",
+      "status": "Pendiente"
+    },
+    {
+      "id": "SOL-882",
+      "type": "Permiso",
+      "person": "Luis Fernando Ruiz",
+      "step": "Talento Humano",
+      "age": "1 día",
+      "status": "Pendiente"
+    },
+    {
+      "id": "SOL-883",
+      "type": "Horas extra",
+      "person": "Equipo Gobierno",
+      "step": "Secretario",
+      "age": "3 días",
+      "status": "Vencida"
+    }
+  ]
+}

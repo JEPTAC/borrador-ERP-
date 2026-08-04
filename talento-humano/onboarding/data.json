@@ -1,0 +1,126 @@
+{
+  "metrics": [
+    {
+      "label": "Ingresos en curso",
+      "value": "4",
+      "hint": "2 planta · 2 OPS",
+      "icon": "users"
+    },
+    {
+      "label": "Avance promedio",
+      "value": "72%",
+      "hint": "Rutas de incorporación",
+      "icon": "chart",
+      "tone": "success"
+    },
+    {
+      "label": "Tareas vencidas",
+      "value": "3",
+      "hint": "Requieren gestión",
+      "icon": "alert",
+      "tone": "danger"
+    },
+    {
+      "label": "Inducciones programadas",
+      "value": "2",
+      "hint": "Esta semana",
+      "icon": "calendar",
+      "tone": "warning"
+    }
+  ],
+  "onboardings": [
+    {
+      "id": "ONB-011",
+      "person": "Mariana Arias",
+      "role": "Apoyo de comunicaciones",
+      "office": "Despacho",
+      "start": "2026-08-03",
+      "progress": 75,
+      "owner": "Sofía Martínez",
+      "tasks": [
+        {
+          "title": "Documentos contractuales",
+          "done": true
+        },
+        {
+          "title": "Creación de correo",
+          "done": true
+        },
+        {
+          "title": "Inducción institucional",
+          "done": true
+        },
+        {
+          "title": "Entrega de equipo",
+          "done": false
+        },
+        {
+          "title": "Inducción al puesto",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "ONB-012",
+      "person": "Diego Salazar",
+      "role": "Técnico Administrativo",
+      "office": "Hacienda",
+      "start": "2026-08-10",
+      "progress": 40,
+      "owner": "Ana Torres",
+      "tasks": [
+        {
+          "title": "Acto de nombramiento",
+          "done": true
+        },
+        {
+          "title": "Examen de ingreso",
+          "done": true
+        },
+        {
+          "title": "Afiliaciones",
+          "done": false
+        },
+        {
+          "title": "Creación de usuario",
+          "done": false
+        },
+        {
+          "title": "Plan de inducción",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "ONB-013",
+      "person": "Natalia Gómez",
+      "role": "Profesional de apoyo",
+      "office": "Salud",
+      "start": "2026-08-01",
+      "progress": 90,
+      "owner": "Camila Valencia",
+      "tasks": [
+        {
+          "title": "Documentación OPS",
+          "done": true
+        },
+        {
+          "title": "Validación SIGEP",
+          "done": true
+        },
+        {
+          "title": "Acceso a sistemas",
+          "done": true
+        },
+        {
+          "title": "Inducción SST",
+          "done": true
+        },
+        {
+          "title": "Evaluación de ingreso",
+          "done": false
+        }
+      ]
+    }
+  ]
+}

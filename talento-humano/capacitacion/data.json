@@ -1,0 +1,96 @@
+{
+  "metrics": [
+    {
+      "label": "Ejecución PIC",
+      "value": "68%",
+      "hint": "Plan Institucional 2026",
+      "icon": "chart",
+      "tone": "success"
+    },
+    {
+      "label": "Cursos activos",
+      "value": "7",
+      "hint": "3 virtuales · 4 presenciales",
+      "icon": "book"
+    },
+    {
+      "label": "Participantes",
+      "value": "56",
+      "hint": "76% de cobertura",
+      "icon": "users"
+    },
+    {
+      "label": "Horas de formación",
+      "value": "846 h",
+      "hint": "Acumulado anual",
+      "icon": "calendar",
+      "tone": "warning"
+    }
+  ],
+  "courses": [
+    {
+      "id": "CUR-041",
+      "title": "Contratación estatal básica",
+      "category": "Gestión pública",
+      "mode": "Virtual",
+      "hours": 12,
+      "enrolled": 28,
+      "capacity": 40,
+      "progress": 60,
+      "status": "En curso"
+    },
+    {
+      "id": "CUR-042",
+      "title": "Servicio al ciudadano",
+      "category": "Competencias",
+      "mode": "Presencial",
+      "hours": 8,
+      "enrolled": 22,
+      "capacity": 25,
+      "progress": 100,
+      "status": "Finalizado"
+    },
+    {
+      "id": "CUR-043",
+      "title": "Seguridad digital",
+      "category": "TIC",
+      "mode": "Virtual",
+      "hours": 6,
+      "enrolled": 35,
+      "capacity": 50,
+      "progress": 20,
+      "status": "En curso"
+    },
+    {
+      "id": "CUR-044",
+      "title": "Primeros auxilios",
+      "category": "SG-SST",
+      "mode": "Presencial",
+      "hours": 8,
+      "enrolled": 18,
+      "capacity": 20,
+      "progress": 0,
+      "status": "Programado"
+    }
+  ],
+  "needs": [
+    {
+      "office": "Gobierno",
+      "topic": "Atención a víctimas",
+      "people": 8,
+      "priority": "Alta"
+    },
+    {
+      "office": "Hacienda",
+      "topic": "Actualización tributaria",
+      "people": 6,
+      "priority": "Media"
+    },
+    {
+      "office": "Planeación",
+      "topic": "Formulación de proyectos",
+      "people": 10,
+      "priority": "Alta"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "metrics": [
+    {
+      "label": "Procesos abiertos",
+      "value": "3",
+      "hint": "2 planta · 1 OPS",
+      "icon": "search"
+    },
+    {
+      "label": "Candidatos",
+      "value": "27",
+      "hint": "8 en evaluación",
+      "icon": "users",
+      "tone": "success"
+    },
+    {
+      "label": "Entrevistas esta semana",
+      "value": "6",
+      "hint": "Agenda confirmada",
+      "icon": "calendar"
+    },
+    {
+      "label": "Tiempo promedio",
+      "value": "21 días",
+      "hint": "Apertura a selección",
+      "icon": "chart",
+      "tone": "warning"
+    }
+  ],
+  "vacancies": [
+    {
+      "id": "VAC-026",
+      "title": "Profesional Universitario",
+      "office": "Secretaría General",
+      "type": "Provisional",
+      "openings": 1,
+      "status": "Abierta"
+    },
+    {
+      "id": "VAC-027",
+      "title": "Técnico Administrativo",
+      "office": "Hacienda",
+      "type": "Carrera",
+      "openings": 1,
+      "status": "En evaluación"
+    },
+    {
+      "id": "VAC-028",
+      "title": "Apoyo de comunicaciones",
+      "office": "Despacho",
+      "type": "OPS",
+      "openings": 1,
+      "status": "Publicada"
+    }
+  ],
+  "stages": [
+    "Postulados",
+    "Preselección",
+    "Prueba",
+    "Entrevista",
+    "Seleccionado"
+  ],
+  "candidates": [
+    {
+      "id": "CAN-01",
+      "name": "Daniela López",
+      "vacancy": "VAC-026",
+      "stage": "Postulados",
+      "score": 78,
+      "source": "Portal empleo"
+    },
+    {
+      "id": "CAN-02",
+      "name": "Felipe Mora",
+      "vacancy": "VAC-026",
+      "stage": "Preselección",
+      "score": 84,
+      "source": "Banco de hojas de vida"
+    },
+    {
+      "id": "CAN-03",
+      "name": "Valentina Cruz",
+      "vacancy": "VAC-027",
+      "stage": "Prueba",
+      "score": 91,
+      "source": "CNSC"
+    },
+    {
+      "id": "CAN-04",
+      "name": "Santiago Díaz",
+      "vacancy": "VAC-028",
+      "stage": "Entrevista",
+      "score": 88,
+      "source": "Convocatoria pública"
+    },
+    {
+      "id": "CAN-05",
+      "name": "Mariana Arias",
+      "vacancy": "VAC-028",
+      "stage": "Seleccionado",
+      "score": 94,
+      "source": "Convocatoria pública"
+    }
+  ]
+}

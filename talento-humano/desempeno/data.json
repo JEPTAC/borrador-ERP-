@@ -1,0 +1,88 @@
+{
+  "metrics": [
+    {
+      "label": "Ciclo actual",
+      "value": "2026-I",
+      "hint": "Evaluación semestral",
+      "icon": "calendar"
+    },
+    {
+      "label": "Avance global",
+      "value": "81%",
+      "hint": "39 de 48 servidores",
+      "icon": "chart",
+      "tone": "success"
+    },
+    {
+      "label": "Objetivos activos",
+      "value": "126",
+      "hint": "Promedio 2.6 por persona",
+      "icon": "target"
+    },
+    {
+      "label": "Planes de mejora",
+      "value": "6",
+      "hint": "Seguimiento mensual",
+      "icon": "alert",
+      "tone": "warning"
+    }
+  ],
+  "cycles": [
+    {
+      "name": "Evaluación semestral 2026-I",
+      "population": 48,
+      "progress": 81,
+      "status": "En proceso"
+    },
+    {
+      "name": "Acuerdos de gestión 2026",
+      "population": 6,
+      "progress": 100,
+      "status": "Completado"
+    },
+    {
+      "name": "Periodo de prueba",
+      "population": 2,
+      "progress": 50,
+      "status": "En proceso"
+    }
+  ],
+  "goals": [
+    {
+      "id": "OBJ-101",
+      "person": "Ana María Torres",
+      "title": "Actualizar expedientes laborales",
+      "weight": 35,
+      "progress": 92,
+      "due": "2026-08-31",
+      "status": "En proceso"
+    },
+    {
+      "id": "OBJ-102",
+      "person": "Camila Valencia",
+      "title": "Reducir tiempos de conciliación",
+      "weight": 40,
+      "progress": 78,
+      "due": "2026-09-30",
+      "status": "En proceso"
+    },
+    {
+      "id": "OBJ-103",
+      "person": "Sofía Martínez",
+      "title": "Digitalizar archivo de Gobierno",
+      "weight": 30,
+      "progress": 100,
+      "due": "2026-07-31",
+      "status": "Completado"
+    },
+    {
+      "id": "OBJ-104",
+      "person": "Juan Pablo Rojas",
+      "title": "Mejorar control de agenda",
+      "weight": 25,
+      "progress": 64,
+      "due": "2026-08-30",
+      "status": "En proceso"
+    }
+  ]
+}
