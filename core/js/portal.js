@@ -1,6 +1,6 @@
 (function(){
   "use strict";
-  var U=window.EI_UTIL,F=window.EI_FIREBASE,cfg=window.EI_NOVA_CONFIG;
+  var U=window.EI_UTIL,F=window.EI_SUPABASE,cfg=window.EI_NOVA_CONFIG;
   var roleConfig=null,session=null,base=document.documentElement.dataset.base||"../";
   function groupFor(role){var n=U.normalize(role);return roleConfig.aliases[n]||"user";}
   function initials(name){return String(name||"U").split(/\s+/).slice(0,2).map(function(x){return x.charAt(0);}).join("").toUpperCase();}

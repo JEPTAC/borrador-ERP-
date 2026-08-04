@@ -11,8 +11,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="../core/css/base.css?v=6.2.2">
-  <link rel="stylesheet" href="../core/css/auth.css?v=6.2.2">
+  <link rel="stylesheet" href="../core/css/base.css?v=7.0.0">
+  <link rel="stylesheet" href="../core/css/auth.css?v=7.0.0">
 </head>
 <body>
   <a class="skip-link" href="#loginForm">Saltar al formulario de acceso</a>
@@ -54,10 +54,11 @@
         <form class="auth-form" id="loginForm" novalidate>
           <label class="ei-field"><span>Correo electrónico</span><input class="ei-input" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="usuario@empresa.com"></label>
           <label class="ei-field"><span>Contraseña</span><span class="auth-password"><input class="ei-input" id="password" name="password" type="password" autocomplete="current-password" required placeholder="Ingrese su contraseña"><button id="togglePassword" type="button" aria-label="Mostrar contraseña">Ver</button></span></label>
-          <div class="auth-options"><label class="auth-check"><input type="checkbox" name="remember" value="1"><span>Mantener sesión en este equipo</span></label><span>Acceso protegido por Firebase</span></div>
+          <div class="auth-options"><label class="auth-check"><input type="checkbox" name="remember" value="1"><span>Mantener sesión en este equipo</span></label><span>Acceso protegido por Supabase</span></div>
           <button class="ei-btn" id="loginSubmit" type="submit"><span>Ingresar</span><svg class="ei-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           <div class="auth-divider"><span>o</span></div>
           <button class="ei-btn secondary" id="googleSignIn" type="button">Ingresar con Google</button>
+          <button class="auth-link-button" id="resetPassword" type="button">Recuperar o cambiar contraseña</button>
         </form>
         <div class="auth-status" id="authStatus" role="status" aria-live="polite"><span>Ingrese sus credenciales para continuar.</span></div>
         <footer class="auth-footer">EI ERP registra accesos y acciones operativas conforme a los permisos asignados. No comparta sus credenciales.</footer>
@@ -65,12 +66,11 @@
     </section>
   </main>
   <div class="ei-live" aria-live="assertive" id="liveRegion"></div>
-  <script src="../core/js/firebase-sdk-loader.js?v=6.2.2"></script>
-  <script src="../core/js/config.js?v=6.2.2"></script>
-  <script src="../core/js/utils.js?v=6.2.2"></script>
-  <script src="../core/js/accessibility.js?v=6.2.2"></script>
-  <script src="../core/js/firebase.js?v=6.2.2"></script>
-  <script src="../core/js/auth-page.js?v=6.2.2"></script>
+  <script src="../core/js/config.js?v=7.0.0"></script>
+  <script src="../core/js/utils.js?v=7.0.0"></script>
+  <script src="../core/js/accessibility.js?v=7.0.0"></script>
+  <script src="../core/js/supabase.js?v=7.0.0"></script>
+  <script src="../core/js/auth-page.js?v=7.0.0"></script>
   <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("../service-worker.js",{scope:"../",updateViaCache:"none"}).catch(function(){});});}</script>
 </body>
 </html>

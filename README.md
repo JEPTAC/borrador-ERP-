@@ -1,42 +1,68 @@
-# EI ERP — Migración total Firebase → Supabase
+# EI ERP Nova V7 · Supabase + Google Drive
 
-Este paquete migra de forma idempotente:
+Plataforma empresarial de Electroingeniería con autenticación obligatoria, portal de aplicativos y un centro transaccional de Trazabilidad logística organizado por rol.
 
-- Todas las colecciones y subcolecciones de Firestore.
-- Firebase Authentication: correos, teléfonos, estado, proveedores, claims, metadata y UID de origen.
-- Firebase Storage: archivos, rutas, MIME, metadata y hash SHA-256.
-- Perfiles y roles.
-- Tablas JSONB de respaldo sin pérdida.
-- Vistas SQL para VSM.
+```text
+Inicio de sesión Supabase Auth
+        ↓
+Portal empresarial de aplicativos
+        ↓
+Trazabilidad logística
+        ↓
+Procesos y transacciones autorizadas
+        ↓
+PostgreSQL + RLS + Realtime
+        ↓
+Documentos físicos en Google Drive
+```
 
-## Seguridad obligatoria
+## Cambios de esta versión
 
-Las credenciales administrativas no deben guardarse en GitHub ni en archivos públicos. Use `.env` local o GitHub Actions Secrets. Después de una migración, rote la cuenta de servicio Firebase y todas las claves administrativas de Supabase que se hayan expuesto.
+- Firebase deja de ser backend activo del ERP.
+- Inicio de sesión, recuperación de contraseña y sesiones mediante Supabase Auth.
+- Pedidos, eventos, checklist, cortes, novedades, perfiles, roles y VSM sobre PostgreSQL.
+- Autorización de lectura y escritura mediante Row Level Security y funciones transaccionales.
+- Control optimista con `flowRevision` para impedir sobrescrituras concurrentes.
+- Validación servidora de transiciones para evitar pedidos sin proceso o con pasos omitidos.
+- Supabase Realtime para refrescar pedidos, eventos, crédito y VSM.
+- Evidencias y documentos continúan físicamente en Google Drive; Supabase conserva sus metadatos e identificadores.
+- Solicitudes de crédito separadas: Ventas crea y envía; Cartera revisa, devuelve, aprueba o rechaza.
+- PVP reconocido como tipo de pedido en el mismo flujo operativo.
+- Corte disponible en escritorio, iOS, portátil compacto y pantalla cuadrada.
+- VSM autónomo con calendario laboral, movimientos, responsables, alertas y exportación CSV.
+- Integración activa con Siesa eliminada.
 
-## Ejecución local en Windows
+## Estructura activa
 
-1. Instale Node.js 22 LTS.
-2. Copie `.env.example` como `.env` y complételo.
-3. Coloque la cuenta de servicio en `secrets/firebase-service-account.json`.
-4. Si no dispone de `SUPABASE_DB_URL`, ejecute una vez `sql/000_EJECUTAR_EN_SUPABASE.sql` desde Supabase SQL Editor.
-5. Ejecute `EJECUTAR_MIGRACION.ps1`.
+```text
+index.html                         Acceso obligatorio
+portal/                            Portal de aplicativos
+apps/trazabilidad/                 Centro transaccional por rol
+core/js/supabase.js                Cliente Auth/Postgres/Realtime
+engine/shared/js/drive-client.js   Documentos Google Drive
+engine/shared/js/supabase-*.js     Puente de compatibilidad del motor legado
+engine/modules/vsm/                VSM completo
+supabase/sql/                      Activación, seguridad y validación
+supabase/functions/                Operaciones administrativas servidoras
+tests/                             Auditoría y QA
+```
 
-## Ejecución segura por GitHub Actions
+## Activación
 
-Configure estos secretos del repositorio:
+1. Ejecutar `supabase/sql/00_ACTIVAR_TODO_EI_ERP_V7.sql` en el SQL Editor.
+2. Ejecutar `supabase/sql/99_VALIDAR_EI_ERP_V7.sql`.
+3. Configurar las URL de redirección de Supabase Auth.
+4. Configurar el origen web autorizado del OAuth de Google Drive.
+5. Desplegar `supabase/functions/admin-create-user` si Administración creará usuarios desde el ERP.
+6. Publicar los archivos diferenciales en GitHub y ejecutar el script de eliminación de Firebase.
+7. Hacer recarga forzada y retirar el Service Worker anterior.
 
-- `FIREBASE_SERVICE_ACCOUNT_B64`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_DB_URL`
+Consulte `docs/ACTIVACION_Y_DESPLIEGUE_V7.md` y `docs/MIGRACION_SUPABASE_DRIVE_V7.md`.
 
-Ejecute primero con `dry_run=true`, revise el reporte y luego repita con `dry_run=false`.
+## Validación local
 
-## Usuarios
+```bash
+npm run qa
+```
 
-Los usuarios se crean en Supabase Auth y el UID de Firebase se conserva en `user_metadata.firebase_uid` y `profiles.firebase_uid`.
-
-Las contraseñas Firebase SCRYPT no pueden importarse mediante la Admin API de Supabase. Para usuarios de correo/contraseña se marca `must_reset_password=true`; deben restablecerla. Para evitar interrupción durante el cambio, puede habilitar temporalmente Firebase como Third-party Auth en Supabase.
-
-## Validación
-
-`npm run validate` compara cantidades de documentos y archivos entre el manifiesto Firebase y Supabase. El total de usuarios se revisa adicionalmente por `profiles.firebase_uid`, porque el destino puede tener usuarios preexistentes.
+La validación local comprueba estructura, sintaxis, rutas, ausencia de secretos, catálogo transaccional, VSM, SQL y eliminación del SDK de Firebase. La aceptación definitiva debe ejecutarse contra el proyecto Supabase productivo y Google Drive con usuarios reales.

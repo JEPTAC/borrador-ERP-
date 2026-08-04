@@ -1,25 +1,13 @@
 {
-  "name": "ei-erp-firebase-to-supabase",
-  "version": "2.0.0",
+  "name": "ei-erp-nova",
+  "version": "7.0.0",
   "private": true,
-  "type": "module",
-  "description": "Migración idempotente de Firestore, Firebase Auth y Firebase Storage a Supabase.",
+  "description": "EI ERP Nova V7 sobre Supabase PostgreSQL/Auth/Realtime y Google Drive.",
   "scripts": {
-    "preflight": "node scripts/00_preflight.mjs",
-    "schema": "node scripts/01_apply_schema.mjs",
-    "export": "node scripts/02_export_firebase.mjs",
-    "import:auth": "node scripts/03_import_auth.mjs",
-    "import:data": "node scripts/04_import_firestore.mjs",
-    "import:storage": "node scripts/05_import_storage.mjs",
-    "sync:profiles": "node scripts/06_sync_profiles.mjs",
-    "validate": "node scripts/07_validate.mjs",
-    "migrate": "node scripts/99_run_all.mjs"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "dotenv": "^17.2.2",
-    "firebase-admin": "^14.2.0",
-    "mime-types": "^3.0.1",
-    "pg": "^8.16.3"
+    "test": "node tests/run-tests.js",
+    "audit": "node tests/audit-project.js",
+    "audit:supabase": "node tests/audit-supabase-v7.js",
+    "qa": "npm run audit && npm run audit:supabase && npm test",
+    "serve": "python -m http.server 8080"
   }
 }

@@ -43,14 +43,14 @@ var feedbackAssets = {
   success:appResource("shared/assets/feedback/hands-up-ok-gauss.gif")
 };
 
-var EI_CANONICAL_APP_VERSION = "v2.0.0-20260803";
+var EI_CANONICAL_APP_VERSION = "v7.0.0-supabase-drive-20260804";
 try{
   window.EI_CANONICAL_APP_VERSION=EI_CANONICAL_APP_VERSION;
   window.EI_BUILD_LOADED=EI_CANONICAL_APP_VERSION;
   v248SafeLocalStorageSet("EI_CANONICAL_APP_VERSION",EI_CANONICAL_APP_VERSION);
   console.info("[EI] app.js cargado:",EI_CANONICAL_APP_VERSION);
 }catch(e){novaCaptureError(e,"operación heredada");}
-var V248_FIRESTORE_PROJECT_ID="trazabilidadlog";
+var V248_FIRESTORE_PROJECT_ID="hezjxcxxcjlpmyalftam";
 var V248_STORAGE_PREPARED=false;
 var V248_STORAGE_REPORT=null;
 var authPersistencePromise=Promise.resolve();
@@ -83,7 +83,7 @@ function v248LocalStorageBytes(){
 
   return total;
 }
-function v248IsFirestoreCoordinationKey(key){
+function v248IsSupabaseCoordinationKey(key){
   key=String(key||"");
 
   return (
@@ -139,7 +139,7 @@ function v248ReleaseLocalStorageSpace(){
 
   keys.forEach(function(key){
     if(
-      v248IsFirestoreCoordinationKey(key)||
+      v248IsSupabaseCoordinationKey(key)||
       v248IsDerivedLargeCacheKey(key)
     ){
       try{
@@ -496,7 +496,7 @@ var processes = {
   },
   corte_cable:{
     code:"S-PR-9", title:"Corte de cable", ownerRoles:["auxiliar_corte"], icon:"CT",
-    checklist:["Solicitud de corte recibida","Referencia validada","Metros solicitados validados","Disponibilidad verificada","Remanente calculado","Aprobación gestionada si aplica","Foto inicial anexada","Cronómetro iniciado","Cronómetro finalizado","Foto final anexada","Corte guardado en Firebase principal"],
+    checklist:["Solicitud de corte recibida","Referencia validada","Metros solicitados validados","Disponibilidad verificada","Remanente calculado","Aprobación gestionada si aplica","Foto inicial anexada","Cronómetro iniciado","Cronómetro finalizado","Foto final anexada","Corte guardado en Supabase principal"],
     waits:["Cable no disponible en su totalidad para el corte","Chipa con cantidad mayor que se puede vender toda","Mal registro del pedido","Otros","Pendiente iniciar corte","Pendiente foto inicial","Pendiente aprobación por remanente","Pendiente disponibilidad física","Pendiente finalizar corte","Pendiente foto final"],
     next:[]
   },
@@ -1388,9 +1388,9 @@ function inlineFinancialSupportFile(file,c,detail){
   if(!file||!file.name)return Promise.reject(new Error("Debe anexar pantallazo, imagen o PDF de la conversación/gestión de Ventas."));
   var type=String(file.type||"");
   if(!/^image\//i.test(type) && type!=="application/pdf")return Promise.reject(new Error("El soporte debe ser imagen o PDF."));
-  if(type==="application/pdf" && file.size>850000)return Promise.reject(new Error("El PDF supera el tamaño permitido para Firebase. Comprímalo o adjunte una imagen del soporte."));
+  if(type==="application/pdf" && file.size>850000)return Promise.reject(new Error("El PDF supera el tamaño permitido para Supabase. Comprímalo o adjunte una imagen del soporte."));
   return prepareFileForDrive(file,{fastCutUpload:true}).then(function(prep){
-    if(Number(prep.sizeBytes||0)>850000)throw new Error("El soporte comprimido supera el tamaño permitido para Firebase. Use una imagen más liviana o PDF comprimido.");
+    if(Number(prep.sizeBytes||0)>850000)throw new Error("El soporte comprimido supera el tamaño permitido para Supabase. Use una imagen más liviana o PDF comprimido.");
     var uploadedAt=now();
     var dataUrl="data:"+(prep.mimeType||type||"application/octet-stream")+";base64,"+prep.base64;
     return {ok:true,storage:"firestore_inline",inlineUrl:dataUrl,dataUrl:dataUrl,fileName:prep.fileName||file.name,mimeType:prep.mimeType||type,sizeBytes:prep.sizeBytes||file.size||0,compressed:!!prep.compressed,evidenceType:"SOPORTE_CARTERA_VENTAS",uploadedAt:uploadedAt,uploadedBy:state.user?state.user.uid:"",uploadedByName:state.user?state.user.name:"",processKey:financialProcessForOrder(c),processName:financialRoleTitleForOrder(c),detail:detail||""};
@@ -1925,125 +1925,37 @@ function loadScriptFallback(urls,idBase,checkFn,label){
   }
   return attempt(0);
 }
-function ensureFirebaseConfigLoaded(){
-  if(window.firebaseConfig)return Promise.resolve();
-  return loadScriptOnce((appSettings.firebaseConfigPath||appResource("shared/js/firebase-config.js"))+"?v="+Date.now(),"firebase-config-retry").then(function(){
-    if(!window.firebaseConfig)throw new Error("firebase-config.js cargó, pero no creó window.firebaseConfig. Revise que el archivo esté en la raíz y no esté vacío.");
-  });
+function ensureSupabaseConfigLoaded(){
+  return Promise.resolve(true);
 }
-function ensureFirebaseSdkLoaded(){
-  if(window.firebase && window.firebase.initializeApp && window.firebase.auth && window.firebase.firestore)return Promise.resolve();
-  var v="12.16.0";
-  var appUrls=[
-    "https://www.gstatic.com/firebasejs/"+v+"/firebase-app-compat.js",
-    "https://cdn.jsdelivr.net/npm/firebase@"+v+"/firebase-app-compat.js",
-    "https://unpkg.com/firebase@"+v+"/firebase-app-compat.js"
-  ];
-  var authUrls=[
-    "https://www.gstatic.com/firebasejs/"+v+"/firebase-auth-compat.js",
-    "https://cdn.jsdelivr.net/npm/firebase@"+v+"/firebase-auth-compat.js",
-    "https://unpkg.com/firebase@"+v+"/firebase-auth-compat.js"
-  ];
-  var firestoreUrls=[
-    "https://www.gstatic.com/firebasejs/"+v+"/firebase-firestore-compat.js",
-    "https://cdn.jsdelivr.net/npm/firebase@"+v+"/firebase-firestore-compat.js",
-    "https://unpkg.com/firebase@"+v+"/firebase-firestore-compat.js"
-  ];
-  return loadScriptFallback(appUrls,"firebase-app-compat-fallback",function(){return !!(window.firebase&&window.firebase.initializeApp);},"Firebase App")
-    .then(function(){return loadScriptFallback(authUrls,"firebase-auth-compat-fallback",function(){return !!(window.firebase&&window.firebase.auth);},"Firebase Auth");})
-    .then(function(){return loadScriptFallback(firestoreUrls,"firebase-firestore-compat-fallback",function(){return !!(window.firebase&&window.firebase.firestore);},"Firebase Firestore");})
-    .then(function(){
-      if(!window.firebase || !window.firebase.initializeApp || !window.firebase.auth || !window.firebase.firestore)throw new Error("El SDK de Firebase no quedó disponible. Revise conexión, bloqueo del navegador, DNS o red corporativa.");
-    });
+function ensureSupabaseSdkLoaded(){
+  if(!window.EI_BACKEND_ADAPTER)return Promise.reject(new Error("No cargó el adaptador Supabase del ERP."));
+  return window.EI_BACKEND_ADAPTER.init();
 }
-var firestorePersistenceReady=false;
-function initFirebase(){
+var firestorePersistenceReady=true;
+function initSupabase(){
   try{
-    if(!window.firebase||!window.firebaseConfig){
-      throw new Error(
-        "No cargó Firebase o firebase-config.js"
-      );
+    if(!window.EI_BACKEND_ADAPTER||!window.EI_BACKEND_ADAPTER.auth||!window.EI_BACKEND_ADAPTER.db){
+      throw new Error("Supabase todavía no terminó de inicializar.");
     }
-
-    if(!firebase.apps.length){
-      firebase.initializeApp(window.firebaseConfig);
-    }
-
-    auth=firebase.auth();
-
-    authPersistencePromise=auth
-      .setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .catch(function(error){
-        if(v248IsQuotaError(error)){
-          v248ReleaseLocalStorageSpace();
-
-          return auth
-            .setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-            .catch(function(){
-              return auth.setPersistence(
-                firebase.auth.Auth.Persistence.SESSION
-              );
-            });
-        }
-
-        return auth.setPersistence(
-          firebase.auth.Auth.Persistence.SESSION
-        );
-      })
-      .catch(function(error){
-        console.warn(
-          "[V254] La sesión de autenticación será temporal.",
-          error
-        );
-      });
-
-    db=firebase.firestore();
-
-    try{
-      db.settings({
-        experimentalAutoDetectLongPolling:false,
-        experimentalForceLongPolling:true,
-        ignoreUndefinedProperties:true,
-        merge:true
-      });
-    }catch(settingsError){
-      console.warn(
-        "[V254] No fue posible aplicar el transporte estable de Firestore.",
-        settingsError
-      );
-    }
-
+    auth=window.EI_BACKEND_ADAPTER.auth;
+    db=window.EI_BACKEND_ADAPTER.db;
+    authPersistencePromise=Promise.resolve(true);
     firebaseReady=true;
     firebaseInitError="";
+    console.info("[EI ERP] Supabase activo; Google Drive conserva los archivos físicos.");
   }catch(error){
     firebaseReady=false;
     firebaseInitError=error.message||String(error);
   }
 }
-function initFirebaseAsync(){
+function initSupabaseAsync(){
   return v248PrepareBrowserStorage()
-    .then(ensureFirebaseConfigLoaded)
-    .then(ensureFirebaseSdkLoaded)
+    .then(ensureSupabaseSdkLoaded)
     .then(function(){
-      initFirebase();
-
-      if(!firebaseReady){
-        throw new Error(
-          firebaseInitError||
-          "Firebase no inicializó."
-        );
-      }
-
-      return Promise.resolve(authPersistencePromise).then(function(){
-        firestorePersistenceReady=false;
-
-        console.info(
-          "[V254] Firestore usa caché en memoria. "+
-          "La continuidad offline permanece en IndexedDB de la aplicación."
-        );
-
-        return true;
-      });
+      initSupabase();
+      if(!firebaseReady)throw new Error(firebaseInitError||"Supabase no inicializó.");
+      return true;
     });
 }
 function clearPwaCachesAndReload(){
@@ -2310,7 +2222,7 @@ function refreshRegistroVentas(silent){
     state.salesRefreshPromise=null;
     state.salesRegistryLoadStarted=false;
     if(state.route==="sales_reports")renderSalesReports();
-    showError("No fue posible cargar todos los registros de ventas. Revise permisos de lectura en Firebase: "+((e&&e.message)||e));
+    showError("No fue posible cargar todos los registros de ventas. Revise permisos de lectura en Supabase: "+((e&&e.message)||e));
     return [];
   });
   return state.salesRefreshPromise;
@@ -2323,7 +2235,7 @@ function forceRefreshCurrentUserCases(){
   var previousRoute=state.route;
   if(normalizeRole(state.user.role)==="auxiliar_corte" || isCutRoleRuntimeUser())previousRoute="corte_cable";
   state.dataLoading=true;
-  showLiveToast("Actualizando pedidos","Forzando nueva lectura de Firebase para este usuario. No cierre la ventana.",false);
+  showLiveToast("Actualizando pedidos","Forzando nueva lectura de Supabase para este usuario. No cierre la ventana.",false);
   var p=(normalizeRole(state.user.role)==="ventas")
     ? loadSalesCasesForcedOnline().then(function(list){state.cases=list||[];})
     : loadCasesForRole().then(function(list){state.cases=list||[];});
@@ -2568,9 +2480,9 @@ function loadReportsForRole(){
 
 function safeLoadBlock(label, loader){
   return Promise.resolve().then(loader).catch(function(e){
-    if(v242IsFirestoreInternalError(e)){
-      console.error("[V254] Estado interno de Firestore detectado en "+label,e);
-      v242ScheduleFirestoreRecovery(e);
+    if(v242IsSupabaseInternalError(e)){
+      console.error("[V254] Estado interno de Supabase detectado en "+label,e);
+      v242ScheduleSupabaseRecovery(e);
       throw e;
     }
     console.warn("Consulta no disponible:",label,e);
@@ -3566,7 +3478,7 @@ function forceExistingPveToPurchasesNow(){
     alert("Solo admin, super admin o gerencia pueden forzar PVE existentes a Compras.");
     return;
   }
-  if(!db){alert("No hay conexión con Firebase.");return;}
+  if(!db){alert("No hay conexión con Supabase.");return;}
   if(!confirm("Esto enviará a Compras todos los PVE activos que aún no tengan liberación de Compras. No toca pedidos cerrados/cancelados ni PVE ya liberados. ¿Continuar?"))return;
   showLiveToast("Migrando PVE","Leyendo todos los pedidos para enviar PVE pendientes a Compras.",false);
   db.collection("cases").get().then(function(snap){
@@ -3623,7 +3535,7 @@ function cloneCaseWriteValue(value,seen){
 function persistCaseGroup(entries,relatedWrites){
   entries=(entries||[]).filter(function(entry){return entry&&entry.case&&entry.case.id;});
   if(!entries.length)return Promise.reject(new Error("No hay pedidos válidos para guardar."));
-  if(!db)return Promise.reject(new Error("No hay conexión con Firebase para guardar los pedidos."));
+  if(!db)return Promise.reject(new Error("No hay conexión con Supabase para guardar los pedidos."));
   var seenIds={};
   for(var n=0;n<entries.length;n++){
     var entryId=String(entries[n].case.id);
@@ -4107,11 +4019,11 @@ function renderLogin(){
   cleanupProtectedToast();
   ensureLowResolutionResponsiveCss();
   ensureMobileFreshVersion();
-  var firebaseMsg=firebaseReady?'Conexión Firebase activa.':'Firebase no conectó: '+esc(firebaseInitError||"revisa conexión");
-  var helper=firebaseReady?'':'<div class="alert warning"><strong>Conexión pendiente.</strong><br>En celular normalmente se corrige limpiando caché/PWA o reintentando la carga del SDK. No borra datos de Firebase.</div>';
-  appEl.innerHTML='<main class="login-wrap"><section class="login-card"><div class="brand-panel"><div><div class="logo-box"><img src="'+logoPath+'" alt="Electroingeniería"></div><h1>Trazabilidad secuencial.</h1><p>Ventas inicia, logística valida, aux logística alista, corte opera con evidencias y los estados se actualizan en tiempo real.</p></div><div class="brand-metrics"><div class="metric"><strong>Secuencia</strong><span>Sin procesos sueltos</span></div><div class="metric"><strong>Tiempo</strong><span>Macroproceso y espera</span></div><div class="metric"><strong>VSM</strong><span>Indicadores por área</span></div></div></div><form class="login-panel" id="loginForm"><h2>Ingreso operativo</h2><p>'+firebaseMsg+'</p>'+helper+'<div class="form"><label class="field"><span>Correo</span><input class="input" name="email" type="email" required placeholder="usuario@empresa.com"></label><label class="field"><span>Contraseña</span><input class="input" name="password" type="password" required placeholder="Contraseña"></label><button class="btn btn-primary" type="submit">Ingresar</button><button class="btn" type="button" id="retryFirebaseBtn">Reintentar conexión</button><button class="btn btn-gold" type="button" id="clearPwaBtn">Limpiar caché del celular</button></div></form></section></main>';
+  var firebaseMsg=firebaseReady?'Conexión Supabase activa.':'Supabase no conectó: '+esc(firebaseInitError||"revise conexión");
+  var helper=firebaseReady?'':'<div class="alert warning"><strong>Conexión pendiente.</strong><br>Revise la red, la sesión o la configuración pública de Supabase. Esta acción no borra información.</div>';
+  appEl.innerHTML='<main class="login-wrap"><section class="login-card"><div class="brand-panel"><div><div class="logo-box"><img src="'+logoPath+'" alt="Electroingeniería"></div><h1>Trazabilidad secuencial.</h1><p>Ventas inicia, logística valida, aux logística alista, corte opera con evidencias y los estados se actualizan en tiempo real.</p></div><div class="brand-metrics"><div class="metric"><strong>Secuencia</strong><span>Sin procesos sueltos</span></div><div class="metric"><strong>Tiempo</strong><span>Macroproceso y espera</span></div><div class="metric"><strong>VSM</strong><span>Indicadores por área</span></div></div></div><form class="login-panel" id="loginForm"><h2>Ingreso operativo</h2><p>'+firebaseMsg+'</p>'+helper+'<div class="form"><label class="field"><span>Correo</span><input class="input" name="email" type="email" required placeholder="usuario@empresa.com"></label><label class="field"><span>Contraseña</span><input class="input" name="password" type="password" required placeholder="Contraseña"></label><button class="btn btn-primary" type="submit">Ingresar</button><button class="btn" type="button" id="retrySupabaseBtn">Reintentar conexión</button><button class="btn btn-gold" type="button" id="clearPwaBtn">Limpiar caché del celular</button></div></form></section></main>';
   qs("#loginForm").onsubmit=function(e){e.preventDefault();login(new FormData(e.target));};
-  var retry=qs("#retryFirebaseBtn");if(retry)retry.onclick=function(){showLoading("Reintentando conexión con Firebase...");initFirebaseAsync().then(function(){renderLogin();}).catch(function(e){firebaseReady=false;firebaseInitError=e.message||String(e);renderLogin();});};
+  var retry=qs("#retrySupabaseBtn");if(retry)retry.onclick=function(){showLoading("Reintentando conexión con Supabase...");initSupabaseAsync().then(function(){renderLogin();}).catch(function(e){firebaseReady=false;firebaseInitError=e.message||String(e);renderLogin();});};
   var clear=qs("#clearPwaBtn");if(clear)clear.onclick=function(){showLoading("Limpiando caché local y recargando...");clearPwaCachesAndReload();};
 }
 
@@ -4138,11 +4050,11 @@ function getOperationalProfileDoc(fbUser){
   });
 }
 function applyProfileFromDoc(fbUser,doc){
-  if(!doc.exists)throw new Error("El usuario existe en Authentication, pero no tiene perfil en Firestore users/"+fbUser.uid+". Cree ese documento con role e isActive:true.");
+  if(!doc.exists)throw new Error("El usuario existe en Authentication, pero no tiene perfil en Supabase users/"+fbUser.uid+". Cree ese documento con role e isActive:true.");
   var p=doc.data();
-  if(p.isActive===false)throw new Error("Usuario inactivo en Firestore.");
+  if(p.isActive===false)throw new Error("Usuario inactivo en Supabase.");
   var rawProfileRole=String(p.role||p.rol||"").trim();
-  if(!rawProfileRole)throw new Error("El perfil de Firestore no tiene un rol operativo asignado.");
+  if(!rawProfileRole)throw new Error("El perfil de Supabase no tiene un rol operativo asignado.");
   var normalizedRole=normalizeRole(rawProfileRole);
   var aliases=uniqueArray([fbUser.uid,doc.id,p.uid,p.id,p.userId,p.authUid,p.email,fbUser.email,p.name,p.displayName].map(function(x){return String(x||"").trim();}).filter(Boolean));
   state.user={uid:fbUser.uid,id:doc.id,profileUid:p.uid||p.id||"",email:fbUser.email||p.email||"",name:p.name||p.email||fbUser.email||"Usuario",role:normalizedRole,rawRole:rawProfileRole,uidAliases:aliases};
@@ -4162,7 +4074,7 @@ function loadProfileAndRender(fbUser){
     var doc=profileResult.value;
     if(profileResult.error)throw profileResult.error;
     if(!doc || !doc.exists){
-      throw new Error("El usuario autenticado no tiene un perfil activo en Firestore.");
+      throw new Error("El usuario autenticado no tiene un perfil activo en Supabase.");
     }
 
     applyProfileFromDoc(fbUser,doc);
@@ -4195,7 +4107,7 @@ function loadProfileAndRender(fbUser){
 
 function login(fd){
   var email=String(fd.get("email")||"").trim();var password=String(fd.get("password")||"");
-  if(!firebaseReady){showError("Firebase no está conectado. "+(firebaseInitError||""));return;}
+  if(!firebaseReady){showError("Supabase no está conectado. "+(firebaseInitError||""));return;}
   showLoading("Validando correo, contraseña y permisos...");
   auth.signInWithEmailAndPassword(email,password).catch(function(err){showError(err.message||err);});
 }
@@ -4262,7 +4174,7 @@ function renderCases(){
 
 function renderCreate(){
   if(!canCreate()){layout(header("Crear pedido","Acceso restringido.")+'<div class="empty">Solo ventas inicia pedidos. Los demás roles reciben por secuencia.</div>');return;}
-  layout(header("Crear pedido","Ventas registra el pedido y define si entra normal, retenido financiero o prioritario.",'<a class="btn" href="'+esc(appResource("modules/creditos/?route=credit_new"))+'">Crear solicitud de crédito</a>')+createOrderGuidePanel()+'<section class="card"><form class="form" id="caseForm"><div class="notice"><strong>Regla financiera:</strong> Caja gestiona PVN y PVP. Cartera gestiona PVC y PVE. Si el pedido queda retenido, debe anexarse soporte de conversación o gestión comercial.</div><div class="grid grid-2"><label class="field"><span>Número / nombre del pedido</span><input class="input" name="reference" id="reference" required placeholder="PVC-0000 / PVN-0000 / PVE-0000 / PVP-0000"></label><label class="field"><span>Orden de compra / OC</span><input class="input" name="purchaseOrder" id="purchaseOrder" placeholder="OC, orden de compra o referencia comercial"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de pedido</span><select class="select" name="orderKind" id="orderKind" required><option value="PVC">PVC</option><option value="PVN">PVN</option><option value="PVE">PVE</option><option value="PVP">PVP</option></select></label><label class="field"><span>Cliente</span><input class="input" name="client" id="client" placeholder="Nombre del cliente"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de gestión</span><select class="select" name="priorityMode" id="priorityMode"><option value="normal">Pedido normal</option><option value="retenido_caja">Pedido retenido financiero · Caja/Cartera según tipo</option><option value="gerencia">Pedido prioritario / salida especial a gerencia</option></select></label><label class="field"><span>Motivo / soporte de gestión</span><input class="input" name="priorityReason" placeholder="Retención, pago, autorización, cliente crítico"></label></div><label class="field"><span>Soporte de conversación o gestión comercial cuando esté retenido</span><input class="input" type="file" name="retainedSupport" id="retainedSupport" accept="image/*,application/pdf" data-mobile-upload="true"><small class="muted">Para PVC/PVE retenido se guarda en Firebase comprimido. En PDF use archivo liviano.</small></label><div class="grid grid-2"><label class="field"><span>Tipo de entrega esperado</span><select class="select" name="requestedDelivery" id="requestedDelivery"><option value="">Sin definir</option><option value="cliente_punto">Cliente en punto</option><option value="cliente_recoge">Cliente recoge</option><option value="despacho_local">Despacho local</option><option value="despacho_nacional">Despacho nacional</option></select></label><label class="field"><span>Condición de pago</span><select class="select" name="paymentCondition" id="paymentCondition"><option value="">Sin definir</option><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option><option value="ANTICIPO">Anticipo / mixto</option></select></label></div><label class="field"><span>Observación comercial</span><textarea class="textarea" name="description" id="description" placeholder="Aclaraciones del asesor, condición especial o instrucción inicial."></textarea></label><button class="btn btn-primary" type="submit">Crear pedido</button></form></section>');
+  layout(header("Crear pedido","Ventas registra el pedido y define si entra normal, retenido financiero o prioritario.",'<a class="btn" href="'+esc(appResource("modules/creditos/?route=credit_new"))+'">Crear solicitud de crédito</a>')+createOrderGuidePanel()+'<section class="card"><form class="form" id="caseForm"><div class="notice"><strong>Regla financiera:</strong> Caja gestiona PVN y PVP. Cartera gestiona PVC y PVE. Si el pedido queda retenido, debe anexarse soporte de conversación o gestión comercial.</div><div class="grid grid-2"><label class="field"><span>Número / nombre del pedido</span><input class="input" name="reference" id="reference" required placeholder="PVC-0000 / PVN-0000 / PVE-0000 / PVP-0000"></label><label class="field"><span>Orden de compra / OC</span><input class="input" name="purchaseOrder" id="purchaseOrder" placeholder="OC, orden de compra o referencia comercial"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de pedido</span><select class="select" name="orderKind" id="orderKind" required><option value="PVC">PVC</option><option value="PVN">PVN</option><option value="PVE">PVE</option><option value="PVP">PVP</option></select></label><label class="field"><span>Cliente</span><input class="input" name="client" id="client" placeholder="Nombre del cliente"></label></div><div class="grid grid-2"><label class="field"><span>Tipo de gestión</span><select class="select" name="priorityMode" id="priorityMode"><option value="normal">Pedido normal</option><option value="retenido_caja">Pedido retenido financiero · Caja/Cartera según tipo</option><option value="gerencia">Pedido prioritario / salida especial a gerencia</option></select></label><label class="field"><span>Motivo / soporte de gestión</span><input class="input" name="priorityReason" placeholder="Retención, pago, autorización, cliente crítico"></label></div><label class="field"><span>Soporte de conversación o gestión comercial cuando esté retenido</span><input class="input" type="file" name="retainedSupport" id="retainedSupport" accept="image/*,application/pdf" data-mobile-upload="true"><small class="muted">Para PVC/PVE retenido se guarda en Supabase comprimido. En PDF use archivo liviano.</small></label><div class="grid grid-2"><label class="field"><span>Tipo de entrega esperado</span><select class="select" name="requestedDelivery" id="requestedDelivery"><option value="">Sin definir</option><option value="cliente_punto">Cliente en punto</option><option value="cliente_recoge">Cliente recoge</option><option value="despacho_local">Despacho local</option><option value="despacho_nacional">Despacho nacional</option></select></label><label class="field"><span>Condición de pago</span><select class="select" name="paymentCondition" id="paymentCondition"><option value="">Sin definir</option><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option><option value="ANTICIPO">Anticipo / mixto</option></select></label></div><label class="field"><span>Observación comercial</span><textarea class="textarea" name="description" id="description" placeholder="Aclaraciones del asesor, condición especial o instrucción inicial."></textarea></label><button class="btn btn-primary" type="submit">Crear pedido</button></form></section>');
   qs("#caseForm").onsubmit=function(e){e.preventDefault();createCase(new FormData(e.target));};
 }
 
@@ -6176,7 +6088,7 @@ function alistamientoLineChecklistPanel(c, compact){
   var readyBilling=canMark && total>0 && found===total && pending===0 && novelty===0 && cutsOk;
   var finishAction=readyBilling?'<button class="btn btn-success" data-action="alistToBilling" data-id="'+esc(c.id)+'">Finalizar alistamiento y enviar a facturación</button>':'';
   var pendingCutNotice=(!cutsOk)?'<div class="notice warning" style="margin-top:12px"><strong>Cortes pendientes:</strong> el pedido tiene '+esc(cd.done)+'/'+esc(cd.total)+' cortes finalizados. Facturación se habilita cuando Corte quede completo.</div>':'';
-  var parallelNotice=c.currentProcess==="corte_cable"?'<div class="notice" style="margin-bottom:12px"><strong>Alistamiento paralelo:</strong> el pedido está temporalmente en Corte, pero las demás referencias pueden seguir marcándose como Encontrado o No encontrado.</div>':'';  return '<section class="card alistamiento-check-panel" style="margin-top:16px">'+parallelNotice+'<div class="section-title"><div><h3>Lista marcable de alistamiento</h3><p>Marque cada referencia validada desde el PDF. Las líneas vinculadas a un corte no disponible se actualizan automáticamente como No encontrado.</p></div><span class="chip primary">'+found+'/'+total+' encontrados</span></div><div class="case-meta" style="margin-bottom:10px"><span>Pendientes: <strong>'+pending+'</strong></span><span>Novedades/no encontrados: <strong>'+novelty+'</strong></span></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Referencia</th><th>Descripción</th><th>Cantidad</th><th>U.M.</th><th>Ubicación</th><th>Destino</th><th>Observación</th><th>Acción</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="notice" style="margin-top:12px"><strong>Regla reforzada:</strong> el pedido solo avanza a facturación cuando las líneas quedan guardadas como encontradas, sin novedades pendientes y con cortes finalizados si aplica. El envío a facturación revalida Firebase antes de cambiar la etapa.</div>'+pendingCutNotice+(canMark?'<div class="top-actions" style="margin-top:12px">'+finishAction+'<button class="btn btn-success" data-action="alistPartial" data-id="'+esc(c.id)+'">Crear envío parcial con lo disponible</button></div>':'')+'</section>';
+  var parallelNotice=c.currentProcess==="corte_cable"?'<div class="notice" style="margin-bottom:12px"><strong>Alistamiento paralelo:</strong> el pedido está temporalmente en Corte, pero las demás referencias pueden seguir marcándose como Encontrado o No encontrado.</div>':'';  return '<section class="card alistamiento-check-panel" style="margin-top:16px">'+parallelNotice+'<div class="section-title"><div><h3>Lista marcable de alistamiento</h3><p>Marque cada referencia validada desde el PDF. Las líneas vinculadas a un corte no disponible se actualizan automáticamente como No encontrado.</p></div><span class="chip primary">'+found+'/'+total+' encontrados</span></div><div class="case-meta" style="margin-bottom:10px"><span>Pendientes: <strong>'+pending+'</strong></span><span>Novedades/no encontrados: <strong>'+novelty+'</strong></span></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Referencia</th><th>Descripción</th><th>Cantidad</th><th>U.M.</th><th>Ubicación</th><th>Destino</th><th>Observación</th><th>Acción</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="notice" style="margin-top:12px"><strong>Regla reforzada:</strong> el pedido solo avanza a facturación cuando las líneas quedan guardadas como encontradas, sin novedades pendientes y con cortes finalizados si aplica. El envío a facturación revalida Supabase antes de cambiar la etapa.</div>'+pendingCutNotice+(canMark?'<div class="top-actions" style="margin-top:12px">'+finishAction+'<button class="btn btn-success" data-action="alistPartial" data-id="'+esc(c.id)+'">Crear envío parcial con lo disponible</button></div>':'')+'</section>';
 }
 function refreshAlistamientoChecklist(c){
   applyAlistamientoAutoChecklist(c);
@@ -6328,7 +6240,7 @@ function markAlistamientoItem(id,idx,status,detail,reason,lineKey){
         var freshItems=(fresh&&fresh.orderItems)||[];
         var freshPos=locateAlistamientoLine(freshItems,pos,lineKey);
         var saved=freshPos>=0 && freshItems[freshPos] && freshItems[freshPos].alistamientoStatus===status;
-        if(!saved)throw new Error("La marca no quedó confirmada en Firebase. Reintente antes de enviar a Facturación.");
+        if(!saved)throw new Error("La marca no quedó confirmada en Supabase. Reintente antes de enviar a Facturación.");
         renderDetail(id);
         return true;
       });
@@ -7560,7 +7472,7 @@ function openCutsPlanner(id){
     c.hasCuts=(c.cutRequests||[]).length>0;var st=procStats(c,"corte_cable");if(c.hasCuts)st.startedAt=st.startedAt||now();c.checklist=c.checklist||{};if(c.checklist["Líneas que requieren corte definidas"]!==undefined)c.checklist["Líneas que requieren corte definidas"]="ok";if(c.checklist["Cortes enviados al módulo de corte si aplica"]!==undefined)c.checklist["Cortes enviados al módulo de corte si aplica"]=c.cutRequests.length?"ok":"na";
     persistCase(c,{type:"CUT_REQUESTS_CREATED",detail:"Solicitudes de corte creadas/ajustadas: "+added}).then(function(){closeDrawer();renderDetail(id);}).catch(function(e){showError(e.message||e);});};
 }
-function cutPayload(c,cut){return {caseId:c.id,cutId:cut.id,pedido:c.reference||cut.pedido||"",tipoPedido:(String(c.orderKind||cut.tipoPedido||"VENTAS").toUpperCase()==="ALUMBRADO"?"ALUMBRADO":"VENTAS"),referencia:cut.referencia||"",descripcion:cut.descripcion||"",metrosSolicitados:cut.metrosSolicitados||"",disponibleAntes:cut.disponibleAntes||"",cliente:c.client||"",source:"firebase_principal"};}
+function cutPayload(c,cut){return {caseId:c.id,cutId:cut.id,pedido:c.reference||cut.pedido||"",tipoPedido:(String(c.orderKind||cut.tipoPedido||"VENTAS").toUpperCase()==="ALUMBRADO"?"ALUMBRADO":"VENTAS"),referencia:cut.referencia||"",descripcion:cut.descripcion||"",metrosSolicitados:cut.metrosSolicitados||"",disponibleAntes:cut.disponibleAntes||"",cliente:c.client||"",source:"supabase_principal"};}
 function findCut(c,cutId){return (c.cutRequests||[]).filter(function(x){return x.id===cutId;})[0]||null;}
 function cutDone(st){return ["CONFORME","AUTORIZADO","FINALIZADO"].indexOf(st)>=0;}
 function cutIsOperationallyDone(cut){
@@ -8527,7 +8439,7 @@ function renderUsers(){
     var self=state.user && u.id===state.user.uid;
     return '<tr><td><strong>'+esc(u.name||'Sin nombre')+'</strong>'+(self?'<br><small>Sesión actual</small>':'')+'</td><td>'+esc(u.email||'')+'</td><td>'+esc(roleTitle(u.role))+'</td><td>'+(u.isActive===false?'<span class="chip danger">Inactivo</span>':'<span class="chip success">Activo</span>')+'</td><td>'+(canManageUsers()?'<div class="top-actions"><button class="btn btn-small" data-action="editUserRole" data-id="'+esc(u.id)+'">Rol</button><button class="btn btn-small btn-gold" data-action="toggleUserActive" data-id="'+esc(u.id)+'">'+(u.isActive===false?'Activar':'Inactivar')+'</button>'+((self||!isAdminRoleValue(state.user.role))?'':'<button class="btn btn-small btn-danger" data-action="deleteUserProfile" data-id="'+esc(u.id)+'">Eliminar</button>')+'</div>':'<span class="chip info">Solo lectura</span>')+'</td></tr>';
   }).join('');
-  layout(header("Usuarios",canAuditViewAll()?"Directorio de usuarios en modo auditoría solo lectura.":"Gestión completa de perfiles: crear usuarios, cambiar roles, activar/inactivar y eliminar perfiles operativos.",canManageUsers()?'<button class="btn btn-primary" data-action="userModal">Crear usuario</button>':"")+auditReadOnlyNotice()+'<section class="grid grid-3"><article class="card kpi"><span>Usuarios activos</span><strong>'+active+'</strong><small>'+state.users.length+' perfiles cargados</small></article><article class="card kpi"><span>Gerencia</span><strong>'+ger+'/2</strong><small>Límite operativo</small></article><article class="card kpi"><span>Roles</span><strong>'+uniqueRoles()+'</strong><small>Incluye líder recepción</small></article></section><section class="card" style="margin-top:16px"><div class="notice"><strong>Control administrativo:</strong> El botón eliminar borra el perfil de Firestore y bloquea el acceso operativo. Para eliminar también la cuenta de Firebase Authentication se requiere hacerlo desde Firebase Console o una Cloud Function segura.</div><h3>Directorio</h3><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">No hay usuarios cargados.</td></tr>')+'</tbody></table></div></section>');
+  layout(header("Usuarios",canAuditViewAll()?"Directorio de usuarios en modo auditoría solo lectura.":"Gestión completa de perfiles: crear usuarios, cambiar roles, activar/inactivar y eliminar perfiles operativos.",canManageUsers()?'<button class="btn btn-primary" data-action="userModal">Crear usuario</button>':"")+auditReadOnlyNotice()+'<section class="grid grid-3"><article class="card kpi"><span>Usuarios activos</span><strong>'+active+'</strong><small>'+state.users.length+' perfiles cargados</small></article><article class="card kpi"><span>Gerencia</span><strong>'+ger+'/2</strong><small>Límite operativo</small></article><article class="card kpi"><span>Roles</span><strong>'+uniqueRoles()+'</strong><small>Incluye líder recepción</small></article></section><section class="card" style="margin-top:16px"><div class="notice"><strong>Control administrativo:</strong> El botón eliminar borra el perfil de Supabase y bloquea el acceso operativo. Para eliminar también la cuenta de Supabase Authentication se requiere hacerlo desde Supabase Console o una Edge Function segura.</div><h3>Directorio</h3><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">No hay usuarios cargados.</td></tr>')+'</tbody></table></div></section>');
 }
 function uniqueRoles(){var m={};state.users.forEach(function(u){if(u&&u.role)m[normalizeRole(u.role)]=1;});return Object.keys(m).length;}
 function roleOptionsHtml(selected){return Object.keys(roles).filter(function(r){return r!=="lider_logistico";}).map(function(r){return '<option value="'+esc(r)+'" '+(normalizeRole(selected)===normalizeRole(r)?'selected':'')+'>'+esc(roles[r])+'</option>';}).join('');}
@@ -10503,7 +10415,7 @@ function renderIndicators(){
   if(!canSeeKpis()){layout(header("Indicadores","Acceso restringido.")+'<div class="empty">Los KPIs consolidados solo están disponibles para jefe logístico, gerencia, auditoría y administración. Rol detectado: '+esc(state.user?state.user.role:'sin sesión')+'</div>');return;}
   var embedded=appResource('modules/vsm/dashboard.html?embedded=1&v=5.0.0'),full=appResource('modules/vsm/dashboard.html?v=5.0.0');
   layout(header("VSM e indicadores","Tablero conectado al ERP para analizar tiempos, flujo, productividad, esperas y cumplimiento.",'<a class="btn" href="'+full+'" target="_blank" rel="noopener">Abrir en pantalla completa</a>')+
-    '<section class="vsm-connected-shell"><div class="vsm-connected-toolbar"><div><strong>Centro operativo VSM</strong><span>Se mantiene dentro del ERP y comparte la misma sesión de Firebase.</span></div><button class="btn" type="button" data-action="reloadVsmFrame">Actualizar tablero</button></div><iframe id="eiVsmFrame" class="vsm-connected-frame" title="Centro operativo VSM" src="'+embedded+'" loading="eager" allow="clipboard-write"></iframe></section>');
+    '<section class="vsm-connected-shell"><div class="vsm-connected-toolbar"><div><strong>Centro operativo VSM</strong><span>Se mantiene dentro del ERP y comparte la misma sesión de Supabase.</span></div><button class="btn" type="button" data-action="reloadVsmFrame">Actualizar tablero</button></div><iframe id="eiVsmFrame" class="vsm-connected-frame" title="Centro operativo VSM" src="'+embedded+'" loading="eager" allow="clipboard-write"></iframe></section>');
   var reload=document.querySelector('[data-action="reloadVsmFrame"]');if(reload)reload.onclick=function(){var frame=document.getElementById('eiVsmFrame');if(frame)frame.src=embedded+'&reload='+Date.now();};
 }
 function startActive(c){
@@ -11410,7 +11322,7 @@ function deleteCaseHard(id){
     .then(function(){return db.collection("cases").doc(id).delete();})
     .then(function(){return createEvent({type:"CASE_DELETED_ADMIN",detail:"Caso eliminado de pruebas: "+(c.reference||id),targetRole:"admin",visibleRoles:["admin","super_admin","super_administrador","gerencia","jefe_logistica"]}).catch(function(){return null;});})
     .then(function(){state.cases=state.cases.filter(function(x){return x.id!==id;});state.events=state.events.filter(function(x){return x.caseId!==id;});renderAdmin();})
-    .catch(function(e){showError((e&&e.message)||e||"No se pudo eliminar. Revise reglas de Firestore para admin/super admin.");});
+    .catch(function(e){showError((e&&e.message)||e||"No se pudo eliminar. Revise reglas de Supabase para admin/super admin.");});
 }
 
 
@@ -11424,7 +11336,7 @@ function deleteReceptionPedidoCase(id){
     .then(function(){return db.collection("cases").doc(id).delete();})
     .then(function(){return createEvent({type:"RECEPTION_PEDIDO_DELETED_SUPERADMIN",detail:"Super Admin eliminó de Recepción de pedidos: "+ref,targetRole:"super_admin",visibleRoles:["super_admin","super_administrador","admin","gerencia","jefe_logistica"]}).catch(function(){return null;});})
     .then(function(){state.cases=state.cases.filter(function(x){return x.id!==id;});state.events=state.events.filter(function(x){return x.caseId!==id;});state.detailId=null;showLiveToast("Pedido eliminado","Se eliminó de Recepción de pedidos: "+ref,false);if(state.route==="cases")renderCases();else if(state.route==="dashboard")renderDashboard();else renderCases();})
-    .catch(function(e){showError((e&&e.message)||e||"No se pudo eliminar el pedido de recepción. Revise permisos de Super Admin en Firestore.");});
+    .catch(function(e){showError((e&&e.message)||e||"No se pudo eliminar el pedido de recepción. Revise permisos de Super Admin en Supabase.");});
 }
 
 function fileDownloadLink(url,label){return url?'<a class="btn btn-small btn-primary" href="'+esc(url)+'" target="_blank" rel="noopener" download>'+esc(label||'Descargar')+'</a>':'<span class="chip warning">Sin archivo</span>';}
@@ -11944,7 +11856,7 @@ function renderCutDiagnostics(){
   ];
   layout(header("Diagnóstico Corte","Verificación rápida de perfil, permisos y carga para el usuario de Corte.",'<button class="btn btn-gold" data-action="forceRefreshCases">Probar carga de pedidos</button>')+
     '<section class="card"><h3>Perfil detectado</h3><div class="table-wrap"><table><tbody>'+rows.map(function(r){return '<tr><th>'+esc(r[0])+'</th><td>'+esc(r[1])+'</td></tr>';}).join("")+'</tbody></table></div></section>'+
-    '<section class="notice"><strong>Uso:</strong> si aquí el rol no sale como auxiliar_corte o no cargan casos, debe publicarse firestore.rules V221 y verificar el documento users del UID real.</section>');
+    '<section class="notice"><strong>Uso:</strong> si aquí el rol no sale como auxiliar_corte o no cargan casos, debe verificarse el perfil activo, el rol y la ejecución del SQL operativo de Supabase.</section>');
 }
 function render(){
   var force=state.__forceRenderOnce===true;
@@ -12706,10 +12618,10 @@ function boot(){
   try{
     cleanupProtectedToast();
     ensureMobileFreshVersion();
-    showLoading("Conectando Firebase y verificando sesión...");
-    initFirebaseAsync().then(function(){
+    showLoading("Conectando Supabase y verificando sesión...");
+    initSupabaseAsync().then(function(){
       if(!firebaseReady || !auth){renderLogin();return;}
-      showLoading("Verificando sesión de Firebase...");
+      showLoading("Verificando sesión de Supabase...");
       auth.onAuthStateChanged(function(fbUser){
         if(!fbUser){
           sessionStorage.removeItem(storageKey+"_session");
@@ -14084,14 +13996,14 @@ try{
    Corte móvil operativo directo.
    Motivo:
    - El flujo móvil estaba fallando incluso con No necesita corte y Medida completa.
-   - Se reemplaza la operación móvil por un flujo directo, con escritura real en Firestore.
+   - Se reemplaza la operación móvil por un flujo directo, con escritura real en Supabase.
    - PC conserva su flujo normal.
 ============================================================ */
 function eiV221IsCutUser(){
   return !!(state.user && normalizeRole(state.user.role)==="auxiliar_corte");
 }
 function eiV221RepairCutUser(){
-  // Los permisos provienen únicamente del perfil validado en Firestore.
+  // Los permisos provienen únicamente del perfil validado en Supabase.
   return false;
 }
 function eiV221CanOperateCut(){
@@ -14141,8 +14053,8 @@ function eiV221PrepareCaseCut(c,cut){
 }
 function eiV221PersistCutCase(c,cut,event,expected){
   if(!db||!c||!c.id){
-    alert("No hay conexión a Firestore. No se puede guardar el corte.");
-    return Promise.reject(new Error("Sin Firestore."));
+    alert("No hay conexión a Supabase. No se puede guardar el corte.");
+    return Promise.reject(new Error("Sin Supabase."));
   }
   c.updatedAt=now();
   c.updatedBy=state.user&&state.user.uid;
@@ -14156,14 +14068,14 @@ function eiV221PersistCutCase(c,cut,event,expected){
   event=event||{};
   event=Object.assign({caseId:c.id,process:c.currentProcess,timestamp:now(),visibleRoles:["auxiliar_corte","aux_logistica","coordinador_logistico","lider_logistico","jefe_logistica","admin","super_admin"]},event);
   return persistCase(c,event).then(function(){return db.collection("cases").doc(c.id).get();}).then(function(doc){
-    if(!doc||!doc.exists)throw new Error("Firestore no devolvió el caso guardado.");
+    if(!doc||!doc.exists)throw new Error("Supabase no devolvió el caso guardado.");
     var remote=doc.data()||{};remote.id=doc.id;
     var remoteCut=(remote.cutRequests||[]).find(function(x){return x&&cut&&x.id===cut.id;});
     if(expected&&expected.cutStatus && (!remoteCut || remoteCut.status!==expected.cutStatus)){
-      throw new Error("El corte no quedó en estado "+expected.cutStatus+" en Firestore.");
+      throw new Error("El corte no quedó en estado "+expected.cutStatus+" en Supabase.");
     }
     if(expected&&expected.currentProcess && remote.currentProcess!==expected.currentProcess){
-      throw new Error("El pedido no quedó en "+expected.currentProcess+" en Firestore.");
+      throw new Error("El pedido no quedó en "+expected.currentProcess+" en Supabase.");
     }
     eiV221ReplaceCase(remote);
     return remote;
@@ -14175,12 +14087,12 @@ function eiV221PersistCutCase(c,cut,event,expected){
       authUid=String((auth&&auth.currentUser&&auth.currentUser.uid)||"");
     }catch(x){novaCaptureError(x,"operación heredada");}
     alert(
-      "Firestore rechazó la actualización real del corte. " +
-      "Firestore sigue rechazando la escritura. Verifique en consola el projectId mostrado por [V221 Firebase] y publique allí firestore.rules V221.\n\n" +
+      "Supabase rechazó la actualización real del corte. " +
+      "Supabase sigue rechazando la escritura. Verifique que ejecutó supabase/sql/00_ACTIVAR_TODO_EI_ERP_V7.sql y que el usuario tiene perfil activo y rol asignado.\n\n" +
       "Usuario autenticado: "+(authEmail||"sin correo")+"\nUID: "+(authUid||"sin UID")+"\n\n" +
       "Detalle: "+msg
     );
-    try{console.error("[V221 corte móvil · permiso Firestore]",e,{authEmail:authEmail,authUid:authUid,caseId:c&&c.id,cutId:cut&&cut.id,event:event,expected:expected});}catch(x){novaCaptureError(x,"operación heredada");}
+    try{console.error("[V221 corte móvil · permiso Supabase]",e,{authEmail:authEmail,authUid:authUid,caseId:c&&c.id,cutId:cut&&cut.id,event:event,expected:expected});}catch(x){novaCaptureError(x,"operación heredada");}
     throw e;
   });
 }
@@ -14453,12 +14365,12 @@ handleCutAction=function(c,cut,action){
 try{eiV221RepairCutUser();eiV221InjectMobileCutCss();}catch(e){novaCaptureError(e,"operación heredada");}
 
 
-/* V221_DIAGNOSTICO_FIREBASE_PROYECTO */
+/* V7_DIAGNOSTICO_SUPABASE_PROYECTO */
 try{
-  var eiV221FirebaseApp=(firebase&&firebase.app)?firebase.app():null;
-  console.info("[V221 Firebase]",{
-    projectId:eiV221FirebaseApp&&eiV221FirebaseApp.options&&eiV221FirebaseApp.options.projectId,
-    authDomain:eiV221FirebaseApp&&eiV221FirebaseApp.options&&eiV221FirebaseApp.options.authDomain,
+  var eiV221SupabaseApp=(firebase&&firebase.app)?firebase.app():null;
+  console.info("[V7 Supabase]",{
+    projectId:"hezjxcxxcjlpmyalftam",
+    backend:"Supabase + Google Drive",
     authEmail:auth&&auth.currentUser&&auth.currentUser.email,
     authUid:auth&&auth.currentUser&&auth.currentUser.uid
   });
@@ -14576,7 +14488,7 @@ function v238QueueSnapshot(queue){
   });
 }
 function v238CreateOrActivateRoll(data,queue){
-  if(!db)return Promise.reject(new Error("Firebase no está disponible para registrar el rollo."));
+  if(!db)return Promise.reject(new Error("Supabase no está disponible para registrar el rollo."));
   var existingId=String(data.existingRollId||"").trim();
   var id=existingId||uid("ROLL");
   var ref=db.collection(V238_ROLL_COLLECTION).doc(id);
@@ -15628,7 +15540,7 @@ document.addEventListener("click",function(e){
    - Visible durante Alistamiento y mientras el pedido está en Corte.
    - Corte no disponible marca la línea como NO_ENCONTRADO.
    - Retomar corte devuelve la línea a PENDIENTE.
-   - Reconexión segura después de una caída del canal Firestore.
+   - Reconexión segura después de una caída del canal Supabase.
 ============================================================ */
 function v240ShouldShowAlistamientoPanel(c){
   if(!c||!(c.orderItems||[]).length)return false;
@@ -15851,19 +15763,19 @@ openAlistamientoChecklist=function(id){
 
 /* Reconexión no destructiva para errores WebChannel / ERR_CONNECTION_RESET. */
 var v240ReconnectTimer=null;
-function v240ReconnectFirestore(reason){
+function v240ReconnectSupabase(reason){
   v242RequestStableRefresh(reason||"reconexion");
 }
 window.addEventListener("online",function(){
-  showLiveToast("Conexión recuperada","Sincronizando nuevamente con Firebase.",false);
-  v240ReconnectFirestore("online");
+  showLiveToast("Conexión recuperada","Sincronizando nuevamente con Supabase.",false);
+  v240ReconnectSupabase("online");
 });
 window.addEventListener("offline",function(){
   showLiveToast("Sin conexión","La vista actual permanece disponible. Los datos se sincronizarán al recuperar internet.",false);
 });
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible"&&navigator.onLine!==false){
-    v240ReconnectFirestore("visible");
+    v240ReconnectSupabase("visible");
   }
 });
 
@@ -16458,7 +16370,7 @@ function v242ErrorText(error){
     String(error)
   ].join(" ");
 }
-function v242IsFirestoreInternalError(error){
+function v242IsSupabaseInternalError(error){
   var text=v242ErrorText(error).toLowerCase();
   return (
     text.indexOf("internal assertion failed")>=0 ||
@@ -16477,7 +16389,7 @@ function v242RecoveryHistory(){
     return [];
   }
 }
-function v242ScheduleFirestoreRecovery(error){
+function v242ScheduleSupabaseRecovery(error){
   if(v242RecoveryScheduled)return;
   v242RecoveryScheduled=true;
 
@@ -16496,7 +16408,7 @@ function v242ScheduleFirestoreRecovery(error){
   if(history.length<=2){
     try{
       showLiveToast(
-        "Reconectando Firebase",
+        "Reconectando Supabase",
         "La conexión interna se reiniciará una sola vez. No se están modificando las reglas.",
         false
       );
@@ -16510,11 +16422,11 @@ function v242ScheduleFirestoreRecovery(error){
     return;
   }
 
-  console.error("[V254] Firestore no logró estabilizarse después de dos reinicios.",error);
+  console.error("[V254] Supabase no logró estabilizarse después de dos reinicios.",error);
   try{
     state.loadWarnings=state.loadWarnings||[];
     state.loadWarnings.push(
-      "Firestore perdió la conexión interna varias veces. Revise la red y pulse Actualizar vista."
+      "Supabase perdió la conexión interna varias veces. Revise la red y pulse Actualizar vista."
     );
     render();
   }catch(e){novaCaptureError(e,"operación heredada");}
@@ -16584,8 +16496,8 @@ function v242SequentialLoad(){
     });
   }).catch(function(error){
     state.dataLoading=false;
-    if(v242IsFirestoreInternalError(error)){
-      v242ScheduleFirestoreRecovery(error);
+    if(v242IsSupabaseInternalError(error)){
+      v242ScheduleSupabaseRecovery(error);
     }
     throw error;
   });
@@ -16631,7 +16543,7 @@ function v242RequestStableRefresh(reason){
       }
       cleanupProtectedToast();
     }).catch(function(error){
-      if(!v242IsFirestoreInternalError(error)){
+      if(!v242IsSupabaseInternalError(error)){
         console.warn("[V254] Actualización periódica no disponible:",reason,error);
       }
     });
@@ -16654,16 +16566,16 @@ function startRealtimeSync(){
 }
 window.addEventListener("unhandledrejection",function(event){
   var reason=event&&event.reason;
-  if(v242IsFirestoreInternalError(reason)){
+  if(v242IsSupabaseInternalError(reason)){
     try{event.preventDefault();}catch(e){novaCaptureError(e,"operación heredada");}
-    v242ScheduleFirestoreRecovery(reason);
+    v242ScheduleSupabaseRecovery(reason);
   }
 });
 window.addEventListener("error",function(event){
   var error=(event&&event.error)||event;
-  if(v242IsFirestoreInternalError(error)){
+  if(v242IsSupabaseInternalError(error)){
     try{event.preventDefault();}catch(e){novaCaptureError(e,"operación heredada");}
-    v242ScheduleFirestoreRecovery(error);
+    v242ScheduleSupabaseRecovery(error);
   }
 });
 
@@ -17610,7 +17522,7 @@ function v246StableLoad(){
         v250ApplyCases(
           caseResult.value||[],
           outboxRows,
-          "Firebase"
+          "Supabase"
         );
       }else if(!(state.cases||[]).length){
         state.v250.lastFailure=
@@ -17756,7 +17668,7 @@ loadFreshCaseForUpdate=function(id,fallback){
     return fallback;
   });
 };
-v242ScheduleFirestoreRecovery=function(error){state.v246.degraded=true;try{stopRealtimeSync();}catch(e){novaCaptureError(e,"operación heredada");}console.error("[V254] Interrupción Firestore; operación local preservada",error);v246Banner("Conexión inestable · los cambios se conservarán y se reintentará sin cerrar la pantalla.","offline");if(state.v246.refreshTimer)clearTimeout(state.v246.refreshTimer);state.v246.refreshTimer=setTimeout(function(){state.v246.refreshTimer=null;if(navigator.onLine!==false&&!v246Locked())loadData().then(function(){startRealtimeSync();v246Flush();}).catch(function(){});},15000);};
+v242ScheduleSupabaseRecovery=function(error){state.v246.degraded=true;try{stopRealtimeSync();}catch(e){novaCaptureError(e,"operación heredada");}console.error("[V254] Interrupción Supabase; operación local preservada",error);v246Banner("Conexión inestable · los cambios se conservarán y se reintentará sin cerrar la pantalla.","offline");if(state.v246.refreshTimer)clearTimeout(state.v246.refreshTimer);state.v246.refreshTimer=setTimeout(function(){state.v246.refreshTimer=null;if(navigator.onLine!==false&&!v246Locked())loadData().then(function(){startRealtimeSync();v246Flush();}).catch(function(){});},15000);};
 v242RequestStableRefresh=function(reason){
   if(state.v246.refreshTimer){
     clearTimeout(state.v246.refreshTimer);
@@ -17786,7 +17698,7 @@ v242RequestStableRefresh=function(reason){
     });
   },reason==="online"?4000:1800);
 };
-v240ReconnectFirestore=function(reason){if(!v246Locked())v242RequestStableRefresh(reason||"reconexion");};
+v240ReconnectSupabase=function(reason){if(!v246Locked())v242RequestStableRefresh(reason||"reconexion");};
 startRealtimeSync=function(){
   stopRealtimeSync();
 
@@ -18298,7 +18210,7 @@ function v247RecoverOrder(reference,options){
   if(!db||navigator.onLine===false){
     return Promise.resolve(finalize(
       [],
-      navigator.onLine===false?"sin_conexion":"sin_firebase"
+      navigator.onLine===false?"sin_conexion":"sin_supabase"
     ));
   }
 
@@ -18412,15 +18324,15 @@ document.addEventListener("click",function(event){
   });
 },true);
 
-var v248LegacyFirestoreRecovery=v242ScheduleFirestoreRecovery;
+var v248LegacySupabaseRecovery=v242ScheduleSupabaseRecovery;
 
-v242ScheduleFirestoreRecovery=function(error){
+v242ScheduleSupabaseRecovery=function(error){
   state.v246.degraded=true;
 
   try{stopRealtimeSync();}catch(e){novaCaptureError(e,"operación heredada");}
 
   console.error(
-    "[V254] Interrupción Firestore; operación local preservada",
+    "[V254] Interrupción Supabase; operación local preservada",
     error
   );
 
@@ -18446,7 +18358,7 @@ v242ScheduleFirestoreRecovery=function(error){
     }
 
     v251BackgroundRefreshCases(
-      "reconexión Firestore"
+      "reconexión Supabase"
     );
 
     v246Flush().catch(function(){});
@@ -18461,7 +18373,7 @@ window.addEventListener("unhandledrejection",function(event){
       event.preventDefault();
     }catch(e){novaCaptureError(e,"operación heredada");}
 
-    v242ScheduleFirestoreRecovery(reason);
+    v242ScheduleSupabaseRecovery(reason);
   }
 },true);
 
@@ -18473,7 +18385,7 @@ window.addEventListener("error",function(event){
       event.preventDefault();
     }catch(e){novaCaptureError(e,"operación heredada");}
 
-    v242ScheduleFirestoreRecovery(error);
+    v242ScheduleSupabaseRecovery(error);
   }
 },true);
 
@@ -18889,7 +18801,7 @@ function v251BackgroundRefreshCases(reason){
     state.v251.lastBackgroundAt=Date.now();
     state.v251.lastBackgroundHash=newHash;
     v246CacheSoon();
-    v251ShowUpdateBadge(reason||"Firebase recibió cambios.");
+    v251ShowUpdateBadge(reason||"Supabase recibió cambios.");
     return true;
   }).catch(function(error){
     console.warn(
@@ -19492,14 +19404,14 @@ startRealtimeSync=function(){
   },300000);
 };
 
-/* La recuperación de Firestore jamás vuelve a ejecutar loadData ni render. */
-v242ScheduleFirestoreRecovery=function(error){
+/* La recuperación de Supabase jamás vuelve a ejecutar loadData ni render. */
+v242ScheduleSupabaseRecovery=function(error){
   state.v246.degraded=true;
 
   try{stopRealtimeSync();}catch(e){novaCaptureError(e,"operación heredada");}
 
   console.error(
-    "[V254] Firestore inestable; el trabajo activo permanece intacto.",
+    "[V254] Supabase inestable; el trabajo activo permanece intacto.",
     error
   );
 
