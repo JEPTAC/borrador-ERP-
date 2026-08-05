@@ -3991,21 +3991,36 @@ function showLoading(msg){
 }
 
 function profileDocsByEmail(fbUser){
-  var email=String((fbUser&&fbUser.email)||"").trim();
-  if(!email || !db)return Promise.resolve(null);
-  var ids=uniqueArray([email,email.toLowerCase()].filter(Boolean));
-  var tasks=ids.map(function(id){return db.collection("users").doc(id).get().then(function(doc){return doc&&doc.exists?doc:null;}).catch(function(){return null;});});
-  return Promise.all(tasks).then(function(list){return list.filter(Boolean)[0]||null;});
+  if(!window.EI_SUPABASE || typeof window.EI_SUPABASE.profileFor!=="function"){
+    return Promise.resolve(null);
+  }
+  return window.EI_SUPABASE.profileFor(fbUser).then(function(profile){
+    if(!profile)return null;
+    var data={
+      uid:profile.uid||fbUser.uid,
+      id:profile.profileId||profile.uid||fbUser.uid,
+      authUid:profile.authUid||fbUser.uid,
+      email:profile.email||fbUser.email||"",
+      name:profile.name||profile.email||fbUser.email||"Usuario",
+      displayName:profile.name||profile.email||fbUser.email||"Usuario",
+      role:profile.role||"",
+      rol:profile.role||"",
+      isActive:true,
+      active:true,
+      capabilities:profile.capabilities||{},
+      sessionContext:profile.raw||{}
+    };
+    return {
+      id:data.id,
+      exists:true,
+      data:function(){return Object.assign({},data);}
+    };
+  });
 }
 function getOperationalProfileDoc(fbUser){
-  return db.collection("users").doc(fbUser.uid).get().then(function(doc){
-    if(doc && doc.exists)return doc;
-    return profileDocsByEmail(fbUser).then(function(byEmail){return byEmail||doc;});
-  }).catch(function(err){
-    return profileDocsByEmail(fbUser).then(function(byEmail){
-      if(byEmail)return byEmail;
-      throw err;
-    });
+  return profileDocsByEmail(fbUser).then(function(doc){
+    if(doc&&doc.exists)return doc;
+    throw new Error("El RPC erp_get_session_context no devolvió un perfil operativo válido.");
   });
 }
 function applyProfileFromDoc(fbUser,doc){

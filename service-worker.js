@@ -1,4 +1,4 @@
-const VERSION="ei-erp-nova-8.2.0-rpc-runtime-20260805-1";
+const VERSION="ei-erp-nova-8.3.0-rls-session-20260805-1";
 const CORE=[
   "./index.html","./manifest.json","./core/css/tokens.css","./core/css/base.css","./core/css/auth.css","./core/css/portal.css","./core/css/shell.css",
   "./core/js/config.js","./core/js/utils.js","./core/js/accessibility.js","./core/js/supabase.js","./core/js/auth-page.js","./core/js/portal.js",
