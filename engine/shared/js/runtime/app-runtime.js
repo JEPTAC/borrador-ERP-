@@ -2134,33 +2134,123 @@ function mergeSalesCasesIntoState(list){
   });
   return sortByUpdated(uniqueById(mine).filter(function(c){return caseBelongsToCurrentSalesUser(c) || (state.detailId && c.id===state.detailId);}));
 }
+function v8RpcCamelKey(key){
+  return String(key||"").replace(/_([a-z])/g,function(_,c){return c.toUpperCase();});
+}
+function v8RpcNormalizeCase(row){
+  row=row||{};
+  var source=row.case&&typeof row.case==="object"?Object.assign({},row.case,row):row;
+  var raw=source.rawData||source.raw_data||{};
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))raw={};
+  var out=Object.assign({},raw);
+  Object.keys(source).forEach(function(key){
+    if(key==="rawData"||key==="raw_data"||key==="case")return;
+    out[v8RpcCamelKey(key)]=source[key];
+  });
+  var assignment=source.assignment||out.assignment||{};
+  if(assignment&&typeof assignment==="object"){
+    out.assignedUid=out.assignedUid||assignment.uid||assignment.userUid||assignment.user_uid||"";
+    out.assignedTo=out.assignedTo||assignment.assignedTo||assignment.assigned_to||out.assignedUid||"";
+    out.assignedName=out.assignedName||assignment.name||assignment.userName||assignment.user_name||"";
+    out.assignedEmail=out.assignedEmail||assignment.email||"";
+    out.assignedRole=out.assignedRole||assignment.role||assignment.roleCode||assignment.role_code||"";
+  }
+  out.id=out.id||out.caseId||source.case_id||source.caseId;
+  out.caseId=out.caseId||out.id;
+  out.reference=out.reference||out.orderNumber||source.reference||out.id;
+  out.currentProcess=out.currentProcess||source.current_process||source.currentProcess||"";
+  out.orderKind=out.orderKind||source.order_kind||source.orderKind||"";
+  out.paymentCondition=out.paymentCondition||source.payment_condition||source.paymentCondition||"";
+  out.deliveryType=out.deliveryType||source.route||source.delivery_type||source.deliveryType||"";
+  out.createdAt=out.createdAt||source.created_at||source.createdAt;
+  out.updatedAt=out.updatedAt||source.updated_at||source.updatedAt||out.createdAt;
+  return out;
+}
+function v8RpcListAllCases(){
+  var client=v8SupabaseClient();
+  if(!client)return Promise.resolve([]);
+  var page=1,pageSize=100,rows=[];
+  function next(){
+    return client.rpc("erp_list_cases",{
+      p_search:null,
+      p_process:null,
+      p_status:null,
+      p_route:null,
+      p_order_kind:null,
+      p_assignment:"all",
+      p_lifecycle:"all",
+      p_page:page,
+      p_page_size:pageSize
+    }).then(function(result){
+      if(result.error)throw result.error;
+      var payload=result.data||{};
+      var items=Array.isArray(payload)?payload:(payload.items||payload.rows||payload.data||[]);
+      rows=rows.concat((items||[]).map(v8RpcNormalizeCase));
+      var pagination=payload.pagination||{};
+      var totalPages=Number(pagination.totalPages||pagination.total_pages||0);
+      var hasNext=pagination.hasNextPage===true||pagination.has_next_page===true||(totalPages>0&&page<totalPages)||(!totalPages&&items.length===pageSize);
+      if(hasNext&&page<100){page+=1;return next();}
+      return sortByUpdated(uniqueById(rows));
+    });
+  }
+  return next();
+}
+function v8RpcDetailRows(payload,names){
+  payload=payload||{};
+  var containers=[payload.related,payload.relations,payload.data,payload];
+  for(var i=0;i<containers.length;i++){
+    var box=containers[i];
+    if(!box||typeof box!=="object")continue;
+    for(var j=0;j<names.length;j++){
+      var value=box[names[j]];
+      if(Array.isArray(value))return value;
+      if(value&&Array.isArray(value.rows))return value.rows;
+      if(value&&Array.isArray(value.items))return value.items;
+    }
+  }
+  return [];
+}
+function v8RpcMergeDetailedCase(payload){
+  payload=payload||{};
+  var row=payload.case||payload.caseData||payload.case_data||payload.order||null;
+  if(!row)return null;
+  var detailed=v8RpcNormalizeCase(row);
+  if(!detailed||!detailed.id)return detailed;
+  var idx=(state.cases||[]).findIndex(function(c){return c&&String(c.id)===String(detailed.id);});
+  if(idx>=0)state.cases[idx]=Object.assign({},state.cases[idx],detailed);
+  else state.cases.unshift(detailed);
+  return detailed;
+}
+function v8RpcListWorkflowRequestsAll(){
+  var client=v8SupabaseClient();
+  if(!client)return Promise.resolve([]);
+  var page=1,pageSize=100,rows=[];
+  function next(){
+    return client.rpc("erp_list_workflow_requests",{
+      p_view:"all",
+      p_request_type:null,
+      p_status:null,
+      p_search:null,
+      p_page:page,
+      p_page_size:pageSize
+    }).then(function(result){
+      if(result.error)throw result.error;
+      var payload=result.data||{};
+      var items=Array.isArray(payload)?payload:(payload.items||payload.rows||payload.data||[]);
+      rows=rows.concat(items||[]);
+      var pagination=payload.pagination||{};
+      var totalPages=Number(pagination.totalPages||pagination.total_pages||0);
+      var hasNext=pagination.hasNextPage===true||pagination.has_next_page===true||(totalPages>0&&page<totalPages)||(!totalPages&&items.length===pageSize);
+      if(hasNext&&page<50){page+=1;return next();}
+      return rows;
+    });
+  }
+  return next();
+}
+
 function loadSalesCasesFastOnline(){
-  var keys=salesLoadIdentityKeys();
-  var name=String(state.user&&state.user.name||"").trim();
-  var email=String(state.user&&state.user.email||"").trim();
-  var uidValue=String(state.user&&state.user.uid||"").trim();
-  var queries=[];
-  if(uidValue)queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("createdBy","==",uidValue),120),"cases.sales.createdBy.uid"));
-  if(email){
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("createdByEmail","==",email),120),"cases.sales.createdByEmail"));
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("createdByEmail","==",email.toLowerCase()),120),"cases.sales.createdByEmail.lower"));
-  }
-  if(name){
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("createdByName","==",name),120),"cases.sales.createdByName"));
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("salesAdvisor","==",name),120),"cases.sales.salesAdvisor"));
-  }
-  var snake=keys.filter(function(x){return x.indexOf("_")>0 && x.indexOf("@")<0;})[0];
-  if(snake){
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("createdByName","==",snake),80),"cases.sales.createdByName.alias"));
-    queries.push(safeQuerySnapshot(limitedQuery(db.collection("cases").where("salesAdvisor","==",snake),80),"cases.sales.salesAdvisor.alias"));
-  }
-  return Promise.all(queries).then(function(snaps){
-    var all=[];snaps.forEach(function(snap){if(snap)all=all.concat(docsToList(snap));});
-    all=sortByUpdated(uniqueById(all)).filter(caseBelongsToCurrentSalesUser);
-    if(all.length)return all;
-    return db.collection("cases").orderBy("updatedAt","desc").limit(120).get().then(function(snap){
-      return sortByUpdated(docsToList(snap).filter(caseBelongsToCurrentSalesUser));
-    }).catch(function(){return [];});
+  return v8RpcListAllCases().then(function(list){
+    return sortByUpdated(uniqueById((list||[]).filter(caseBelongsToCurrentSalesUser)));
   });
 }
 function refreshSalesCasesInBackground(reason){
@@ -2225,18 +2315,9 @@ function writeRegistroVentasCache(list){
   return list||[];
 }
 function loadRegistroVentasAllOnline(){
-  if(!db)return Promise.resolve([]);
-  if(isCurrentUserSalesAdvisor())return loadSalesCasesFastOnline().then(function(list){return salesRegistryRowsForCurrentUser(list);});
-  function readQuery(q,label){
-    return q.get().then(function(snap){return normalizeRegistroVentasList(docsToList(snap));}).catch(function(e){
-      console.warn("Registro de ventas: consulta falló",label,e);
-      throw e;
-    });
-  }
-  return readQuery(db.collection("cases").orderBy("updatedAt","desc"),"cases.updatedAt.desc").catch(function(){
-    return readQuery(db.collection("cases").orderBy("createdAt","desc"),"cases.createdAt.desc");
-  }).catch(function(){
-    return readQuery(db.collection("cases"),"cases.full");
+  return v8RpcListAllCases().then(function(list){
+    if(isCurrentUserSalesAdvisor())return salesRegistryRowsForCurrentUser(list||[]);
+    return normalizeRegistroVentasList(list||[]);
   });
 }
 function ensureRegistroVentasInitialLoad(){
@@ -2285,9 +2366,7 @@ function forceRefreshCurrentUserCases(){
   if(normalizeRole(state.user.role)==="auxiliar_corte" || isCutRoleRuntimeUser())previousRoute="corte_cable";
   state.dataLoading=true;
   showLiveToast("Actualizando pedidos","Forzando nueva lectura de Supabase para este usuario. No cierre la ventana.",false);
-  var p=(normalizeRole(state.user.role)==="ventas")
-    ? loadSalesCasesForcedOnline().then(function(list){state.cases=list||[];})
-    : loadCasesForRole().then(function(list){state.cases=list||[];});
+  var p=loadCasesForRole().then(function(list){state.cases=list||[];});
   p.then(function(){
     state.dataLoading=false;
     state.route=previousRoute||state.route||"dashboard";
@@ -2306,179 +2385,8 @@ function loadingPedidosPanel(text){
   return '<section class="mobile-loading-orders card"><div class="loading-spinner-dot"></div><div><strong>Cargando pedidos</strong><span>'+esc(text||'Estamos trayendo solo la información necesaria para tu rol. Espere un momento.')+'</span></div></section>';
 }
 function loadCasesForRole(){
-  if(canSeeAll()||canAuditViewAll()){
-    return v250GetQueryList(
-      db.collection("cases")
-        .orderBy("updatedAt","desc"),
-      "cases.todos",
-      V250_CASES_TIMEOUT
-    );
-  }
-
-  var role=normalizeRole(state.user.role);
-
-  if(role==="ventas"){
-    return v250Bounded(
-      loadSalesCasesFast(),
-      V250_CASES_TIMEOUT,
-      state.cases||[]
-    ).then(function(result){
-      return result.value||[];
-    });
-  }
-
-  var tasks=[];
-  var aliases=roleQueryAliases(state.user.role);
-  var identities=currentUserIdentityAliases();
-
-  var processKeys=activeProcessKeys().filter(function(processKey){
-    return canAccessProcess(role,processKey);
-  });
-
-  tasks.push(
-    v250QueryValues(
-      "currentProcess",
-      "in",
-      processKeys,
-      "cases.currentProcess"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "assignedRole",
-      "in",
-      aliases,
-      "cases.assignedRole"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "openRequirement.targetRole",
-      "in",
-      aliases,
-      "cases.openRequirement.targetRole"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "openRequirement.assignedRole",
-      "in",
-      aliases,
-      "cases.openRequirement.assignedRole"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "createdBy",
-      "in",
-      identities,
-      "cases.createdBy"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "assignedUid",
-      "in",
-      identities,
-      "cases.assignedUid"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "assignedTo",
-      "in",
-      identities,
-      "cases.assignedTo"
-    )
-  );
-
-  tasks.push(
-    v250QueryValues(
-      "assignedUserIds",
-      "array-contains-any",
-      identities,
-      "cases.assignedUserIds"
-    )
-  );
-
-  if(role==="cartera"){
-    tasks.push(
-      v250GetQueryList(
-        db.collection("cases")
-          .where("currentProcess","==","caja"),
-        "cases.cartera.caja",
-        8000
-      )
-    );
-
-    tasks.push(
-      v250GetQueryList(
-        db.collection("cases")
-          .where("salesHold.destination","==","cartera"),
-        "cases.cartera.retenidos",
-        8000
-      )
-    );
-  }
-
-  if(role==="auxiliar_corte"){
-    tasks.push(
-      v250GetQueryList(
-        db.collection("cases")
-          .where("hasCuts","==",true),
-        "cases.corte",
-        8000
-      )
-    );
-  }
-
-  var ownerRule=currentUserDeliveryOwnerRule();
-
-  if(ownerRule){
-    tasks.push(
-      v250QueryValues(
-        "deliveryRouteOwner",
-        "in",
-        [ownerRule.key].concat(ownerRule.legacyKeys||[]),
-        "cases.deliveryRouteOwner"
-      )
-    );
-
-    tasks.push(
-      v250QueryValues(
-        "currentProcess",
-        "in",
-        ownerRule.routes||[],
-        "cases.deliveryRoutes"
-      )
-    );
-
-    tasks.push(
-      v250QueryValues(
-        "deliveryType",
-        "in",
-        ownerRule.routes||[],
-        "cases.deliveryType"
-      )
-    );
-  }
-
-  return Promise.all(tasks).then(function(groups){
-    var rows=[];
-
-    groups.forEach(function(group){
-      rows=rows.concat(group||[]);
-    });
-
-    return filterCasesForCurrentUserStrict(
-      uniqueById(rows)
-    );
+  return v8RpcListAllCases().then(function(list){
+    return filterCasesForCurrentUserStrict(list||[]);
   });
 }
 
@@ -5998,9 +5906,12 @@ function loadCaseComments(caseId,force){
   if(!force&&state.caseComments[caseId])return Promise.resolve(state.caseComments[caseId]);
   if(state.caseCommentsLoading[caseId])return state.caseCommentsLoading[caseId];
   var client=v8SupabaseClient();if(!client)return Promise.resolve([]);
-  state.caseCommentsLoading[caseId]=client.from("case_comments").select("comment_id,case_id,comment_type,body,created_by_name,created_by_role,created_at,metadata").eq("case_id",caseId).order("created_at",{ascending:true}).then(function(result){
+  state.caseCommentsLoading[caseId]=client.rpc("erp_get_case_detail",{p_case_id:caseId}).then(function(result){
     if(result.error)throw result.error;
-    state.caseComments[caseId]=(result.data||[]).map(normalizeServerComment);
+    var payload=result.data||{};
+    v8RpcMergeDetailedCase(payload);
+    var rows=v8RpcDetailRows(payload,["caseComments","case_comments","comments"]);
+    state.caseComments[caseId]=(rows||[]).map(normalizeServerComment);
     return state.caseComments[caseId];
   }).catch(function(error){console.warn("Comentarios del pedido no disponibles",error);return state.caseComments[caseId]||[];}).finally(function(){delete state.caseCommentsLoading[caseId];});
   return state.caseCommentsLoading[caseId];
@@ -6035,18 +5946,33 @@ function insertCaseComment(c,type,body,metadata){
   if(!client)return Promise.reject(new Error("Supabase no está disponible."));
   body=String(body||"").trim();
   if(!c||!body)return Promise.reject(new Error("El comentario está vacío."));
-  return client.from("case_comments").insert({case_id:c.id,comment_type:type||"COMMENT",body:body,created_by_name:state.user&&state.user.name||"",metadata:Object.assign({process:c.currentProcess,status:c.status},metadata||{})}).select().single().then(function(result){
+  return client.rpc("erp_execute_case_action",{
+    p_case_id:c.id,
+    p_action_code:"add_comment",
+    p_payload:{
+      body:body,
+      commentType:type||"COMMENT",
+      visibility:"CASE",
+      metadata:Object.assign({process:c.currentProcess,status:c.status},metadata||{})
+    }
+  }).then(function(result){
     if(result.error)throw result.error;
+    var response=result.data||{};
+    var row=response.result||response.comment||response;
     state.caseComments[c.id]=state.caseComments[c.id]||[];
-    state.caseComments[c.id].push(normalizeServerComment(result.data));
-    return result.data;
+    state.caseComments[c.id].push(normalizeServerComment(row));
+    return row;
   });
 }
 function requestWorkflowApproval(c,type,reason,metadata){
   var client=v8SupabaseClient();
   if(!client)return Promise.reject(new Error("Supabase no está disponible."));
   if(!c)return Promise.reject(new Error("Pedido no encontrado."));
-  return client.rpc("erp_request_approval",{p_case_id:c.id,p_type:type,p_reason:String(reason||"").trim(),p_metadata:metadata||{}}).then(function(result){
+  return client.rpc("erp_execute_case_action",{
+    p_case_id:c.id,
+    p_action_code:type,
+    p_payload:{reason:String(reason||"").trim(),metadata:metadata||{}}
+  }).then(function(result){
     if(result.error)throw result.error;
     state.workflowRequestsLoaded=false;
     return result.data;
@@ -6054,14 +5980,32 @@ function requestWorkflowApproval(c,type,reason,metadata){
 }
 function normalizeWorkflowRequest(row){
   row=row||{};
-  return {id:row.request_id||row.id,caseId:row.case_id||row.caseId,type:row.request_type||row.type,status:row.status||"PENDING",reason:row.reason||"",requestedByName:row.requested_by_name||"",requestedByRole:row.requested_by_role||"",assignedRoles:row.assigned_roles||[],assignedUserUids:row.assigned_user_uids||[],decision:row.decision||"",decisionReason:row.decision_reason||"",decidedByName:row.decided_by_name||"",createdAt:row.created_at||row.createdAt,decidedAt:row.decided_at||row.decidedAt,metadata:row.metadata||{}};
+  var requester=row.requester||{};
+  var decision=row.decision&&typeof row.decision==="object"?row.decision:{};
+  return {
+    id:row.requestId||row.request_id||row.id,
+    caseId:row.caseId||row.case_id,
+    type:row.requestType||row.request_type||row.type,
+    status:row.status||"PENDING",
+    reason:row.reason||"",
+    requestedByName:row.requestedByName||row.requested_by_name||requester.name||"",
+    requestedByRole:row.requestedByRole||row.requested_by_role||requester.role||"",
+    assignedRoles:row.assignedRoles||row.assigned_roles||[],
+    assignedUserUids:row.assignedUserUids||row.assigned_user_uids||[],
+    decision:typeof row.decision==="string"?row.decision:(decision.decision||""),
+    decisionReason:row.decisionReason||row.decision_reason||decision.reason||"",
+    decidedByName:row.decidedByName||row.decided_by_name||decision.decidedByName||"",
+    createdAt:row.createdAt||row.created_at,
+    decidedAt:row.decidedAt||row.decided_at||decision.decidedAt,
+    metadata:row.metadata||{},
+    canDecide:row.canDecide===true,
+    requestedByMe:row.requestedByMe===true||row.isMine===true
+  };
 }
 function loadWorkflowRequests(force){
   if(state.workflowRequestsLoaded&&!force)return Promise.resolve(state.workflowRequests||[]);
-  var client=v8SupabaseClient();if(!client)return Promise.resolve([]);
-  return client.from("workflow_requests").select("request_id,case_id,request_type,status,reason,requested_by_name,requested_by_role,assigned_roles,assigned_user_uids,decision,decision_reason,decided_by_name,created_at,decided_at,metadata").order("created_at",{ascending:false}).limit(500).then(function(result){
-    if(result.error)throw result.error;
-    state.workflowRequests=(result.data||[]).map(normalizeWorkflowRequest);
+  return v8RpcListWorkflowRequestsAll().then(function(rows){
+    state.workflowRequests=(rows||[]).map(normalizeWorkflowRequest);
     state.workflowRequestsLoaded=true;
     return state.workflowRequests;
   }).catch(function(error){console.warn("Solicitudes de flujo no disponibles",error);state.workflowRequestsLoaded=true;state.workflowRequests=[];return [];});
@@ -6110,14 +6054,18 @@ function decideWorkflowRequest(id,decision){
   var label=decision==="APPROVED"?"aprobar":"rechazar";
   var reason=prompt("Motivo para "+label+" la solicitud:","");
   if(reason===null)return;
+  reason=String(reason||"").trim();
+  if(!reason){alert("Debe registrar el motivo de la decisión.");return;}
   var client=v8SupabaseClient();if(!client){showError("Supabase no está disponible.");return;}
-  var preparation=Promise.resolve();
-  if(decision==="APPROVED"&&req.type==="no_delivery")preparation=startNoDeliveryFromWorkflow(req);
-  preparation.then(function(){return client.rpc("erp_decide_approval",{p_request_id:req.id,p_decision:decision,p_reason:String(reason||"").trim()});}).then(function(result){
+  client.rpc("erp_execute_case_action",{
+    p_case_id:req.caseId||null,
+    p_action_code:"decide_approval",
+    p_payload:{requestId:req.id,decision:decision,reason:reason}
+  }).then(function(result){
     if(result.error)throw result.error;
-    var c=caseById(req.caseId);
-    if(c)return insertCaseComment(c,"SUPERVISION",workflowRequestTypeLabel(req.type)+" "+(decision==="APPROVED"?"aprobada":"rechazada")+" por "+(state.user.name||"Usuario")+(reason?": "+reason:""),{workflowRequestId:req.id,decision:decision}).catch(function(){return null;});
-  }).then(function(){state.workflowRequestsLoaded=false;return loadData();}).then(function(){return loadWorkflowRequests(true);}).then(renderApprovals).catch(function(error){showError((error&&error.message)||error);});
+    state.workflowRequestsLoaded=false;
+    return loadData();
+  }).then(function(){return loadWorkflowRequests(true);}).then(renderApprovals).catch(function(error){showError((error&&error.message)||error);});
 }
 
 function renderDetail(id){

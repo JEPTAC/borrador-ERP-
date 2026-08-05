@@ -1,10 +1,10 @@
-const VERSION="ei-erp-nova-8.1.0-rpc-session-20260805-1";
+const VERSION="ei-erp-nova-8.2.0-rpc-runtime-20260805-1";
 const CORE=[
   "./index.html","./manifest.json","./core/css/tokens.css","./core/css/base.css","./core/css/auth.css","./core/css/portal.css","./core/css/shell.css",
   "./core/js/config.js","./core/js/utils.js","./core/js/accessibility.js","./core/js/supabase.js","./core/js/auth-page.js","./core/js/portal.js",
   "./core/config/applications.json","./core/config/roles.json","./core/assets/logo-electroingenieria.jpeg","./core/assets/app-icon.svg",
   "./portal/index.html","./apps/trazabilidad/index.html","./apps/trazabilidad/js/app.js","./apps/trazabilidad/config/transactions.json",
-  "./engine/shared/js/supabase-compat.js","./engine/shared/js/supabase-legacy-adapter.js","./engine/shared/js/drive-client.js"
+  "./engine/shared/js/supabase-compat.js","./engine/shared/js/supabase-legacy-adapter.js","./engine/shared/js/bootstrap.js","./engine/shared/js/runtime/app-runtime.js","./engine/shared/js/drive-client.js"
 ];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
