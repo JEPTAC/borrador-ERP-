@@ -106,7 +106,7 @@
         state.client=window.supabase.createClient(settings.url,settings.publishableKey,{
           auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce",storageKey:"sb-hezjxcxxcjlpmyalftam-auth-token"},
           db:{schema:settings.schema||"public"},
-          global:{headers:{"X-Client-Info":"ei-erp-nova/8.0.0"}}
+          global:{headers:{"X-Client-Info":"ei-erp-nova/8.5.0"}}
         });
         window[clientSingletonKey]={url:settings.url,key:settings.publishableKey,client:state.client};
       }
@@ -121,38 +121,22 @@
   function profileFor(user){
     user=normalizeUser(user);
     if(!user)return Promise.reject(new Error("No existe una sesión autenticada."));
-
     return init().then(function(){
-      return state.client.rpc("erp_get_session_context");
+      return state.client.from("profiles").select("*").eq("auth_user_id",user.id).maybeSingle();
     }).then(function(result){
       if(result.error)throw result.error;
-
-      var context=result.data||{};
-      var viewer=context.viewer||context.profile||context.user||context.session||{};
-      var capabilities=context.capabilities||viewer.capabilities||{};
-
-      var uid=viewer.uid||viewer.userKey||viewer.user_key||context.userKey||context.user_key||user.id;
-      var email=viewer.email||context.email||user.email||"";
-      var name=viewer.name||viewer.displayName||viewer.display_name||context.name||user.displayName||email||"Usuario";
-      var role=viewer.role||viewer.roleCode||viewer.role_code||context.role||context.roleCode||context.role_code||capabilities.role||"";
-
-      if(viewer.active===false||context.active===false){
-        throw new Error("Su usuario está inactivo. Comuníquese con el administrador.");
-      }
-
-      if(!role){
-        throw new Error("Su cuenta está autenticada, pero el ERP no devolvió un rol autorizado.");
-      }
-
+      var data=result.data;
+      if(!data)throw new Error("Su cuenta está autenticada, pero no está vinculada a un perfil del ERP.");
+      if(data.active!==true)throw new Error("Su usuario está inactivo. Comuníquese con el administrador.");
+      if(!data.role_code)throw new Error("El perfil no tiene un rol configurado.");
       return {
-        uid:uid,
+        uid:data.firebase_uid||user.id,
         authUid:user.id,
-        email:email,
-        name:name,
-        role:role,
-        capabilities:capabilities,
-        raw:context,
-        profileId:uid
+        email:user.email||data.email||"",
+        name:data.display_name||user.displayName||user.email||"Usuario",
+        role:data.role_code,
+        raw:Object.assign({},data.raw_profile||{},data),
+        profileId:data.firebase_uid||user.id
       };
     });
   }

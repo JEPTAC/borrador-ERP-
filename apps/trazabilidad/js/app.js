@@ -150,63 +150,19 @@
     cash:["caja"],credit:["cartera"],goods_reception:[],
     logistics_manager:["recepcion_pedidos","alistamiento","corte_cable","facturacion","cliente_punto","cliente_recoge","despacho_local","despacho_nacional","cierre_despacho_nacional"]
   };return map[state.group]||[];}
-  function rpcCamelKey(key){return String(key||"").replace(/_([a-z])/g,function(_,c){return c.toUpperCase();});}
-  function normalizeRpcCase(row){
-    row=row||{};
-    var source=row.case&&typeof row.case==="object"?Object.assign({},row.case,row):row;
-    var raw=source.rawData||source.raw_data||{};
-    if(!raw||typeof raw!=="object"||Array.isArray(raw))raw={};
-    var out=Object.assign({},raw);
-    Object.keys(source).forEach(function(key){
-      if(key==="rawData"||key==="raw_data"||key==="case")return;
-      out[rpcCamelKey(key)]=source[key];
-    });
-    var assignment=source.assignment||out.assignment||{};
-    if(assignment&&typeof assignment==="object"){
-      out.assignedUid=out.assignedUid||assignment.uid||assignment.userUid||assignment.user_uid||"";
-      out.assignedTo=out.assignedTo||assignment.assignedTo||assignment.assigned_to||out.assignedUid||"";
-      out.assignedName=out.assignedName||assignment.name||assignment.userName||assignment.user_name||"";
-      out.assignedEmail=out.assignedEmail||assignment.email||"";
-      out.assignedRole=out.assignedRole||assignment.role||assignment.roleCode||assignment.role_code||"";
-    }
-    out.id=out.id||out.caseId||source.case_id||source.caseId;
-    out.caseId=out.caseId||out.id;
-    out.reference=out.reference||out.orderNumber||source.reference||out.id;
-    out.currentProcess=out.currentProcess||source.current_process||source.currentProcess||"";
-    out.orderKind=out.orderKind||source.order_kind||source.orderKind||"";
-    out.paymentCondition=out.paymentCondition||source.payment_condition||source.paymentCondition||"";
-    out.deliveryType=out.deliveryType||source.route||source.delivery_type||source.deliveryType||"";
-    out.updatedAt=out.updatedAt||source.updated_at||source.updatedAt||out.createdAt||source.created_at||source.createdAt;
-    out.createdAt=out.createdAt||source.created_at||source.createdAt;
-    return out;
-  }
   function loadCasesForShell(){
-    var pageSize=100,page=1,all=[];
-    function next(){
-      return F.state.client.rpc("erp_list_cases",{
-        p_search:null,
-        p_process:null,
-        p_status:null,
-        p_route:null,
-        p_order_kind:null,
-        p_assignment:"all",
-        p_lifecycle:"all",
-        p_page:page,
-        p_page_size:pageSize
-      }).then(function(result){
-        if(result.error)throw result.error;
-        var payload=result.data||{};
-        var items=Array.isArray(payload)?payload:(payload.items||payload.rows||payload.data||[]);
-        all=all.concat((items||[]).map(normalizeRpcCase));
-        var pagination=payload.pagination||{};
-        var totalPages=Number(pagination.totalPages||pagination.total_pages||0);
-        var hasNext=pagination.hasNextPage===true||pagination.has_next_page===true||(totalPages>0&&page<totalPages)||(!totalPages&&items.length===pageSize);
-        if(hasNext&&page<50){page+=1;return next();}
-        var map={};all.forEach(function(c){if(c&&c.id)map[c.id]=c;});
-        return Object.keys(map).map(function(id){return map[id];}).sort(function(a,b){return dateValue(b.updatedAt||b.createdAt)-dateValue(a.updatedAt||a.createdAt);}).slice(0,5000);
-      });
-    }
-    return F.init().then(next);
+    var db=state.session.db,cases=db.collection("cases"),user=state.session.user,profile=state.session.profile,queries=[];
+    if(["admin","management","audit"].indexOf(state.group)>=0)return safeCaseQuery(cases.orderBy("updatedAt","desc"),"cases.all").then(function(rows){return mergeCaseGroups([rows]);});
+    queries.push(safeCaseQuery(cases.where("createdBy","==",user.uid),"cases.createdBy"));
+    queries.push(safeCaseQuery(cases.where("assignedUid","==",user.uid),"cases.assignedUid"));
+    queries.push(safeCaseQuery(cases.where("assignedTo","==",user.uid),"cases.assignedTo"));
+    queries.push(safeCaseQuery(cases.where("assignedUserIds","array-contains",user.uid),"cases.assignedUserIds"));
+    if(user.email)queries.push(safeCaseQuery(cases.where("createdByEmail","==",user.email),"cases.createdByEmail"));
+    if(profile.name)queries.push(safeCaseQuery(cases.where("createdByName","==",profile.name),"cases.createdByName"));
+    var processKeys=processKeysForGroup();if(processKeys.length)queries.push(safeCaseQuery(cases.where("currentProcess","in",processKeys.slice(0,10)),"cases.currentProcess"));
+    var aliases=reverseRoleAliases();for(var i=0;i<aliases.length;i+=10){var chunk=aliases.slice(i,i+10);queries.push(safeCaseQuery(cases.where("assignedRole","in",chunk),"cases.assignedRole"));queries.push(safeCaseQuery(cases.where("openRequirement.targetRole","in",chunk),"cases.requirementRole"));}
+    if(state.group==="cut")queries.push(safeCaseQuery(cases.where("hasCuts","==",true),"cases.hasCuts"));
+    return Promise.all(queries).then(mergeCaseGroups);
   }
   function loadRecords(){
     var db=state.session.db,credit=db.collection("credit_requests"),uid=state.session.user.uid;

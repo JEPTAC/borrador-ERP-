@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var BUILD="v8.3.0-rls-session-20260805";
+var BUILD="v8.5.0-recuperacion-operativa-20260805";
 var scriptEl=document.currentScript||Array.prototype.slice.call(document.scripts).filter(function(s){return /shared\/js\/bootstrap\.js/.test(s.src||"");}).slice(-1)[0];
 var appRoot=new URL("../../",scriptEl&&scriptEl.src||location.href);
 var declared=window.EI_MODULE_CONFIG||{id:"inicio",defaultRoute:"dashboard",routes:["dashboard"],engine:"legacy"};
